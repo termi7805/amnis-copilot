@@ -1,0 +1,11 @@
+node_modules/
+dist/
+target/
+*.log
+
+# La BD es una caché derivada y reconstruible: nunca se versiona.
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+.amnis/

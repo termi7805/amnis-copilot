@@ -1,0 +1,9 @@
+{
+  "name": "@amnis/daemon",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "dependencies": {
+    "@amnis/shared": "workspace:*"
+  }
+}
