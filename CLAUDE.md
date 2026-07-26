@@ -115,6 +115,12 @@ gh api repos/:owner/:repo/issues/N/sub_issues -q '.[].number'
 Único contribuyente del repo: se trabaja directamente sobre `main`, sin ramas de feature ni PRs.
 Commitear ahí salvo que el usuario pida explícitamente lo contrario.
 
+## Flujo de trabajo por issue
+
+Antes de implementar una issue del backlog, pasar por **Plan Mode**: explorar el código
+relevante, diseñar el approach y dejarlo por escrito para aprobación antes de tocar ficheros.
+Ninguna issue se implementa directamente sin ese paso previo.
+
 ## Mensajes de commit
 
 Formato: `[#issue] - Descripción en español`, imperativo, con el cuerpo explicando el porqué
