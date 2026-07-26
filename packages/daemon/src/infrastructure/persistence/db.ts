@@ -93,4 +93,14 @@ function migrate(db: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS idx_quota_ts ON quota_samples (ts);
   `);
+
+  // ALTER TABLE ADD COLUMN no es idempotente con IF NOT EXISTS en SQLite:
+  // hay que comprobar antes. El techo calibrado (2.4) se persiste aquí,
+  // no en el código — PLAN_WINDOW_TOKENS es solo el valor inicial.
+  const accountColumns = db.prepare("PRAGMA table_info(accounts)").all() as {
+    name: string;
+  }[];
+  if (!accountColumns.some((c) => c.name === "plan_window_tokens")) {
+    db.exec("ALTER TABLE accounts ADD COLUMN plan_window_tokens INTEGER");
+  }
 }
