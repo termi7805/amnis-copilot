@@ -6,6 +6,8 @@ import type {
   QuotaReading,
   UsageStore,
 } from "../../../domain/Provider.ts";
+import { loadToken } from "./credentials.ts";
+import { fetchQuota } from "./quota.ts";
 import {
   findTranscripts,
   parseUsageLine,
@@ -29,15 +31,10 @@ function ingestHistorical(store: UsageStore): IngestResult {
   });
 }
 
-/**
- * El endpoint OAuth de cuota es #14. Hasta entonces, degradar es el
- * comportamiento normal (DESIGN.md §2), no un stub a rellenar.
- */
 async function pollQuota(): Promise<QuotaReading> {
-  return {
-    authoritative: null,
-    error: "pollQuota() no implementado todavía (#14)",
-  };
+  const result = await loadToken();
+  if (!result.ok) return { authoritative: null, error: result.message };
+  return fetchQuota(result.token.accessToken);
 }
 
 /**
