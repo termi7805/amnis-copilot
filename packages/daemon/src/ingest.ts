@@ -1,4 +1,4 @@
-import { readdirSync, statSync, openSync, readSync, closeSync } from "node:fs";
+import { closeSync, openSync, readdirSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import { CLAUDE_PROJECTS_DIR } from "./config.ts";
@@ -71,7 +71,7 @@ function ingestFile(
     .get(path) as { size: number; offset: number } | undefined;
 
   // Si el fichero encogió, fue reescrito: se relee entero.
-  let offset = prev && size >= prev.size ? prev.offset : 0;
+  const offset = prev && size >= prev.size ? prev.offset : 0;
   if (offset >= size) return;
 
   result.filesScanned++;
@@ -159,6 +159,7 @@ interface ParsedUsage {
  * por uuid dobla los tokens (medido: 23 de 53 entradas en un fichero real).
  */
 function parseUsageLine(line: string): ParsedUsage | null {
+  // biome-ignore lint/suspicious/noExplicitAny: forma cruda del JSONL de Claude Code, sin esquema propio todavía; tiparlo de verdad es #44.
   let entry: any;
   try {
     entry = JSON.parse(line);

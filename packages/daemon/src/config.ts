@@ -1,6 +1,6 @@
+import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { mkdirSync } from "node:fs";
 
 export const VERSION = "0.0.1";
 
@@ -8,7 +8,8 @@ export const VERSION = "0.0.1";
 export const PORT = Number(process.env.AMNIS_PORT ?? 4747);
 
 export const HOME = homedir();
-export const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR ?? join(HOME, ".claude");
+export const CLAUDE_DIR =
+  process.env.CLAUDE_CONFIG_DIR ?? join(HOME, ".claude");
 export const CLAUDE_PROJECTS_DIR = join(CLAUDE_DIR, "projects");
 export const CLAUDE_SETTINGS = join(CLAUDE_DIR, "settings.json");
 export const CLAUDE_CREDENTIALS = join(CLAUDE_DIR, ".credentials.json");
