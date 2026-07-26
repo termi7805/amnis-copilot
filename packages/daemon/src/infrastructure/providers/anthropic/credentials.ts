@@ -1,6 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { CLAUDE_CREDENTIALS } from "../../../config.ts";
+import { readFileSync, statSync } from "node:fs";
+import { CLAUDE_CREDENTIALS, TOKEN_CACHE_PATH } from "../../../config.ts";
+import {
+  type CachedToken,
+  readTokenCache,
+  writeTokenCache,
+} from "../../persistence/tokenCache.ts";
+import { type RefreshOutcome, refreshAccessToken } from "./oauthClient.ts";
 
 export interface OAuthToken {
   accessToken: string;
@@ -138,4 +144,119 @@ function readFromKeychain(): CredentialsResult {
 export function isTokenExpired(token: OAuthToken, now: Date): boolean {
   if (token.expiresAt === null) return false;
   return now.getTime() >= token.expiresAt;
+}
+
+export type LoadTokenResult =
+  | { ok: true; token: OAuthToken }
+  | {
+      ok: false;
+      reason: "no-session" | "unreadable" | "malformed" | "refresh-failed";
+      message: string;
+    };
+
+export interface LoadTokenOptions extends ReadCredentialsOptions {
+  cachePath?: string;
+  now?: Date;
+  refreshFn?: (refreshToken: string) => Promise<RefreshOutcome>;
+}
+
+function toOAuthToken(
+  cached: CachedToken,
+  base: Pick<OAuthToken, "subscriptionType" | "rateLimitTier">,
+): OAuthToken {
+  return {
+    accessToken: cached.accessToken,
+    refreshToken: cached.refreshToken,
+    expiresAt: cached.expiresAt,
+    subscriptionType: base.subscriptionType,
+    rateLimitTier: base.rateLimitTier,
+    source: "file",
+  };
+}
+
+/**
+ * `readCredentials()` + refresco automático cuando hace falta. Implementa
+ * el pseudocódigo de DESIGN.md §2: releer el fichero, comprobar mtime,
+ * refrescar solo si toca, y nunca escribir en ~/.claude/.
+ *
+ * Solo actúa sobre credenciales `source: "file"`: un token de entorno no
+ * tiene refreshToken, y el Keychain de macOS no tiene un mtime observable
+ * en esta forma — queda fuera de alcance, simplificación explícita.
+ */
+export async function loadToken(
+  opts: LoadTokenOptions = {},
+): Promise<LoadTokenResult> {
+  const credsResult = readCredentials(opts);
+  if (!credsResult.ok) return credsResult;
+  if (credsResult.token.source !== "file") return credsResult;
+
+  const now = opts.now ?? new Date();
+  if (!isTokenExpired(credsResult.token, now)) return credsResult;
+
+  const path = opts.path ?? CLAUDE_CREDENTIALS;
+  const cachePath = opts.cachePath ?? TOKEN_CACHE_PATH;
+  const refreshFn = opts.refreshFn ?? refreshAccessToken;
+
+  let mtimeMs: number;
+  try {
+    mtimeMs = statSync(path).mtimeMs;
+  } catch {
+    // El fichero desapareció entre leerlo y hacerle stat: degradar, no romper.
+    return credsResult;
+  }
+
+  const cache = readTokenCache(cachePath);
+  if (cache && cache.sourceCredentialsMtimeMs === mtimeMs) {
+    if (cache.lastPermanentFailureAt !== null) {
+      return {
+        ok: false,
+        reason: "refresh-failed",
+        message: `El refresh token fue rechazado (401) y no se reintenta hasta que vuelvas a hacer \`claude login\` (registrado ${cache.lastPermanentFailureAt}).`,
+      };
+    }
+    if (cache.refreshedToken) {
+      const cachedToken = toOAuthToken(cache.refreshedToken, credsResult.token);
+      if (!isTokenExpired(cachedToken, now)) {
+        return { ok: true, token: cachedToken };
+      }
+    }
+  }
+
+  if (!credsResult.token.refreshToken) {
+    return {
+      ok: false,
+      reason: "refresh-failed",
+      message:
+        "El token caducó y no hay refresh_token disponible para renovarlo.",
+    };
+  }
+
+  const outcome = await refreshFn(credsResult.token.refreshToken);
+
+  if (outcome.ok) {
+    const refreshedToken: CachedToken = {
+      accessToken: outcome.accessToken,
+      refreshToken: outcome.refreshToken,
+      expiresAt: outcome.expiresAt,
+    };
+    writeTokenCache(
+      {
+        refreshedToken,
+        sourceCredentialsMtimeMs: mtimeMs,
+        lastPermanentFailureAt: null,
+      },
+      cachePath,
+    );
+    return { ok: true, token: toOAuthToken(refreshedToken, credsResult.token) };
+  }
+
+  writeTokenCache(
+    {
+      refreshedToken: cache?.refreshedToken ?? null,
+      sourceCredentialsMtimeMs: mtimeMs,
+      lastPermanentFailureAt: outcome.permanent ? now.toISOString() : null,
+    },
+    cachePath,
+  );
+  return { ok: false, reason: "refresh-failed", message: outcome.message };
 }
