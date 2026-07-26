@@ -38,6 +38,9 @@ para que exponerlo por túnel (Tailscale/Cloudflare) sea un día de trabajo el d
 
 ### Stack
 
+> Las decisiones concretas de stack (frontend, tooling, empaquetado) y su porqué viven en
+> [`STACK.md`](./STACK.md). Aquí solo lo que condiciona la arquitectura.
+
 - **Monorepo TypeScript** con tipos compartidos entre daemon y clientes.
 - **Daemon: Node 24, cero dependencias.** `node:sqlite` (nativo) y type-stripping nativo de
   TypeScript. Sin build step, sin `node_modules` en el camino crítico.
@@ -95,6 +98,57 @@ User-Agent: claude-code/<version>
 - El access token caduca cada ~60 min → **refresh automático es MVP**, sin él parece un bug.
 - **Aislado tras la abstracción `Provider`**: si un día devuelve 404, degrada, no rompe.
 
+#### Amnis nunca escribe en el fichero de credenciales de Claude
+
+`.credentials.json` es estado de **otra aplicación**. Amnis lo relee en cada poll —es barato— y
+solo refresca si el token está caducado *y* el fichero no se ha actualizado por su cuenta. El
+token resultante se guarda en `~/.amnis/`, jamás de vuelta en `~/.claude/`.
+
+La regla es asimétrica a propósito: el peor fallo de Amnis debe ser quedarse sin dato, nunca
+romperle el login a Claude Code. Un dashboard que te desloguea de la herramienta que mide es
+un producto que se desinstala.
+
+> ⚠️ **Riesgo asumido y sin resolver:** no sabemos si Anthropic rota el `refresh_token` al usarlo.
+> Si lo rota, que Amnis refresque invalida el que tiene Claude Code. Mitigación: refrescar solo
+> cuando de verdad haga falta (token caducado y fichero sin tocar), y si tras un refresh el
+> siguiente `401` es persistente, dejar de refrescar y degradar a estimación local.
+
+### La ventana de 5 horas es fija, no rodante
+
+"Los tokens de las últimas 5 horas" **no es lo que mide Anthropic**. La ventana arranca con el
+primer mensaje y se cierra 5 h después; el consumo no se desliza, se resetea de golpe. Sumar una
+ventana rodante da un número que nunca coincide con el del endpoint.
+
+- **Con endpoint:** el inicio es `resets_at − 5 h`. Autoritativo, sin inferencia.
+- **Sin endpoint:** se infiere del último reset conocido en `quota_samples`, avanzando en saltos
+  de 5 h hasta cubrir el momento actual. Si no hay ninguno (primera ejecución sin red), se toma
+  el primer `usage_event` que deje un hueco de más de 5 h sin actividad.
+
+### El techo del plan se calibra solo
+
+`PLAN_WINDOW_TOKENS` (pro ≈44k, max_5x ≈88k, max_20x ≈220k) son aproximaciones, y **nada en el
+sistema sabe qué plan tienes**: `accounts.plan` nace nulo y ninguna fuente lo dice.
+
+No hace falta preguntarlo. **Cada muestra trae la respuesta**: el endpoint da el `%` real y el
+parseo local da los tokens del mismo instante, así que `techo ≈ tokens / (utilization / 100)`.
+Con unas cuantas muestras por encima de un uso mínimo, el techo se estima solo y mejora con el uso.
+
+- Se persiste en `accounts.plan_window_tokens`, no en el código.
+- Solo se calibra con muestras autoritativas y con `utilization` suficiente (por debajo del ~10%
+  el cociente es ruido).
+- `PLAN_WINDOW_TOKENS` queda como **valor inicial** hasta que haya calibración, no como verdad.
+
+Es el mejor uso posible de la doble vía: las dos fuentes no solo se comparan, **una enseña a la otra**.
+
+### Coste: equivalente de API, nunca "gastado"
+
+En una tarifa plana el coste por token no existe. Lo que sí responde a una pregunta real —*¿me
+compensa la suscripción?*— es **cuánto habría costado ese consumo pagando la API pública**.
+
+Se muestra siempre etiquetado como *equivalente*, junto al precio del plan. Presentarlo como
+dinero gastado sería mentir. La tabla de precios vive en `domain/cost.ts`, versionada y con fecha:
+es un dato que envejece, y tiene que verse cuándo se actualizó por última vez.
+
 ### Parseo de JSONL — la trampa del doble conteo
 
 Las entradas `type: "assistant"` traen `message.usage` completo. **Pero varias líneas comparten
@@ -137,6 +191,23 @@ Un único eje persistente: **fatiga = consumo de la ventana de 5h**. Fresca al 1
 85%, revive en el reset. Ese es el enganche: la mascota y el dashboard son el mismo producto.
 No hay simulación que balancear ni que pueda tener bugs — es un mapeo directo de un número
 que ya calculas.
+
+### Panel de cuota en la ventana flotante
+
+La fatiga da el vistazo ambiental, pero no responde "¿me queda para terminar esto?". **Un click
+en el bicho despliega un panel con las cifras**, y la preferencia se recuerda: quien quiera solo
+compañía la tiene, quien quiera el número lo tiene sin abrir el navegador.
+
+Plegado por defecto. El panel es **una lista indexada por proveedor** que hoy pinta una sola fila
+(Claude), por la misma razón que `account_id` existe desde el día uno: es barato en la estructura
+y caro como refactorización.
+
+Por proveedor: ventana de 5h y de 7d, cada una con su barra y su cuenta atrás hasta `resets_at`.
+**Cuando el dato no es autoritativo tiene que verse que no lo es** — un `~` y la etiqueta de
+estimado, nunca un número inventado presentado como real.
+
+No entra la divergencia: es análisis, y el análisis vive en el dashboard. La ventana flotante
+responde de un vistazo o no sirve.
 
 ### Máquina de estados
 
@@ -182,6 +253,11 @@ variable de entorno, `|| true` y `exit 0` **siempre**. Pase lo que pase, nunca b
 
 `PreToolUse` con matcher `*` dispara muchísimo → fire-and-forget obligatorio, o hay lag en cada
 llamada a herramienta.
+
+**Cada entrada de Amnis se marca**, porque desinstalar limpio exige reconocer lo propio sin
+adivinar. La marca es el propio comando: todo hook de Amnis invoca un script cuya ruta contiene
+`amnis-hook`, y ese es el criterio de identidad — no un comentario JSON (que se pierde al
+reescribir el fichero con cualquier herramienta) ni la posición en el array (que cambia).
 
 `amnis install-hooks` hace **merge no destructivo** (los hooks son arrays y Orca ya está ahí);
 `amnis uninstall-hooks` quita exactamente lo suyo. Nunca pedir al usuario que copie JSON a mano:

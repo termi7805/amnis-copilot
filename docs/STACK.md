@@ -1,0 +1,312 @@
+# Amnis Copilot — Stack y arquitectura
+
+> Complementa a [`DESIGN.md`](./DESIGN.md), que decide **qué** se construye y por qué.
+> Este documento decide **con qué**, y deja escrito el porqué para no rediscutirlo.
+
+## 1. Resumen
+
+| Capa | Elección | Por qué |
+|---|---|---|
+| Monorepo | pnpm workspaces + TypeScript | Tipos compartidos entre daemon y clientes |
+| Daemon | Node 24, **cero dependencias en runtime** | `node:sqlite` y type-stripping nativos: sin build step |
+| Frontend | **React 19 + Vite** en `apps/web` | Dashboard y mascota comparten la criatura; ecosistema conocido |
+| Estilos | CSS Modules | Sin dependencias; el `<Pet>` es CSS y SVG a mano |
+| Gráficas | SVG propio; Recharts solo si 5.3 lo pide | Un anillo de progreso son 40 líneas, no una librería |
+| Mascota | Tauri v2 apuntando al daemon por HTTP | Un solo bundle; remote-ready desde el día 1 |
+| Tests | `node:test` en daemon, Vitest en UI | El daemon se testea sin instalar nada |
+| Lint/formato | Biome | Un paquete en vez de ESLint + Prettier + plugins |
+| CI | GitHub Actions | Lint + tests en cada push |
+
+## 2. Frontend: React 19 + Vite, un solo bundle
+
+**Un único `apps/web`** que produce las dos vistas. No son dos aplicaciones: son dos rutas
+del mismo bundle, porque **comparten la criatura**. El dashboard enseña el bicho al lado de la
+cuota, y mantener dos copias del mismo SVG en dos builds es la forma más rápida de que diverjan.
+
+### La criatura se comparte; la envoltura no
+
+Las dos vistas **no** enseñan la mascota igual, y esa diferencia tiene un sitio concreto:
+
+| | Ruta `/pet` (Tauri) | Dashboard |
+|---|---|---|
+| Contenedor | Viewport completo, fondo transparente, arrastrable, sin marco | Tarjeta de ~160 px junto a los anillos de cuota |
+| Qué añade | Región de arrastre, click-through, indicador de desconexión | Etiqueta del estado, enlace al detalle |
+| Criatura | **El mismo `<Pet>`** | **El mismo `<Pet>`** |
+
+`<Pet>` recibe `{state, level, fatigue}`, escala a su contenedor y **no tiene fondo, ni marco,
+ni tamaño propio**. Todo lo que sea "cómo se presenta" vive en la envoltura, no en él. Es la
+misma regla que `DESIGN.md` §4 aplica a los sprites, extendida al layout: si `<Pet>` supiera
+que a veces flota sobre el escritorio, la ventana de Tauri y el dashboard empezarían a pelearse
+dentro del mismo componente.
+
+**React y no Svelte**, aunque el `<Pet>` (animación pura, CSS scoped) habría encajado mejor en
+Svelte: el dashboard es donde vive la mayor parte del trabajo, y ahí el ecosistema de React
+—Recharts, TanStack Table— y la soltura previa pesan más que los ~45 KB de runtime, que en
+`127.0.0.1` son cosméticos.
+
+**Gráficas a mano por defecto.** Los medidores de 5h/7d son un `<circle>` con `strokeDasharray`:
+meter una librería para eso es más código, no menos, y menos control sobre un elemento que
+además tiene que combinar con la estética de la mascota. Recharts entra **solo** si la vista
+histórica (5.3) lo pide, y como dependencia de `apps/web`, nunca del daemon.
+
+## 3. Dónde vive cada frontend
+
+```
+                      apps/web (React + Vite)
+                           │ pnpm build
+                           ▼
+                      apps/web/dist ───────┐
+                                           │ servido como estático
+   Tauri webview ──► http://127.0.0.1:4747/pet
+   Navegador     ──► http://127.0.0.1:4747/
+                                           │
+                                    amnis-daemon
+```
+
+**La mascota carga su UI del daemon**, no de un bundle propio dentro del `.app`. Un solo build,
+un solo `<Pet>`, y el día que se exponga por túnel (Tailscale/Cloudflare) la mascota ya funciona
+desde otra máquina sin tocar nada — que es exactamente el motivo por el que `DESIGN.md` §1 exige
+"todo por HTTP con URL configurable".
+
+El coste es que si el daemon no responde, el webview no tiene qué pintar. Se paga con una
+**página local mínima empaquetada en Tauri** ("desconectada", con reintento), que además es la
+misma señal que pide la issue 6.3: mejor un bicho que dice "no veo nada" que uno que finge.
+
+**En desarrollo** el dev server de Vite sirve la UI con HMR y proxea `/api` al daemon; en
+producción el daemon sirve `apps/web/dist` directamente. La URL base del daemon es
+configurable en el cliente, nunca `localhost` hardcodeado.
+
+### La única grieta: el panel de cuota necesita redimensionar la ventana
+
+`DESIGN.md` §4 añade un panel que se despliega con click. En el navegador eso es un `div` que
+crece; **dentro de Tauri hay además que redimensionar la ventana nativa**, o el panel se recorta.
+Es el único punto donde la web habla con Tauri, y rompe la propiedad de que el frontend sea
+ignorante de dónde corre.
+
+Se acota así: la ruta `/pet` **detecta si está dentro de Tauri** (`window.__TAURI_INTERNALS__`) y
+solo entonces llama a `getCurrentWindow().setSize()`. En un navegador normal el panel se despliega
+igual, sin redimensionar nada. Nunca un `import` de `@tauri-apps/api` en el camino crítico: carga
+diferida, y si falla, el panel sigue funcionando.
+
+La preferencia plegado/desplegado va en **`localStorage`, no en SQLite**: la BD es una caché
+derivada que se borra con `amnis ingest --rebuild`, y perder un ajuste de UI al reconstruir datos
+sería un bug difícil de atribuir.
+
+## 4. Rutas: la API bajo `/api`
+
+El daemon sirve dos cosas por el mismo puerto, así que se separan por prefijo:
+
+| Ruta | Qué |
+|---|---|
+| `GET /` | Dashboard (SPA) |
+| `GET /pet` | Mascota (misma SPA, otra ruta) |
+| `GET /api/state` | `StateResponse`: mascota + cuota + salud del daemon |
+| `GET /api/usage` | Agregados por día, proyecto y modelo |
+| `GET /api/events` | SSE: cambios de estado y de cuota |
+| `POST /api/hook/claude` | Receptor de hooks, fire-and-forget |
+
+Sin auth: escucha en loopback y no hay dato de otra persona en juego. El día del túnel, el auth
+se añade en una sola capa delante de `/api`.
+
+### El contrato del SSE
+
+Tres consumidores distintos leen `/api/events` (la mascota, su panel de cuota y el dashboard), así
+que el formato se declara **una vez en `packages/shared/src/types.ts`** y no se improvisa en cada
+cliente.
+
+| `event:` | `data:` | Cuándo |
+|---|---|---|
+| `state` | `PetSnapshot` | Cambia el estado de la mascota |
+| `quota` | `QuotaSnapshot[]` | Nueva muestra (cada 180 s, o al degradar) |
+| `hello` | `StateResponse` | Primer mensaje tras conectar |
+
+`hello` existe para que **un cliente que acaba de conectar no tenga que hacer también un `GET
+/api/state`**: sin él, toda UI arranca con dos peticiones y una ventana en la que pinta datos
+vacíos. Con él, conectarse es una sola operación.
+
+Cada mensaje lleva `id:` con el timestamp, para que la reconexión automática de SSE mande
+`Last-Event-ID` y el daemon sepa si el cliente se perdió algo. `retry: 2000` en la cabecera del
+stream: la mascota tiene que volver rápido, no ser educada.
+
+## 5. Tooling
+
+**El "cero dependencias" aplica al runtime del daemon, no a las dev-deps.** El daemon tiene que
+poder ejecutarse con un `node` pelado y nada más; que el repo tenga un linter no lo contradice.
+
+- **`node --test packages/daemon`** — Node 24 ejecuta TypeScript sin build, así que el daemon se
+  testea sin `node_modules` en medio. Aquí vive el test que más importa del proyecto: el de
+  regresión del doble conteo (issue #11), el bug que no peta, solo miente.
+- **Vitest + Testing Library** en `apps/web`, que necesita el pipeline de Vite igualmente.
+- **Biome** para formato y lint del monorepo entero: un paquete, y rápido.
+
+## 6. Empaquetado del daemon (fuera del MVP, decidido para no bloquear)
+
+Tauri lanza el daemon como sidecar. En el MVP eso es **invocar el `node` del sistema** sobre el
+entrypoint del daemon (`tauri-plugin-shell`), lo cual asume Node 24 instalado — aceptable
+mientras el único usuario seas tú.
+
+El día del instalador, la salida es **Node SEA** (single executable application): produce un
+binario autocontenido que Tauri empaqueta como sidecar de verdad. No condiciona nada del código
+de hoy salvo mantener un entrypoint único y sin dependencias, que ya es el plan.
+
+## 7. Layout y arquitectura interna
+
+```
+amnis-copilot/
+├── docs/                    DESIGN.md · STACK.md
+├── packages/
+│   ├── shared/
+│   │   └── src/types.ts     contrato daemon ↔ clientes
+│   └── daemon/
+│       ├── src/
+│       │   ├── domain/      lógica pura, sin I/O
+│       │   │   ├── petState.ts      evento → estado + temporizador de sleeping
+│       │   │   ├── fatigue.ts       utilización → fatiga
+│       │   │   ├── localQuota.ts    tokens de la ventana → % estimado
+│       │   │   ├── cost.ts          tokens + modelo → coste
+│       │   │   └── Provider.ts      el contrato que infrastructure implementa
+│       │   ├── application/ casos de uso
+│       │   │   ├── ingestUsage.ts   recorrido incremental por offsets
+│       │   │   ├── sampleQuota.ts   doble vía + divergencia
+│       │   │   ├── recordHook.ts    normaliza, persiste, deriva estado
+│       │   │   └── getState.ts      compone StateResponse
+│       │   ├── infrastructure/
+│       │   │   ├── providers/anthropic/  transcripts · quota · credentials · hooks
+│       │   │   ├── persistence/          un módulo por agregado
+│       │   │   │   ├── db.ts             esquema + migración + apertura
+│       │   │   │   ├── usage.ts          insertar · agregar por proyecto/modelo/día
+│       │   │   │   ├── hookEvents.ts
+│       │   │   │   ├── quotaSamples.ts
+│       │   │   │   └── ingestOffsets.ts
+│       │   │   ├── http/                 node:http, rutas /api, SSE, estáticos
+│       │   │   └── cli/                  amnis: ingest · doctor · install-hooks · serve
+│       │   └── config.ts
+│       ├── hooks/           claude-hook.sh
+│       ├── public/          la página fea de la rebanada vertical, sin build
+│       └── test/            *.test.ts + fixtures/ de JSONL reales
+└── apps/
+    ├── web/                 React 19 + Vite
+    │   └── src/
+    │       ├── lib/Pet/     la criatura, compartida por las dos rutas
+    │       ├── routes/      dashboard/ · pet/  (las dos envolturas)
+    │       ├── api/         cliente HTTP + hook de SSE
+    │       └── main.tsx
+    └── pet/                 Tauri v2 (Rust)
+        ├── src-tauri/
+        └── offline.html     fallback empaquetado, sin React
+```
+
+### El criterio: `packages/` es lo que se importa, `apps/` es lo que se ejecuta
+
+`apps/web` está en `apps/` y no en `packages/` porque **nadie lo importa como código**. Al
+decidir que Tauri carga la UI por HTTP (§3), `apps/pet` dejó de tener un solo `import` de
+TypeScript: es Rust abriendo una URL. La criatura se comparte entre dos rutas del mismo bundle,
+no entre dos paquetes — así que el frontend no es una librería, es una app que el daemon sirve.
+
+Y `web` en vez de `dashboard` porque sirve las dos vistas.
+
+### Tres capas, y solo un contrato
+
+`domain` · `application` · `infrastructure`. Sin carpetas `ports/` ni `adapters/`: los nombres de
+capa ya dicen quién define el contrato y quién lo implementa, y una carpeta llamada `ports` con un
+solo fichero dentro es ceremonia.
+
+**La regla para crear contratos, y se aplica sin excepciones:** ¿hay una segunda implementación
+prevista? Sí → interfaz en `domain/`. No → función directa. Un andamiaje de interfaces "por si
+acaso" sobre un daemon de unos pocos miles de líneas es el mismo error que empezar por la mascota,
+con otra cara.
+
+Eso deja **un solo contrato**, `domain/Provider.ts`, con la mejor justificación posible: la segunda
+implementación existe y está descrita (`DESIGN.md` §6). Antigravity son `.pb` y `.db` sin esquema
+público frente a JSONL legible — no hay forma de que compartan código, solo contrato. Vive en
+`domain/` y no en `infrastructure/` precisamente para que la dependencia apunte hacia dentro: el
+núcleo declara qué necesita, y `infrastructure/providers/anthropic/` obedece.
+
+**El segundo motivo para `application/` no son los providers: son las dos formas de entrar.**
+El CLI (`amnis ingest`, `amnis doctor`) y el servidor HTTP hacen lo mismo por dos vías distintas.
+Sin casos de uso en medio, o esa lógica se duplica o el CLI acaba importando del servidor, que es
+peor. `application/` existe para que `amnis ingest` y una futura ruta de ingesta sean dos puertas
+al mismo código — y por eso `http/` y `cli/` son **hermanos** dentro de `infrastructure/`, no uno
+colgando del otro.
+
+**Regla de dependencias:** `domain/` no importa nada del proyecto. `application/` importa
+`domain/`. `infrastructure/` importa las dos. Nunca al revés — si una pieza de `infrastructure/`
+necesita algo de otra, sube a `application/` o baja a `domain/`.
+
+### Por qué `persistence/` son módulos y no repositorios
+
+La duda razonable es: si van a entrar Claude, Antigravity y lo que venga, ¿no toca un repositorio
+por proveedor? **No, porque múltiples proveedores son múltiples *fuentes*, no múltiples *almacenes*.**
+
+Leerlos no se parece en nada —JSONL frente a `.pb` y `.db` sin esquema público—, y esa variabilidad
+ya tiene su contrato: `domain/Provider.ts`. Pero una vez normalizados, todos caen en **la misma
+`usage_events` con una columna `provider`**, que es lo que `DESIGN.md` §3 ya decidió y `db.ts`
+ya implementa, igual que `accounts.provider`.
+
+Fragmentarlo tendría un coste concreto: con un repositorio por proveedor, *"¿cuánto he consumido
+esta semana entre todos?"* —la razón de ser del dashboard— deja de ser un `GROUP BY provider` y pasa
+a juntarse en memoria desde dos implementaciones. La columna existe justamente para evitar eso.
+
+Los otros dos argumentos habituales del patrón tampoco se sostienen aquí:
+
+- *"Poder cambiar de motor."* Cambiar `node:sqlite` rompería el "cero dependencias", que es una
+  premisa del proyecto y no un detalle de implementación.
+- *"Poder testear sin BD."* `node:sqlite` abre bases en `:memory:`, así que los tests corren contra
+  SQLite de verdad. Un doble te daría un test **peor**: verde contra un fake que no tiene los
+  `UNIQUE` que son exactamente lo que hay que verificar (#11).
+
+Lo que sí queda en pie —mantener el SQL fuera de la lógica— se consigue con **un módulo por
+agregado** cuyas funciones reciben `db`. Se lee como un repositorio; lo único que falta es la
+`interface`, y extraerla el día que exista una segunda implementación es mecánico.
+
+### Dónde acaba el código que ya existe
+
+El commit `d1e4efd` es previo a esta decisión, así que se recoloca:
+
+| Hoy | Va a | Por qué |
+|---|---|---|
+| `db.ts` (esquema, migración) | `infrastructure/persistence/db.ts` | Es acceso a datos, no lógica |
+| `db.ts` → `ensureAccount()` | `infrastructure/persistence/accounts.ts` | Un módulo por agregado |
+| `ingest.ts` → recorrido por offsets | `application/ingestUsage.ts` | Sirve para cualquier provider |
+| `ingest.ts` → escritura de offsets | `infrastructure/persistence/ingestOffsets.ts` | SQL fuera de la lógica |
+| `ingest.ts` → `parseUsageLine()` | `infrastructure/providers/anthropic/` | **El formato JSONL y la trampa del `message.id` son de Claude, no del dominio** |
+| `config.ts` | se queda en la raíz | Configuración de proceso, no capa |
+
+Ese tercer movimiento es el que importa: la regla de deduplicar por `message.id` y no por `uuid` es
+un detalle del transcript de Claude Code. Si vive en el núcleo, el día de Antigravity hay que sacarlo
+de en medio; si vive en el adaptador desde ahora, no hay nada que mover.
+
+### Qué protege cada carpeta
+
+**`shared/` no puede tener build ni lógica.** Solo tipos y constantes puras. Es lo que permite
+que el daemon lo importe como TypeScript directo *y* que Vite lo transpile sin ceremonia. En
+cuanto ahí entra una función con dependencias de runtime, se rompen los dos lados a la vez.
+
+**`providers/anthropic/` existe desde el primer día aunque solo haya un provider.** Es la costura
+que `DESIGN.md` §6 exige para que Antigravity sea aditivo. Hoy `'anthropic'` está hardcodeado en
+el SQL de `ingest.ts`; esta carpeta es el sitio donde eso se corrige. Si el provider vive disperso,
+el día de Antigravity es una refactorización y no una carpeta nueva.
+
+**`state/` separado porque es la única lógica pura del daemon.** Sin I/O, sin BD, sin red: entra
+un `NormalizedHookEvent`, sale un `PetState`. Es lo más fácil de testear y lo que más se va a
+tocar afinando el comportamiento de la mascota.
+
+**`daemon/public/` sobrevive a la llegada de la SPA.** La página fea sin build es lo que se sirve
+antes de que exista `apps/web`, y después sigue siendo el mejor sitio desde el que depurar cuando
+la SPA no arranca. No se borra al construir el dashboard.
+
+**`daemon/test/fixtures/` con JSONL reales.** El test que más importa —el del doble conteo—
+necesita dos líneas de verdad que compartan `message.id`. Salen de transcripts propios, con el
+contenido recortado: solo metadatos, la misma regla que rige la BD.
+
+**Un solo `cli.ts` como entrypoint.** No es estética: es el prerrequisito de Node SEA (§6). Un
+binario autocontenido necesita un punto de entrada único y sin dependencias de runtime.
+
+## 8. Riesgos que añade el stack
+
+| Riesgo | Mitigación |
+|---|---|
+| El webview de la mascota depende del daemon | Página de fallback empaquetada + reconexión SSE automática |
+| Compilar Tauri en Linux necesita `libwebkit2gtk-4.1-dev` | No instalado en esta máquina: es un prerrequisito de la épica 6, no una sorpresa a mitad |
+| Node SEA aún no está probado aquí | Fuera del MVP; el entrypoint se mantiene único y sin deps para que sea viable |
+| Type-stripping nativo no hace type-checking | `tsc --noEmit` en CI: Node ejecuta los tipos, no los valida |
