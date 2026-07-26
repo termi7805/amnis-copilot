@@ -1,19 +1,7 @@
 import { closeSync, openSync, readdirSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { CLAUDE_PROJECTS_DIR } from "../../../config.ts";
-
-export interface ParsedUsage {
-  dedupeKey: string;
-  sessionId: string | null;
-  project: string | null;
-  ts: string;
-  model: string | null;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  serviceTier: string | null;
-}
+import type { ProviderUsageEvent } from "../../../domain/Provider.ts";
 
 export function findTranscripts(): string[] {
   let projectDirs: string[];
@@ -70,7 +58,7 @@ export function readTranscriptChunk(
  * repitiendo el mismo objeto usage, una por bloque de contenido. Deduplicar
  * por uuid dobla los tokens (medido: 23 de 53 entradas en un fichero real).
  */
-export function parseUsageLine(line: string): ParsedUsage | null {
+export function parseUsageLine(line: string): ProviderUsageEvent | null {
   // biome-ignore lint/suspicious/noExplicitAny: forma cruda del JSONL de Claude Code, sin esquema propio todavía; tiparlo de verdad es #44.
   let entry: any;
   try {

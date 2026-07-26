@@ -1,22 +1,11 @@
-export interface IngestResult {
-  filesScanned: number;
-  linesRead: number;
-  eventsInserted: number;
-  duplicatesSkipped: number;
-}
+import type {
+  IngestResult,
+  Provider,
+  ProviderUsageEvent,
+  UsageStore,
+} from "../domain/Provider.ts";
 
-export interface ParsedUsageEvent {
-  dedupeKey: string;
-  sessionId: string | null;
-  project: string | null;
-  ts: string;
-  model: string | null;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  serviceTier: string | null;
-}
+export type { IngestResult };
 
 /**
  * Todo lo que `ingestAll` necesita de fuera, sin saber si viene de
@@ -29,9 +18,31 @@ export interface IngestUsageDeps {
   readChunk(path: string, offset: number, length: number): string;
   getOffset(filePath: string): { size: number; offset: number } | undefined;
   saveOffset(filePath: string, size: number, offset: number): void;
-  parseLine(line: string): ParsedUsageEvent | null;
+  parseLine(line: string): ProviderUsageEvent | null;
   /** `true` si se insertó; `false` si `dedupe_key` ya existía. */
-  insertUsageEvent(event: ParsedUsageEvent): boolean;
+  insertUsageEvent(event: ProviderUsageEvent): boolean;
+}
+
+/** Recorre el registro de providers y suma sus resultados de ingesta. */
+export function ingestAllProviders(
+  providers: readonly Provider[],
+  store: UsageStore,
+): IngestResult {
+  const total: IngestResult = {
+    filesScanned: 0,
+    linesRead: 0,
+    eventsInserted: 0,
+    duplicatesSkipped: 0,
+  };
+
+  for (const provider of providers) {
+    const result = provider.ingestHistorical(store);
+    total.filesScanned += result.filesScanned;
+    total.linesRead += result.linesRead;
+    total.eventsInserted += result.eventsInserted;
+    total.duplicatesSkipped += result.duplicatesSkipped;
+  }
+  return total;
 }
 
 /**
