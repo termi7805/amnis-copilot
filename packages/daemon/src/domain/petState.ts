@@ -62,3 +62,17 @@ export function derivePetState(
 
   return null;
 }
+
+/** Duplica config.ts SLEEP_AFTER_MS a propósito: domain/ no importa nada del
+ * proyecto (mismo patrón que FIVE_HOUR_MS en localQuota.ts). */
+export const SLEEP_AFTER_MS = 10 * 60_000;
+
+/**
+ * `lastEventAt: null` → true: nunca hubo evento, y no saber qué haces no es
+ * lo mismo que saber que estás trabajando — arrancar en `coding` sería
+ * inventarse un dato, así que `sleeping` es el estado inicial al arrancar.
+ */
+export function sleepAfter(lastEventAt: Date | null, now: Date): boolean {
+  if (!lastEventAt) return true;
+  return now.getTime() - lastEventAt.getTime() >= SLEEP_AFTER_MS;
+}

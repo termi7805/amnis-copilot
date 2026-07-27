@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { NormalizedHookEvent } from "@amnis/shared";
-import { derivePetState } from "../src/domain/petState.ts";
+import {
+  derivePetState,
+  SLEEP_AFTER_MS,
+  sleepAfter,
+} from "../src/domain/petState.ts";
 
 function makeEvent(
   overrides: Partial<NormalizedHookEvent> = {},
@@ -93,4 +97,26 @@ test("PreToolUse sin toolName no lanza y no mapea", () => {
 test("cada estado devuelto trae un reason legible", () => {
   const result = derivePetState(makeEvent({ toolName: "Edit" }));
   assert.ok(result?.reason.includes("Edit"));
+});
+
+test("sleepAfter: sin lastEventAt, siempre true (estado inicial al arrancar)", () => {
+  assert.equal(sleepAfter(null, new Date("2026-01-01T00:00:00.000Z")), true);
+});
+
+test("sleepAfter: evento reciente, false", () => {
+  const lastEventAt = new Date("2026-01-01T00:00:00.000Z");
+  const now = new Date(lastEventAt.getTime() + 1000);
+  assert.equal(sleepAfter(lastEventAt, now), false);
+});
+
+test("sleepAfter: evento a más de 10 min, true", () => {
+  const lastEventAt = new Date("2026-01-01T00:00:00.000Z");
+  const now = new Date(lastEventAt.getTime() + SLEEP_AFTER_MS + 1);
+  assert.equal(sleepAfter(lastEventAt, now), true);
+});
+
+test("sleepAfter: justo en el límite, true", () => {
+  const lastEventAt = new Date("2026-01-01T00:00:00.000Z");
+  const now = new Date(lastEventAt.getTime() + SLEEP_AFTER_MS);
+  assert.equal(sleepAfter(lastEventAt, now), true);
 });
