@@ -1,4 +1,4 @@
-import type { NormalizedHookEvent } from "@amnis/shared";
+import type { NormalizedHookEvent, PetState } from "@amnis/shared";
 
 export interface HookEventInput {
   provider: string;
@@ -12,13 +12,13 @@ export interface HookEventInput {
 
 /**
  * Todo lo que `recordHook` necesita de fuera. `normalizeHookEvent` viene del
- * `Provider` (Anthropic hoy); `deriveState` es la costura hacia la máquina
- * de estados de #23 — hasta que exista, el llamador inyecta una función que
- * devuelve un estado fijo, sin que este caso de uso ni la ruta HTTP lo sepan.
+ * `Provider` (Anthropic hoy); `deriveState` es la máquina de estados de
+ * `domain/petState.ts` (#23), inyectada para que este caso de uso y la ruta
+ * HTTP no sepan de dominio. `null` cuando el evento no dispara transición.
  */
 export interface RecordHookDeps {
   normalizeHookEvent(raw: unknown): NormalizedHookEvent | null;
-  deriveState(event: NormalizedHookEvent): string;
+  deriveState(event: NormalizedHookEvent): PetState | null;
   insertHookEvent(event: HookEventInput): void;
 }
 
@@ -41,7 +41,7 @@ export function recordHook(
     toolName: event.toolName,
     sessionId: event.sessionId,
     project: event.project,
-    derivedState: deps.deriveState(event),
+    derivedState: deps.deriveState(event) ?? "unknown",
   });
 
   return event;

@@ -24,7 +24,7 @@ async function withHookServer(
         at: new Date().toISOString(),
       };
     },
-    deriveState: () => "unknown",
+    deriveState: () => null,
     insertHookEvent: (event) => inserted.push(event),
   });
 

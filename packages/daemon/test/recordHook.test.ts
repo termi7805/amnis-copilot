@@ -27,7 +27,7 @@ function makeDeps(overrides: Partial<RecordHookDeps> = {}): {
         at: "2026-01-01T00:00:00.000Z",
       };
     },
-    deriveState: () => "unknown",
+    deriveState: () => null,
     insertHookEvent: (event) => inserted.push(event),
     ...overrides,
   };

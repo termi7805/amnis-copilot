@@ -48,6 +48,16 @@ function normalizeHookEvent(raw: unknown): NormalizedHookEvent | null {
   const hook = payload.hook_event_name;
   if (typeof hook !== "string") return null;
 
+  // El comando de Bash viaja en tool_input.command, no en el nivel
+  // superior del payload — sin esto `testing` no se dispara nunca.
+  const toolInput = payload.tool_input;
+  const command =
+    typeof toolInput === "object" &&
+    toolInput !== null &&
+    typeof (toolInput as Record<string, unknown>).command === "string"
+      ? ((toolInput as Record<string, unknown>).command as string)
+      : null;
+
   return {
     provider: ID,
     hook,
@@ -59,7 +69,7 @@ function normalizeHookEvent(raw: unknown): NormalizedHookEvent | null {
       typeof payload.permission_mode === "string"
         ? payload.permission_mode
         : null,
-    command: typeof payload.command === "string" ? payload.command : null,
+    command,
     at: new Date().toISOString(),
   };
 }
