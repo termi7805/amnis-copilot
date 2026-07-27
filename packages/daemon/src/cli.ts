@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 import { VERSION } from "./config.ts";
 import { runIngestCli } from "./infrastructure/cli/ingest.ts";
+import { runInstallHooksCli } from "./infrastructure/cli/installHooks.ts";
 
 const HELP = `amnis <comando>
 
 Comandos:
   ingest [--rebuild]   Ingesta incremental de los transcripts de uso.
                         --rebuild borra la BD y reingiere todo desde cero.
+  install-hooks         Registra los hooks de Amnis en ~/.claude/settings.json
+                        (merge no destructivo; reinstalar reemplaza en su sitio).
   --help                Muestra esta ayuda.
   --version             Muestra la versión.
 `;
@@ -17,6 +20,9 @@ function main(argv: readonly string[]): void {
   switch (command) {
     case "ingest":
       runIngestCli(rest);
+      return;
+    case "install-hooks":
+      runInstallHooksCli();
       return;
     case "--version":
       console.log(VERSION);
