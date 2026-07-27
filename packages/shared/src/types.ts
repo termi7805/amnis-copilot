@@ -69,6 +69,16 @@ export interface StateResponse {
   };
 }
 
+/**
+ * Contrato de `GET /api/events` (SSE). Se declara una vez aquí porque hay
+ * tres consumidores (mascota, su panel de cuota, dashboard) — si cada uno
+ * lo improvisa, divergen (docs/STACK.md §4).
+ */
+export type AmnisEvent =
+  | { event: "hello"; data: StateResponse }
+  | { event: "state"; data: PetSnapshot }
+  | { event: "quota"; data: QuotaSnapshot[] };
+
 /** Evento de hook ya normalizado por el `Provider`. */
 export interface NormalizedHookEvent {
   provider: ProviderId;
