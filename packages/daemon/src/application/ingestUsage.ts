@@ -23,6 +23,43 @@ export interface IngestUsageDeps {
   insertUsageEvent(event: ProviderUsageEvent): boolean;
 }
 
+/**
+ * Todo lo que `runIngest` necesita de fuera. Nada de `node:fs` ni
+ * `node:sqlite` aquí: borrar el fichero y abrir la BD son detalles de
+ * `infrastructure/cli/ingest.ts`.
+ */
+export interface RunIngestDeps {
+  providers: readonly Provider[];
+  /** Borra la BD (`~/.amnis/amnis.sqlite`). Solo se llama si `rebuild`. */
+  resetDatabase(): void;
+  openStore(): { store: UsageStore; close(): void };
+}
+
+export interface RunIngestOptions {
+  rebuild: boolean;
+}
+
+/**
+ * `amnis ingest` / `amnis ingest --rebuild`.
+ *
+ * `--rebuild` es el botón que hace barato equivocarse en el parseo: como
+ * el JSONL es la fuente de verdad, la BD siempre se puede recalcular
+ * entera desde cero.
+ */
+export function runIngest(
+  deps: RunIngestDeps,
+  options: RunIngestOptions,
+): IngestResult {
+  if (options.rebuild) deps.resetDatabase();
+
+  const { store, close } = deps.openStore();
+  try {
+    return ingestAllProviders(deps.providers, store);
+  } finally {
+    close();
+  }
+}
+
 /** Recorre el registro de providers y suma sus resultados de ingesta. */
 export function ingestAllProviders(
   providers: readonly Provider[],
