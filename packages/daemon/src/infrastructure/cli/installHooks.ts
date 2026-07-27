@@ -23,8 +23,9 @@ interface HookMatcher {
   hooks: HookCommand[];
 }
 
-/** Forma parcial de settings.json: solo lo que install-hooks toca. Todo lo
- * demás (claves de nivel superior, otros eventos) pasa intacto por `...`. */
+/** Forma parcial de settings.json: solo lo que install-hooks toca. Cualquier
+ * otra clave o hook ya presente pasa intacto por `...`, sin importar quién
+ * lo haya puesto ahí. */
 export interface ClaudeSettings {
   hooks?: Record<string, HookMatcher[]>;
   [key: string]: unknown;
@@ -36,20 +37,35 @@ export interface HookEntry {
   command: string;
 }
 
+/** Tolerante a entradas mal formadas: cualquier otra herramienta pudo haber
+ * dejado el fichero en una forma inesperada, y eso no debe tumbar el merge. */
 function isAmnisMatcher(m: HookMatcher): boolean {
-  return m.hooks.some((h) => h.command.includes(IDENTITY_MARK));
+  return (
+    Array.isArray(m?.hooks) &&
+    m.hooks.some(
+      (h) =>
+        typeof h?.command === "string" && h.command.includes(IDENTITY_MARK),
+    )
+  );
 }
 
 /**
  * Merge no destructivo: reemplaza las entradas de Amnis en su sitio, deja
- * todo lo demás (Orca, otros eventos, claves de nivel superior) intacto.
+ * todo lo demás (cualquier otro hook ya instalado, otros eventos, claves de
+ * nivel superior) intacto, sea cual sea el entorno en el que corra.
  * Pura, sin I/O: reinstalar dos veces produce el mismo resultado.
  */
 export function mergeHooks(
   settings: ClaudeSettings,
   entries: readonly HookEntry[],
 ): ClaudeSettings {
-  const hooks: Record<string, HookMatcher[]> = { ...settings.hooks };
+  const existingHooks =
+    settings.hooks &&
+    typeof settings.hooks === "object" &&
+    !Array.isArray(settings.hooks)
+      ? settings.hooks
+      : {};
+  const hooks: Record<string, HookMatcher[]> = { ...existingHooks };
 
   const byEvent = new Map<string, HookEntry[]>();
   for (const entry of entries) {
@@ -59,7 +75,8 @@ export function mergeHooks(
   }
 
   for (const [event, eventEntries] of byEvent) {
-    const existing = hooks[event] ?? [];
+    const existingRaw = hooks[event];
+    const existing = Array.isArray(existingRaw) ? existingRaw : [];
     const withoutAmnis = existing.filter((m) => !isAmnisMatcher(m));
     const amnisMatchers = eventEntries.map(
       (entry): HookMatcher => ({
@@ -79,9 +96,20 @@ function hookScriptPath(): string {
   );
 }
 
+/** Cualquier JSON que no sea un objeto (array, primitivo, null, o fichero
+ * inexistente/corrupto) se trata como "sin configuración previa", nunca
+ * como un error que bloquee la instalación. */
 function readSettings(path: string): ClaudeSettings {
   try {
-    return JSON.parse(readFileSync(path, "utf8")) as ClaudeSettings;
+    const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
+      return {};
+    }
+    return parsed as ClaudeSettings;
   } catch {
     return {};
   }

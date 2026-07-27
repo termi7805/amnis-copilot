@@ -82,3 +82,44 @@ test("un settings.json vacío se crea desde cero con solo los hooks de Amnis", (
   assert.equal(merged.hooks?.Notification?.length, 1);
   assert.equal(merged.hooks?.Stop?.length, 1);
 });
+
+test("tolera un settings.hooks corrupto (no objeto) sin lanzar", () => {
+  const settings = {
+    hooks: "no-deberia-ser-un-string",
+  } as unknown as ClaudeSettings;
+
+  const merged = mergeHooks(settings, AMNIS_ENTRIES);
+
+  assert.equal(merged.hooks?.PreToolUse?.length, 1);
+});
+
+test("tolera un evento existente que no es array (otra herramienta lo dejó mal) sin lanzar", () => {
+  const settings = {
+    hooks: { PreToolUse: "corrupto" },
+  } as unknown as ClaudeSettings;
+
+  const merged = mergeHooks(settings, AMNIS_ENTRIES);
+
+  assert.equal(merged.hooks?.PreToolUse?.length, 1);
+});
+
+test("funciona igual con cualquier otro hook de terceros ya instalado, no solo uno concreto", () => {
+  const thirdPartyCommand = "/bin/sh '/opt/cualquier-otra-herramienta/hook.sh'";
+  const settings: ClaudeSettings = {
+    hooks: {
+      PreToolUse: [
+        {
+          matcher: "*",
+          hooks: [{ type: "command", command: thirdPartyCommand }],
+        },
+      ],
+    },
+  };
+
+  const merged = mergeHooks(settings, AMNIS_ENTRIES);
+
+  const preToolUse = merged.hooks?.PreToolUse ?? [];
+  assert.equal(preToolUse.length, 2);
+  assert.ok(preToolUse.some((m) => m.hooks[0]?.command === thirdPartyCommand));
+  assert.ok(preToolUse.some((m) => m.hooks[0]?.command.includes("amnis-hook")));
+});
