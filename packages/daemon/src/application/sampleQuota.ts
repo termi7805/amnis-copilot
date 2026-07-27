@@ -8,6 +8,13 @@ import {
 } from "../domain/localQuota.ts";
 import type { QuotaReading } from "../domain/Provider.ts";
 
+/**
+ * `sampleQuota` es agnóstica de proveedor: no sabe qué `Provider` la llamó.
+ * `quotaSampler.ts` (infrastructure/, que sí conoce el `Provider`) añade
+ * `.provider` al resultado antes de que salga de ahí.
+ */
+type ProviderlessQuotaSnapshot = Omit<QuotaSnapshot, "provider">;
+
 export interface QuotaSampleInput {
   ts: string;
   fiveHourUtil: number | null;
@@ -49,7 +56,7 @@ export interface SampleQuotaDeps {
 export async function sampleQuota(
   deps: SampleQuotaDeps,
   now: Date,
-): Promise<QuotaSnapshot> {
+): Promise<ProviderlessQuotaSnapshot> {
   const reading = await deps.pollQuota();
   const authoritative = reading.authoritative;
 

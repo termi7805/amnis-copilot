@@ -1,15 +1,23 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { GetStateDeps } from "../../application/getState.ts";
 import type { RecordHookDeps } from "../../application/recordHook.ts";
-import { DB_PATH, PORT } from "../../config.ts";
+import { DB_PATH, PORT, VERSION } from "../../config.ts";
 import { derivePetState } from "../../domain/petState.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
+import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
 import { createHttpServer } from "../http/server.ts";
 import { ensureAccount } from "../persistence/accounts.ts";
 import { openDb } from "../persistence/db.ts";
-import { insertHookEvent } from "../persistence/hookEvents.ts";
+import {
+  countHookEvents,
+  insertHookEvent,
+  lastKnownStateEvent,
+} from "../persistence/hookEvents.ts";
+import { countUsageEvents } from "../persistence/usageEvents.ts";
 import { startQuotaPoller } from "../poller.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
+import { providers } from "../providers/index.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
 
 function makeHookDeps(db: DatabaseSync, accountId: number): RecordHookDeps {
@@ -17,6 +25,24 @@ function makeHookDeps(db: DatabaseSync, accountId: number): RecordHookDeps {
     normalizeHookEvent: (raw) => anthropicProvider.normalizeHookEvent(raw),
     deriveState: (event) => derivePetState(event)?.state ?? null,
     insertHookEvent: (event) => insertHookEvent(db, { accountId, ...event }),
+  };
+}
+
+function makeStateDeps(
+  db: DatabaseSync,
+  accountId: number,
+  startedAt: string,
+): GetStateDeps {
+  const quotaSamplers = providers.map((provider) =>
+    createQuotaSampler(db, accountId, provider),
+  );
+  return {
+    version: VERSION,
+    startedAt,
+    lastKnownStateEvent: () => lastKnownStateEvent(db, accountId),
+    countHookEvents: () => countHookEvents(db, accountId),
+    countUsageEvents: () => countUsageEvents(db, accountId),
+    sampleQuotas: () => Promise.all(quotaSamplers.map((sample) => sample())),
   };
 }
 
@@ -28,11 +54,15 @@ function makeHookDeps(db: DatabaseSync, accountId: number): RecordHookDeps {
 export function runServeCli(): void {
   const db = openDb(DB_PATH);
   const accountId = ensureAccount(db, "anthropic", "default");
+  const startedAt = new Date().toISOString();
 
   const server = createHttpServer({
     routes: {
       "POST /api/hook/claude": createHookRoute(makeHookDeps(db, accountId)),
       "GET /api/usage": createUsageRoute(db, accountId),
+      "GET /api/state": createStateRoute(
+        makeStateDeps(db, accountId, startedAt),
+      ),
     },
   });
 

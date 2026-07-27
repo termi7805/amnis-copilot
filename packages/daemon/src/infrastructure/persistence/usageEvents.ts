@@ -48,3 +48,10 @@ export function insertUsageEvent(
     );
   return info.changes > 0;
 }
+
+export function countUsageEvents(db: DatabaseSync, accountId: number): number {
+  const row = db
+    .prepare("SELECT COUNT(*) AS n FROM usage_events WHERE account_id = ?")
+    .get(accountId) as { n: number };
+  return row.n;
+}

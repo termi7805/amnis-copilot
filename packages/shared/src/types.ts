@@ -37,6 +37,9 @@ export interface QuotaWindow {
  * su divergencia dice cuánto se consume fuera de Claude Code.
  */
 export interface QuotaSnapshot {
+  /** Lista indexada por proveedor: una fila más el día que exista Antigravity,
+   * no un cambio de contrato (mismo criterio que account_id). */
+  provider: ProviderId;
   /** Del endpoint OAuth. `null` si no respondió. */
   authoritative: {
     fiveHour: QuotaWindow;
@@ -57,7 +60,7 @@ export interface QuotaSnapshot {
 
 export interface StateResponse {
   pet: PetSnapshot;
-  quota: QuotaSnapshot;
+  quotas: QuotaSnapshot[];
   daemon: {
     version: string;
     startedAt: string;

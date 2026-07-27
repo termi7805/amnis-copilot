@@ -5,6 +5,7 @@ import type { QuotaSnapshot } from "@amnis/shared";
 import { startQuotaPoller } from "../src/infrastructure/poller.ts";
 
 const FAKE_SNAPSHOT: QuotaSnapshot = {
+  provider: "anthropic",
   authoritative: null,
   local: {
     fiveHourTokens: 0,

@@ -1,0 +1,79 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { ensureAccount } from "../src/infrastructure/persistence/accounts.ts";
+import { openDb } from "../src/infrastructure/persistence/db.ts";
+import {
+  countHookEvents,
+  insertHookEvent,
+  lastKnownStateEvent,
+} from "../src/infrastructure/persistence/hookEvents.ts";
+
+function insert(
+  db: ReturnType<typeof openDb>,
+  accountId: number,
+  ts: string,
+  derivedState: string,
+  overrides: { hook?: string; toolName?: string | null } = {},
+): void {
+  insertHookEvent(db, {
+    accountId,
+    provider: "anthropic",
+    ts,
+    hook: overrides.hook ?? "PreToolUse",
+    toolName: overrides.toolName ?? "Edit",
+    sessionId: null,
+    project: null,
+    derivedState,
+  });
+}
+
+test("lastKnownStateEvent devuelve null sin eventos", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+
+  assert.equal(lastKnownStateEvent(db, accountId), null);
+});
+
+test("lastKnownStateEvent ignora eventos con derived_state = unknown", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "coding");
+  insert(db, accountId, "2026-01-01T00:01:00.000Z", "unknown", {
+    hook: "UserPromptSubmit",
+    toolName: null,
+  });
+
+  const last = lastKnownStateEvent(db, accountId);
+
+  assert.equal(last?.derivedState, "coding");
+});
+
+test("lastKnownStateEvent devuelve el más reciente por ts", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "researching", {
+    toolName: "Read",
+  });
+  insert(db, accountId, "2026-01-01T00:05:00.000Z", "coding", {
+    toolName: "Edit",
+  });
+
+  const last = lastKnownStateEvent(db, accountId);
+
+  assert.equal(last?.derivedState, "coding");
+  assert.equal(last?.ts, "2026-01-01T00:05:00.000Z");
+});
+
+test("countHookEvents cuenta solo los de la cuenta indicada", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const otherAccountId = ensureAccount(db, "anthropic", "otra");
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "coding");
+  insert(db, accountId, "2026-01-01T00:01:00.000Z", "unknown", {
+    hook: "UserPromptSubmit",
+    toolName: null,
+  });
+  insert(db, otherAccountId, "2026-01-01T00:02:00.000Z", "coding");
+
+  assert.equal(countHookEvents(db, accountId), 2);
+});

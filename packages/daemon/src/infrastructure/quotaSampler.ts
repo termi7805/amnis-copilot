@@ -23,8 +23,8 @@ export function createQuotaSampler(
   accountId: number,
   provider: Provider,
 ): () => Promise<QuotaSnapshot> {
-  return (now: Date = new Date()) =>
-    sampleQuota(
+  return async (now: Date = new Date()) => {
+    const snapshot = await sampleQuota(
       {
         pollQuota: () => provider.pollQuota(),
         tokensInWindow: (since) => tokensInWindow(db, accountId, since),
@@ -46,4 +46,8 @@ export function createQuotaSampler(
       },
       now,
     );
+    // sampleQuota() (application/) es agnóstica de proveedor; el provider
+    // solo lo conoce quien cablea, aquí.
+    return { ...snapshot, provider: provider.id };
+  };
 }
