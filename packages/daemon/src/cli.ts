@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { VERSION } from "./config.ts";
+import { runDoctorCli } from "./infrastructure/cli/doctor.ts";
 import { runIngestCli } from "./infrastructure/cli/ingest.ts";
 import { runInstallHooksCli } from "./infrastructure/cli/installHooks.ts";
 import { runServeCli } from "./infrastructure/cli/serve.ts";
@@ -15,11 +16,13 @@ Comandos:
   uninstall-hooks        Quita los hooks de Amnis de ~/.claude/settings.json,
                         dejándolo equivalente al original.
   serve                  Arranca el daemon: BD, rutas HTTP y poller de cuota.
+  doctor                 Diagnostica daemon, hooks, credenciales, endpoint,
+                        BD e ingesta, con el remedio de cada fallo.
   --help                Muestra esta ayuda.
   --version             Muestra la versión.
 `;
 
-function main(argv: readonly string[]): void {
+async function main(argv: readonly string[]): Promise<void> {
   const [command, ...rest] = argv;
 
   switch (command) {
@@ -34,6 +37,9 @@ function main(argv: readonly string[]): void {
       return;
     case "serve":
       runServeCli();
+      return;
+    case "doctor":
+      await runDoctorCli();
       return;
     case "--version":
       console.log(VERSION);

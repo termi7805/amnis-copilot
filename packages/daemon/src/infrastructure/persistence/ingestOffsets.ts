@@ -28,3 +28,11 @@ export function saveOffset(
        updated_at = excluded.updated_at`,
   ).run(filePath, size, offset);
 }
+
+/** `null` si nunca se ha ingerido nada. Para `amnis doctor` (#35). */
+export function lastIngestAt(db: DatabaseSync): Date | null {
+  const row = db
+    .prepare("SELECT MAX(updated_at) AS ts FROM ingest_offsets")
+    .get() as { ts: string | null };
+  return row.ts ? new Date(`${row.ts}Z`) : null;
+}
