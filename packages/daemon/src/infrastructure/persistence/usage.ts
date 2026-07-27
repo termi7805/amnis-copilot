@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { apiEquivalent } from "../../domain/cost.ts";
 
 /**
  * Suma de tokens en la ventana. Las cuatro columnas, no solo input/output:
@@ -31,4 +32,102 @@ export function usageTimestamps(db: DatabaseSync, accountId: number): Date[] {
     .prepare("SELECT ts FROM usage_events WHERE account_id = ? ORDER BY ts ASC")
     .all(accountId) as { ts: string }[];
   return rows.map((r) => new Date(r.ts));
+}
+
+export type UsageGroupBy = "day" | "project" | "model";
+
+export interface AggregateOptions {
+  groupBy: UsageGroupBy;
+  from?: Date;
+  to?: Date;
+}
+
+export interface UsageAggregateRow {
+  key: string;
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+  costUsd: number;
+}
+
+const GROUP_KEY_SQL: Record<UsageGroupBy, string> = {
+  day: "date(ts)",
+  project: "COALESCE(project, '')",
+  model: "COALESCE(model, '')",
+};
+
+/**
+ * Agrega desde los eventos crudos, nunca desde una tabla de rollups: cambiar
+ * la fórmula de coste (domain/cost.ts) no debe obligar a reingerir nada.
+ *
+ * El coste no se puede sumar sobre tokens ya agrupados por día/proyecto —
+ * un grupo puede mezclar modelos con precios distintos. Se agrega primero
+ * por (grupo, modelo) en SQL, y el coste por modelo se combina en JS.
+ */
+export function aggregate(
+  db: DatabaseSync,
+  accountId: number,
+  options: AggregateOptions,
+): UsageAggregateRow[] {
+  const keyExpr = GROUP_KEY_SQL[options.groupBy];
+  const conditions = ["account_id = ?"];
+  const params: (string | number)[] = [accountId];
+
+  if (options.from) {
+    conditions.push("ts >= ?");
+    params.push(options.from.toISOString());
+  }
+  if (options.to) {
+    conditions.push("ts <= ?");
+    params.push(options.to.toISOString());
+  }
+
+  const rows = db
+    .prepare(`
+      SELECT
+        ${keyExpr} AS key,
+        model,
+        SUM(input_tokens) AS inputTokens,
+        SUM(output_tokens) AS outputTokens,
+        SUM(cache_creation_tokens) AS cacheCreationTokens,
+        SUM(cache_read_tokens) AS cacheReadTokens
+      FROM usage_events
+      WHERE ${conditions.join(" AND ")}
+      GROUP BY key, model
+    `)
+    .all(...params) as {
+    key: string;
+    model: string | null;
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+  }[];
+
+  const byKey = new Map<string, UsageAggregateRow>();
+  for (const row of rows) {
+    const acc = byKey.get(row.key) ?? {
+      key: row.key,
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheCreationTokens: 0,
+      cacheReadTokens: 0,
+      costUsd: 0,
+    };
+    acc.inputTokens += row.inputTokens;
+    acc.outputTokens += row.outputTokens;
+    acc.cacheCreationTokens += row.cacheCreationTokens;
+    acc.cacheReadTokens += row.cacheReadTokens;
+    acc.costUsd += apiEquivalent({
+      model: row.model,
+      inputTokens: row.inputTokens,
+      outputTokens: row.outputTokens,
+      cacheCreationTokens: row.cacheCreationTokens,
+      cacheReadTokens: row.cacheReadTokens,
+    });
+    byKey.set(row.key, acc);
+  }
+
+  return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
