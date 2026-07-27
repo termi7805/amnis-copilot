@@ -2,6 +2,7 @@
 import { VERSION } from "./config.ts";
 import { runIngestCli } from "./infrastructure/cli/ingest.ts";
 import { runInstallHooksCli } from "./infrastructure/cli/installHooks.ts";
+import { runServeCli } from "./infrastructure/cli/serve.ts";
 import { runUninstallHooksCli } from "./infrastructure/cli/uninstallHooks.ts";
 
 const HELP = `amnis <comando>
@@ -13,6 +14,7 @@ Comandos:
                         (merge no destructivo; reinstalar reemplaza en su sitio).
   uninstall-hooks        Quita los hooks de Amnis de ~/.claude/settings.json,
                         dejándolo equivalente al original.
+  serve                  Arranca el daemon: BD, rutas HTTP y poller de cuota.
   --help                Muestra esta ayuda.
   --version             Muestra la versión.
 `;
@@ -29,6 +31,9 @@ function main(argv: readonly string[]): void {
       return;
     case "uninstall-hooks":
       runUninstallHooksCli();
+      return;
+    case "serve":
+      runServeCli();
       return;
     case "--version":
       console.log(VERSION);
