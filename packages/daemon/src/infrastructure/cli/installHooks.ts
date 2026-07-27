@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 import { AMNIS_DIR, CLAUDE_SETTINGS } from "../../config.ts";
 
 /** Marca de identidad: cualquier hook cuyo `command` contenga esto es de Amnis. */
-const IDENTITY_MARK = "amnis-hook";
+export const IDENTITY_MARK = "amnis-hook";
 
 interface HookCommand {
   type: "command";
@@ -18,7 +18,7 @@ interface HookCommand {
   timeout?: number;
 }
 
-interface HookMatcher {
+export interface HookMatcher {
   matcher?: string;
   hooks: HookCommand[];
 }
@@ -38,8 +38,10 @@ export interface HookEntry {
 }
 
 /** Tolerante a entradas mal formadas: cualquier otra herramienta pudo haber
- * dejado el fichero en una forma inesperada, y eso no debe tumbar el merge. */
-function isAmnisMatcher(m: HookMatcher): boolean {
+ * dejado el fichero en una forma inesperada, y eso no debe tumbar el merge.
+ * Compartido con uninstall-hooks (#21) y doctor (#35): reconocer lo propio
+ * es el mismo criterio en los tres sitios. */
+export function isAmnisMatcher(m: HookMatcher): boolean {
   return (
     Array.isArray(m?.hooks) &&
     m.hooks.some(
@@ -99,7 +101,7 @@ function hookScriptPath(): string {
 /** Cualquier JSON que no sea un objeto (array, primitivo, null, o fichero
  * inexistente/corrupto) se trata como "sin configuración previa", nunca
  * como un error que bloquee la instalación. */
-function readSettings(path: string): ClaudeSettings {
+export function readSettings(path: string): ClaudeSettings {
   try {
     const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
     if (
@@ -115,7 +117,7 @@ function readSettings(path: string): ClaudeSettings {
   }
 }
 
-function backupSettings(path: string): string | null {
+export function backupSettings(path: string): string | null {
   if (!existsSync(path)) return null;
   const backupPath = join(AMNIS_DIR, `settings.backup.${Date.now()}.json`);
   mkdirSync(AMNIS_DIR, { recursive: true });
@@ -125,7 +127,10 @@ function backupSettings(path: string): string | null {
 
 /** Escritura atómica: tmp + rename, para no dejar el settings.json de otra
  * aplicación a medio escribir si el proceso muere a mitad de camino. */
-function writeSettingsAtomic(path: string, settings: ClaudeSettings): void {
+export function writeSettingsAtomic(
+  path: string,
+  settings: ClaudeSettings,
+): void {
   const dir = dirname(path);
   mkdirSync(dir, { recursive: true });
   const tmpPath = `${path}.amnis-tmp-${process.pid}`;

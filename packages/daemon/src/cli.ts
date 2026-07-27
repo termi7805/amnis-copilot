@@ -2,6 +2,7 @@
 import { VERSION } from "./config.ts";
 import { runIngestCli } from "./infrastructure/cli/ingest.ts";
 import { runInstallHooksCli } from "./infrastructure/cli/installHooks.ts";
+import { runUninstallHooksCli } from "./infrastructure/cli/uninstallHooks.ts";
 
 const HELP = `amnis <comando>
 
@@ -10,6 +11,8 @@ Comandos:
                         --rebuild borra la BD y reingiere todo desde cero.
   install-hooks         Registra los hooks de Amnis en ~/.claude/settings.json
                         (merge no destructivo; reinstalar reemplaza en su sitio).
+  uninstall-hooks        Quita los hooks de Amnis de ~/.claude/settings.json,
+                        dejándolo equivalente al original.
   --help                Muestra esta ayuda.
   --version             Muestra la versión.
 `;
@@ -23,6 +26,9 @@ function main(argv: readonly string[]): void {
       return;
     case "install-hooks":
       runInstallHooksCli();
+      return;
+    case "uninstall-hooks":
+      runUninstallHooksCli();
       return;
     case "--version":
       console.log(VERSION);
