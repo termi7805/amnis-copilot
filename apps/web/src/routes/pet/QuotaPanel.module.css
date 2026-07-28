@@ -1,0 +1,30 @@
+.panel {
+  font-family: system-ui, sans-serif;
+  color: #eee;
+  padding: 0.25rem 0.5rem 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.provider + .provider {
+  margin-top: 0.5rem;
+}
+
+.providerLabel {
+  font-size: 0.8rem;
+  margin: 0 0 0.25rem;
+  text-align: center;
+}
+
+.rings {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.error {
+  color: #ff8a80;
+  font-size: 0.7rem;
+  text-align: center;
+  margin: 0 0 0.25rem;
+}

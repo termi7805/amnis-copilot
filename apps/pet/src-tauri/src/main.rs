@@ -8,7 +8,12 @@
 use std::net::TcpStream;
 use std::time::Duration;
 use tauri::{WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_window_state::StateFlags;
 use url::Url;
+
+/// Tamaño de arranque plegado (#42): antes de que cargue el JS que decide
+/// si el panel de cuota estaba desplegado.
+const COLLAPSED_SIZE: (f64, f64) = (140.0, 140.0);
 
 // 500ms basta para distinguir "nada escuchando" de "está tardando": el
 // daemon en 127.0.0.1 responde en microsegundos si está vivo.
@@ -30,7 +35,15 @@ fn main() {
     env_logger::init();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(
+            // Solo posición: el tamaño ahora lo decide el JS según
+            // `expanded` en localStorage (#42). Restaurar SIZE aquí
+            // pelearía con el setSize() que dispara PetWindow.tsx en
+            // cada arranque.
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::POSITION | StateFlags::VISIBLE)
+                .build(),
+        )
         .setup(|app| {
             let url_str = std::env::var("AMNIS_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:4747/pet".to_string());
@@ -51,7 +64,8 @@ fn main() {
                 .decorations(false)
                 .transparent(true)
                 .resizable(false)
-                .skip_taskbar(true);
+                .skip_taskbar(true)
+                .inner_size(COLLAPSED_SIZE.0, COLLAPSED_SIZE.1);
 
             let window = builder.build()?;
 

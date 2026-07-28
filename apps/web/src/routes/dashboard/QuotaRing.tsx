@@ -9,6 +9,9 @@ export interface QuotaRingProps {
   /** Estimación local (0-100), o `null` si no hay ninguna (7d sin endpoint). */
   estimated: number | null;
   now: Date;
+  /** Lado del `<svg>` en px. El `viewBox` sigue en 0-100, así que la
+   * geometría escala sola (#42 lo usa más pequeño en la mascota). */
+  size?: number;
 }
 
 /**
@@ -29,6 +32,7 @@ export function QuotaRing({
   authoritative,
   estimated,
   now,
+  size = 96,
 }: QuotaRingProps) {
   const hasData = authoritative !== null || estimated !== null;
   const displayValue = authoritative?.utilization ?? estimated;
@@ -38,7 +42,7 @@ export function QuotaRing({
 
   return (
     <div className={styles.ring}>
-      <svg viewBox="0 0 100 100" width="96" height="96" role="img">
+      <svg viewBox="0 0 100 100" width={size} height={size} role="img">
         <title>
           {label}: {hasData ? `${displayValue}%` : "sin dato"}
         </title>

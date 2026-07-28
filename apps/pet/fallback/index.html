@@ -75,7 +75,7 @@
 
   function showCountdown(ms) {
     var remaining = Math.ceil(ms / 1000);
-    countdownEl.textContent = "reintentando en " + remaining + "s…";
+    countdownEl.textContent = `reintentando en ${remaining}s…`;
     clearInterval(tickTimer);
     tickTimer = setInterval(() => {
       remaining -= 1;
@@ -83,7 +83,7 @@
         clearInterval(tickTimer);
         countdownEl.textContent = "reintentando…";
       } else {
-        countdownEl.textContent = "reintentando en " + remaining + "s…";
+        countdownEl.textContent = `reintentando en ${remaining}s…`;
       }
     }, 1000);
   }
@@ -95,9 +95,9 @@
     // tauri://localhost, otro origen. La respuesta es opaca, pero la
     // promesa SÍ rechaza si la conexión falla, que es la única señal
     // que hace falta: "hay algo escuchando ahí" vs "no hay nada".
-    fetch(base + "/api/state", { mode: "no-cors", cache: "no-store" })
+    fetch(`${base}/api/state`, { mode: "no-cors", cache: "no-store" })
       .then(() => {
-        location.replace(base + "/pet");
+        location.replace(`${base}/pet`);
       })
       .catch(scheduleRetry);
   }

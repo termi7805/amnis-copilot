@@ -1,38 +1,55 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
+import { useNow } from "../../lib/countdown.ts";
 import { Pet } from "../../lib/Pet/Pet.tsx";
 import styles from "./PetWindow.module.css";
+import { QuotaPanel } from "./QuotaPanel.tsx";
+import {
+  COLLAPSED_SIZE,
+  EXPANDED_SIZE,
+  isTauri,
+  resizeWindow,
+} from "./useTauriWindow.ts";
 
 /** Antes de esto, un pointerdown es un futuro clic, no un arrastre. */
 const DRAG_THRESHOLD_PX = 4;
 
-function isTauri(): boolean {
-  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
-}
+/** `localStorage`, no SQLite (issue #42): la BD se borra con
+ * `amnis ingest --rebuild`, y perder un ajuste de UI al reconstruir
+ * datos es un bug difícil de atribuir. */
+const EXPANDED_KEY = "amnis-pet-quota-panel-expanded";
 
 /**
  * Envoltura de la mascota: viewport completo y fondo transparente
  * (docs/STACK.md §2). Arrastrar y hacer clic compiten por el mismo
- * gesto (issue #32): por debajo del umbral no pasa nada — todavía no
- * hay panel que abrir (#42), así que no hay handler de clic
- * especulativo, solo el mecanismo de umbral que #42 reusará. Import de
- * `@tauri-apps/api/window` perezoso y solo dentro de Tauri
- * (docs/STACK.md §3): en un navegador normal esto no hace nada.
+ * gesto (issue #32): por debajo del umbral es un clic que alterna el
+ * panel de cuota (#42); por encima, arrastre. El umbral se mide en
+ * cualquier entorno — solo `startDragging()` queda condicionado a
+ * Tauri, vía `useTauriWindow.ts` (docs/STACK.md §3).
  */
 export function PetWindow() {
   const { state, status } = useAmnisStream();
+  const now = useNow();
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
   const dragStarted = useRef(false);
+  const [expanded, setExpanded] = useState(
+    () => localStorage.getItem(EXPANDED_KEY) === "1",
+  );
+
+  useEffect(() => {
+    localStorage.setItem(EXPANDED_KEY, expanded ? "1" : "0");
+    const { width, height } = expanded ? EXPANDED_SIZE : COLLAPSED_SIZE;
+    resizeWindow(width, height);
+  }, [expanded]);
 
   function handlePointerDown(e: React.PointerEvent) {
-    if (!isTauri()) return;
     pointerDownAt.current = { x: e.clientX, y: e.clientY };
     dragStarted.current = false;
   }
 
   function handlePointerMove(e: React.PointerEvent) {
     const start = pointerDownAt.current;
-    if (!start || dragStarted.current) return;
+    if (!start || dragStarted.current || !isTauri()) return;
 
     const dx = e.clientX - start.x;
     const dy = e.clientY - start.y;
@@ -45,6 +62,9 @@ export function PetWindow() {
   }
 
   function handlePointerUp() {
+    if (!dragStarted.current) {
+      setExpanded((current) => !current);
+    }
     pointerDownAt.current = null;
     dragStarted.current = false;
   }
@@ -62,15 +82,18 @@ export function PetWindow() {
         data-status={status}
         title={CONNECTION_LABEL[status]}
       />
-      {state ? (
-        <Pet
-          state={state.pet.state}
-          level={state.pet.level}
-          fatigue={state.pet.fatigue}
-        />
-      ) : (
-        <span>{CONNECTION_LABEL[status]}</span>
-      )}
+      <div className={styles.petArea}>
+        {state ? (
+          <Pet
+            state={state.pet.state}
+            level={state.pet.level}
+            fatigue={state.pet.fatigue}
+          />
+        ) : (
+          <span>{CONNECTION_LABEL[status]}</span>
+        )}
+      </div>
+      {expanded && state && <QuotaPanel quotas={state.quotas} now={now} />}
     </div>
   );
 }
