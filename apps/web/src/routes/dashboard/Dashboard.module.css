@@ -9,3 +9,14 @@
   border: 1px solid #ccc;
   border-radius: 8px;
 }
+
+.quotas {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.quotaError {
+  color: #b3261e;
+  font-size: 0.85rem;
+}

@@ -1,4 +1,4 @@
-import type { StateResponse } from "@amnis/shared";
+import type { QuotaSnapshot, StateResponse } from "@amnis/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "./Dashboard.tsx";
@@ -85,5 +85,30 @@ describe("Dashboard", () => {
     expect(screen.getByTestId("connection-status")).toHaveTextContent(
       "reconectando",
     );
+  });
+
+  it("sin endpoint OAuth, el anillo de 7d dice 'sin dato' en vez de un 0%", () => {
+    const quota: QuotaSnapshot = {
+      provider: "anthropic",
+      authoritative: null,
+      local: {
+        fiveHourTokens: 100,
+        fiveHourUtilization: 30,
+        windowStartedAt: "2026-01-01T00:00:00Z",
+      },
+      divergence: null,
+      sampledAt: "2026-01-01T00:00:00Z",
+      error: "endpoint caído",
+    };
+    render(<Dashboard />);
+
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", { ...fakeState, quotas: [quota] }));
+
+    const values = screen.getAllByTestId("quota-value");
+    expect(values[0]).toHaveTextContent("~30%");
+    expect(values[1]).toHaveTextContent("sin dato");
+    expect(screen.getByText("endpoint caído")).toBeInTheDocument();
   });
 });
