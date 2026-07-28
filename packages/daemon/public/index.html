@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Amnis — depuración</title>
+</head>
+<body>
+<h1>Amnis — rebanada vertical</h1>
+<p id="status">conectando…</p>
+<pre id="state"></pre>
+<script>
+  let current = null;
+  const statusEl = document.getElementById("status");
+  const stateEl = document.getElementById("state");
+
+  function render() {
+    stateEl.textContent = JSON.stringify(current, null, 2);
+  }
+
+  const source = new EventSource("/api/events");
+
+  source.addEventListener("hello", (e) => {
+    current = JSON.parse(e.data);
+    statusEl.textContent = "conectado";
+    render();
+  });
+
+  source.addEventListener("state", (e) => {
+    if (!current) return;
+    current.pet = JSON.parse(e.data);
+    render();
+  });
+
+  source.addEventListener("quota", (e) => {
+    if (!current) return;
+    current.quotas = JSON.parse(e.data);
+    render();
+  });
+
+  source.onerror = () => {
+    statusEl.textContent = "desconectado, reconectando…";
+  };
+</script>
+</body>
+</html>

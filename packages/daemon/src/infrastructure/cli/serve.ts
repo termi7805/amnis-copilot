@@ -8,6 +8,7 @@ import type { RecordHookDeps } from "../../application/recordHook.ts";
 import { DB_PATH, PORT, VERSION } from "../../config.ts";
 import { derivePetState } from "../../domain/petState.ts";
 import { createEventBroadcaster } from "../http/events.ts";
+import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
 import { createStateRoute } from "../http/routes/state.ts";
@@ -87,6 +88,7 @@ export function runServeCli(): void {
 
   const server = createHttpServer({
     routes: {
+      "GET /": createDashboardRoute(),
       "POST /api/hook/claude": createHookRoute(
         makeHookDeps(db, accountId, () => watcher.check()),
       ),
