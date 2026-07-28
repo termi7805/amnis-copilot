@@ -6,6 +6,9 @@
   "bin": {
     "amnis": "./src/cli.ts"
   },
+  "scripts": {
+    "dev": "node src/cli.ts serve"
+  },
   "dependencies": {
     "@amnis/shared": "workspace:*"
   }

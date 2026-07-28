@@ -7,10 +7,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Monorepo pnpm. Todos los scripts se lanzan desde la raíz.
 
 ```bash
-pnpm typecheck          # tsc --noEmit — el único type-checking real, ver docs/CONVENCIONES.md
+pnpm typecheck          # tsc --noEmit (daemon) + tsc --noEmit -p apps/web
 pnpm lint                # biome check .
 pnpm format              # biome check --write .
-pnpm test                 # node --test packages/daemon/test/
+pnpm test                 # node --test packages/daemon/test/ + vitest run en apps/web
 pnpm dev / pnpm build     # delega en cada paquete (pnpm -r --parallel <script>)
 ```
 
