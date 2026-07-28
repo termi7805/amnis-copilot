@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { PRICES_UPDATED_AT } from "../../../domain/cost.ts";
 import { aggregate, type UsageGroupBy } from "../../persistence/usage.ts";
 import type { RouteHandler } from "../server.ts";
 
@@ -52,6 +53,10 @@ export function createUsageRoute(
     }
 
     const rows = aggregate(db, accountId, { groupBy: groupByParam, from, to });
-    sendJson(res, 200, { groupBy: groupByParam, rows });
+    sendJson(res, 200, {
+      groupBy: groupByParam,
+      pricesUpdatedAt: PRICES_UPDATED_AT,
+      rows,
+    });
   };
 }

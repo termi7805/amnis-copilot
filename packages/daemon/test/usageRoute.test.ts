@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { PRICES_UPDATED_AT } from "../src/domain/cost.ts";
 import { createUsageRoute } from "../src/infrastructure/http/routes/usage.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
 import { ensureAccount } from "../src/infrastructure/persistence/accounts.ts";
@@ -35,10 +36,12 @@ test("GET /api/usage responde tipado y con el coste calculado", async () => {
     assert.equal(response.status, 200);
     const body = (await response.json()) as {
       groupBy: string;
+      pricesUpdatedAt: string;
       rows: { costUsd: number }[];
     };
     assert.equal(body.groupBy, "project");
     assert.equal(body.rows[0]?.costUsd, 3.0);
+    assert.equal(body.pricesUpdatedAt, PRICES_UPDATED_AT);
   } finally {
     await server.close();
   }

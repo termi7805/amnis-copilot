@@ -3,11 +3,11 @@ import { useNow } from "../../lib/countdown.ts";
 import { Pet } from "../../lib/Pet/Pet.tsx";
 import styles from "./Dashboard.module.css";
 import { QuotaRing } from "./QuotaRing.tsx";
+import { Usage } from "./Usage.tsx";
 
 /**
  * Envoltura del dashboard: tarjeta ~160px junto a los anillos de cuota
- * (docs/STACK.md §2). El relleno real —tokens y coste— llega con #31;
- * aquí solo el sitio donde encajan.
+ * (docs/STACK.md §2) y la vista histórica de tokens/coste debajo (#31).
  */
 export function Dashboard() {
   const { state, status } = useAmnisStream();
@@ -52,6 +52,7 @@ export function Dashboard() {
           )}
         </div>
       ))}
+      <Usage />
       <pre>{state ? JSON.stringify(state, null, 2) : null}</pre>
     </main>
   );

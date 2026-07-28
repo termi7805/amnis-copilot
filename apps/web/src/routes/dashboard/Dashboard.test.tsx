@@ -55,6 +55,16 @@ describe("Dashboard", () => {
   beforeEach(() => {
     FakeEventSource.instances = [];
     vi.stubGlobal("EventSource", FakeEventSource);
+    // <Usage/> pide /api/usage al montar; sin este stub, fetch intenta
+    // resolver una URL relativa y falla como unhandled rejection.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ groupBy: "day", pricesUpdatedAt: "", rows: [] }),
+      }),
+    );
   });
 
   afterEach(() => {
