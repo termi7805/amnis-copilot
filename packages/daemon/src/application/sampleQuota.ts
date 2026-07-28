@@ -70,7 +70,12 @@ export async function sampleQuota(
     : (findGapStart(deps.usageTimestamps(), FIVE_HOUR_MS) ?? now);
 
   const localTokens = deps.tokensInWindow(windowStartedAt);
-  const ceiling = deps.getPlanWindowTokens() ?? deps.defaultPlanWindowTokens;
+  // Un 0 almacenado no es un techo calibrado, es "sin calibrar todavía"
+  // (calibrate() ya no debería guardarlo, pero una BD anterior a esa
+  // guarda puede tenerlo, y dividir entre 0 produce NaN/Infinity).
+  const stored = deps.getPlanWindowTokens();
+  const ceiling =
+    stored !== null && stored > 0 ? stored : deps.defaultPlanWindowTokens;
   const localUtilization = estimate(localTokens, ceiling);
 
   let divergence: number | null = null;

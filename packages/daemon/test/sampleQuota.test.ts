@@ -106,6 +106,21 @@ test("utilización autoritativa por debajo del 10% no toca el techo calibrado", 
   assert.deepEqual(savedCeilings, []);
 });
 
+test("un techo de 0 almacenado (#46) no se usa: cae al default en vez de dividir entre 0", async () => {
+  const { deps, saved } = makeDeps({
+    getPlanWindowTokens: () => 0,
+    tokensInWindow: () => 500,
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.equal(
+    snapshot.local.fiveHourUtilization,
+    (500 / DEFAULT_CEILING) * 100,
+  );
+  assert.ok(Number.isFinite(saved[0]?.localUtil));
+});
+
 test("utilización autoritativa suficiente calibra el techo del plan", async () => {
   const reading: QuotaReading = {
     authoritative: {

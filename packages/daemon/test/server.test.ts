@@ -63,6 +63,28 @@ test("método incorrecto sobre una ruta conocida da 405", async () => {
   );
 });
 
+test("un handler que rechaza responde 500 sin tumbar el servidor (#46)", async () => {
+  await withServer(
+    {
+      routes: {
+        "GET /api/rota": () => Promise.reject(new Error("boom")),
+        "GET /api/ping": ({ res }) => {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
+        },
+      },
+    },
+    async (baseUrl) => {
+      const broken = await fetch(`${baseUrl}/api/rota`);
+      assert.equal(broken.status, 500);
+      assert.equal(broken.headers.get("content-type"), "application/json");
+
+      const stillAlive = await fetch(`${baseUrl}/api/ping`);
+      assert.equal(stillAlive.status, 200);
+    },
+  );
+});
+
 test("close() termina las respuestas abiertas y libera el puerto", async () => {
   let releaseResponse: (() => void) | undefined;
   const server = createHttpServer({

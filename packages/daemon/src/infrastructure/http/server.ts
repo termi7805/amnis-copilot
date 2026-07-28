@@ -43,7 +43,19 @@ export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
     const handler = deps.routes[`${method} ${url.pathname}`];
 
     if (handler) {
-      void handler({ req, res, url });
+      Promise.resolve(handler({ req, res, url })).catch((err) => {
+        // Un handler que revienta no puede tumbar el daemon entero: una
+        // promesa rechazada sin catch es fatal en Node 24. /api/events ya
+        // ha escrito cabeceras SSE antes de fallar, así que un writeHead
+        // aquí volvería a lanzar — solo se intenta si aún no se ha
+        // respondido nada.
+        console.error("Error en handler:", err);
+        if (!res.headersSent) {
+          sendJson(res, 500, { error: "Error interno." });
+        } else {
+          res.end();
+        }
+      });
       return;
     }
 

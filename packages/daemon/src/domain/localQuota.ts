@@ -33,9 +33,13 @@ export function estimate(tokens: number, ceilingTokens: number): number {
 /**
  * techo ≈ tokens / (utilization/100). `null` si `utilization` < 10: por
  * debajo de eso el cociente es ruido y envenenaría el techo calibrado.
+ * `null` también con 0 tokens locales: no hay nada que calibrar (la
+ * ingesta va por detrás del endpoint, o justo tras un reset de ventana),
+ * y el resultado sería un techo de 0 en vez de uno bajo.
  */
 export function calibrate(tokens: number, utilization: number): number | null {
   if (utilization < 10) return null;
+  if (tokens <= 0) return null;
   return tokens / (utilization / 100);
 }
 

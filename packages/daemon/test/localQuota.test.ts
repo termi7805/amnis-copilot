@@ -55,6 +55,10 @@ test("calibrate devuelve null por debajo del 10% (ruido)", () => {
   assert.notEqual(calibrate(1000, 10), null);
 });
 
+test("calibrate devuelve null con 0 tokens: no hay nada que calibrar", () => {
+  assert.equal(calibrate(0, 50), null);
+});
+
 test("findGapStart: lista vacía devuelve null", () => {
   assert.equal(findGapStart([], FIVE_HOUR_MS), null);
 });
