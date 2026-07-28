@@ -193,7 +193,8 @@ amnis-copilot/
     │       └── main.tsx
     └── pet/                 Tauri v2 (Rust)
         ├── src-tauri/
-        └── offline.html     fallback empaquetado, sin React
+        └── fallback/
+            └── index.html   fallback empaquetado, sin React (#39)
 ```
 
 ### El criterio: `packages/` es lo que se importa, `apps/` es lo que se ejecuta

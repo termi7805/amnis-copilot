@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<title>Amnis · sin conexión</title>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: transparent;
+  }
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: system-ui, sans-serif;
+    color: #ddd;
+  }
+  .card {
+    text-align: center;
+    padding: 1rem;
+  }
+  .face {
+    font-size: 2rem;
+  }
+  .reason {
+    font-size: 0.85rem;
+    opacity: 0.8;
+    margin: 0.4rem 0 0;
+  }
+  .url {
+    font-size: 0.7rem;
+    opacity: 0.6;
+    word-break: break-all;
+    margin: 0.2rem 0 0;
+  }
+  .countdown {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    margin: 0.6rem 0 0;
+  }
+  button {
+    margin-top: 0.4rem;
+    font-size: 0.7rem;
+    background: transparent;
+    border: 1px solid #555;
+    color: #ddd;
+    border-radius: 4px;
+    padding: 0.2rem 0.5rem;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="face">😴</div>
+  <p class="reason">no se encuentra el daemon</p>
+  <p class="url" id="url"></p>
+  <p class="countdown" id="countdown"></p>
+  <button type="button" id="retry">reintentar ahora</button>
+</div>
+<script>
+(() => {
+  // window.__AMNIS_URL__ lo inyecta main.rs vía initialization_script:
+  // esta página no puede hardcodear 127.0.0.1:4747 (docs/DESIGN.md §1).
+  var base = window.__AMNIS_URL__ || "http://127.0.0.1:4747";
+  document.getElementById("url").textContent = base;
+
+  var MIN_DELAY = 1000;
+  var MAX_DELAY = 15000;
+  var delay = MIN_DELAY;
+  var timer = null;
+  var countdownEl = document.getElementById("countdown");
+  var tickTimer = null;
+
+  function showCountdown(ms) {
+    var remaining = Math.ceil(ms / 1000);
+    countdownEl.textContent = "reintentando en " + remaining + "s…";
+    clearInterval(tickTimer);
+    tickTimer = setInterval(() => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        clearInterval(tickTimer);
+        countdownEl.textContent = "reintentando…";
+      } else {
+        countdownEl.textContent = "reintentando en " + remaining + "s…";
+      }
+    }, 1000);
+  }
+
+  function probe() {
+    clearTimeout(timer);
+    // mode: "no-cors" porque el daemon no manda cabeceras Access-Control-*
+    // (no hay CORS en packages/daemon/src) y esta página se sirve desde
+    // tauri://localhost, otro origen. La respuesta es opaca, pero la
+    // promesa SÍ rechaza si la conexión falla, que es la única señal
+    // que hace falta: "hay algo escuchando ahí" vs "no hay nada".
+    fetch(base + "/api/state", { mode: "no-cors", cache: "no-store" })
+      .then(() => {
+        location.replace(base + "/pet");
+      })
+      .catch(scheduleRetry);
+  }
+
+  function scheduleRetry() {
+    showCountdown(delay);
+    timer = setTimeout(probe, delay);
+    delay = Math.min(delay * 2, MAX_DELAY);
+  }
+
+  document.getElementById("retry").addEventListener("click", () => {
+    delay = MIN_DELAY;
+    probe();
+  });
+
+  probe();
+})();
+</script>
+</body>
+</html>

@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "identifier": "dev.amnis.pet",
   "build": {
-    "frontendDist": "../dist-placeholder"
+    "frontendDist": "../fallback"
   },
   "app": {
     "windows": [],
