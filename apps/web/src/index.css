@@ -1,0 +1,12 @@
+/*
+ * html/body, no un componente: WebKitGTK usa el background-color
+ * computado de la raíz del documento como color de fondo de página
+ * para compositing, no el de un <div> interior aunque cubra el
+ * viewport — sin esto la ventana Tauri transparente (#32) sale opaca
+ * aunque .petWindow ya diga `background: transparent`.
+ */
+html,
+body {
+  margin: 0;
+  background: transparent;
+}

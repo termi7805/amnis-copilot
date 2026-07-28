@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import "./index.css";
 import { Dashboard } from "./routes/dashboard/Dashboard.tsx";
 import { PetWindow } from "./routes/pet/PetWindow.tsx";
 

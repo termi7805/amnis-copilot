@@ -3,6 +3,9 @@ dist/
 target/
 *.log
 
+# Tauri regenera esto en cada build (schemas de capabilities, etc).
+apps/pet/src-tauri/gen/
+
 # La BD es una caché derivada y reconstruible: nunca se versiona.
 *.sqlite
 *.sqlite-journal

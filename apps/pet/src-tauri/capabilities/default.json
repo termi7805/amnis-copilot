@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permisos de la ventana pet: solo lo que PetWindow.tsx necesita invocar.",
+  "windows": ["pet"],
+  "permissions": ["core:window:allow-start-dragging"]
+}
