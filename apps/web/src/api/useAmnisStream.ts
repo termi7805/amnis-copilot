@@ -2,10 +2,29 @@ import type { PetSnapshot, QuotaSnapshot, StateResponse } from "@amnis/shared";
 import { useEffect, useState } from "react";
 import { daemonUrl } from "./config.ts";
 
+/**
+ * `EventSource` ya reconecta solo; lo único que hace falta escribir es
+ * distinguir dos caídas que se ven igual desde fuera: un corte que se
+ * resuelve solo (`reconnecting`) de un daemon de verdad caído
+ * (`offline`). Un simple booleano las confunde y la mascota no puede
+ * decir "no veo nada" a tiempo (docs/DESIGN.md §4).
+ */
+export type ConnectionStatus = "connected" | "reconnecting" | "offline";
+
+/** Antes de este umbral, un error es solo ruido de red. */
+const OFFLINE_AFTER_MS = 5_000;
+
 export interface AmnisStream {
   state: StateResponse | null;
-  connected: boolean;
+  status: ConnectionStatus;
 }
+
+/** Etiqueta en español, compartida por las dos envolturas (dashboard y `/pet`). */
+export const CONNECTION_LABEL: Record<ConnectionStatus, string> = {
+  connected: "conectado",
+  reconnecting: "reconectando…",
+  offline: "sin conexión",
+};
 
 /**
  * GET /api/events por SSE (docs/STACK.md §4): `hello` trae el
@@ -14,14 +33,16 @@ export interface AmnisStream {
  */
 export function useAmnisStream(): AmnisStream {
   const [state, setState] = useState<StateResponse | null>(null);
-  const [connected, setConnected] = useState(false);
+  // Arranca en "reconnecting": antes del primer `onopen` no se ha
+  // alcanzado al daemon todavía, y "connected" sería inventárselo.
+  const [status, setStatus] = useState<ConnectionStatus>("reconnecting");
 
   useEffect(() => {
     const source = new EventSource(`${daemonUrl()}/api/events`);
+    let offlineTimer: ReturnType<typeof setTimeout> | null = null;
 
     source.addEventListener("hello", (e: MessageEvent<string>) => {
       setState(JSON.parse(e.data) as StateResponse);
-      setConnected(true);
     });
 
     source.addEventListener("state", (e: MessageEvent<string>) => {
@@ -34,10 +55,28 @@ export function useAmnisStream(): AmnisStream {
       setState((current) => (current ? { ...current, quotas } : current));
     });
 
-    source.onerror = () => setConnected(false);
+    source.onopen = () => {
+      if (offlineTimer) {
+        clearTimeout(offlineTimer);
+        offlineTimer = null;
+      }
+      setStatus("connected");
+    };
 
-    return () => source.close();
+    source.onerror = () => {
+      setStatus("reconnecting");
+      // Ya hay uno corriendo: una ráfaga de errores durante un corte
+      // largo no debe aplazar el `offline` indefinidamente.
+      if (!offlineTimer) {
+        offlineTimer = setTimeout(() => setStatus("offline"), OFFLINE_AFTER_MS);
+      }
+    };
+
+    return () => {
+      if (offlineTimer) clearTimeout(offlineTimer);
+      source.close();
+    };
   }, []);
 
-  return { state, connected };
+  return { state, status };
 }

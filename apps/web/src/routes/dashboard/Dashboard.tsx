@@ -1,4 +1,4 @@
-import { useAmnisStream } from "../../api/useAmnisStream.ts";
+import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
 import { Pet } from "../../lib/Pet/Pet.tsx";
 import styles from "./Dashboard.module.css";
 
@@ -8,7 +8,7 @@ import styles from "./Dashboard.module.css";
  * llega con #30 y #31; aquí solo el sitio donde encajan.
  */
 export function Dashboard() {
-  const { state, connected } = useAmnisStream();
+  const { state, status } = useAmnisStream();
 
   return (
     <main className={styles.dashboard}>
@@ -23,7 +23,7 @@ export function Dashboard() {
           <span>conectando…</span>
         )}
       </div>
-      <p>{connected ? "conectado" : "desconectado"}</p>
+      <p data-testid="connection-status">{CONNECTION_LABEL[status]}</p>
       <pre>{state ? JSON.stringify(state, null, 2) : null}</pre>
     </main>
   );

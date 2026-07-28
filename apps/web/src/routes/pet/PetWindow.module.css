@@ -2,4 +2,30 @@
   width: 100vw;
   height: 100vh;
   background: transparent;
+  position: relative;
+}
+
+/* Desaturar solo con offline: un corte de red que se resuelve solo
+   (reconnecting) no debe apagar la mascota, sería ruido. */
+.petWindow[data-status="offline"] {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+.statusDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7fd88f;
+}
+
+.statusDot[data-status="reconnecting"] {
+  background: #e0b84a;
+}
+
+.statusDot[data-status="offline"] {
+  background: #b0b0b0;
 }

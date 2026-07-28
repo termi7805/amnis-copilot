@@ -6,6 +6,7 @@ import { useAmnisStream } from "./useAmnisStream.ts";
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
   listeners = new Map<string, (e: MessageEvent) => void>();
+  onopen: (() => void) | null = null;
   onerror: (() => void) | null = null;
 
   constructor(public url: string) {
@@ -20,6 +21,14 @@ class FakeEventSource {
     this.listeners.get(event)?.(
       new MessageEvent(event, { data: JSON.stringify(data) }),
     );
+  }
+
+  open() {
+    this.onopen?.();
+  }
+
+  error() {
+    this.onerror?.();
   }
 
   close() {}
@@ -63,6 +72,7 @@ describe("useAmnisStream", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("aplica hello y luego un state encima, sin perder quotas", () => {
@@ -90,5 +100,85 @@ describe("useAmnisStream", () => {
 
     expect(result.current.state?.quotas).toHaveLength(0);
     expect(result.current.state?.pet.state).toBe("coding");
+  });
+
+  it("arranca en reconnecting, no en connected — todavía no se alcanzó al daemon", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    expect(result.current.status).toBe("reconnecting");
+  });
+
+  it("onopen marca connected", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.open());
+
+    expect(result.current.status).toBe("connected");
+  });
+
+  it("un corte que se resuelve antes de 5s se queda en reconnecting", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.open());
+    act(() => source?.error());
+    expect(result.current.status).toBe("reconnecting");
+
+    act(() => vi.advanceTimersByTime(4_000));
+    expect(result.current.status).toBe("reconnecting");
+  });
+
+  it("un corte que dura 5s escala a offline", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.open());
+    act(() => source?.error());
+    act(() => vi.advanceTimersByTime(5_000));
+
+    expect(result.current.status).toBe("offline");
+  });
+
+  it("recuperarse solo tras un offline vuelve a connected", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.open());
+    act(() => source?.error());
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(result.current.status).toBe("offline");
+
+    act(() => source?.open());
+    expect(result.current.status).toBe("connected");
+  });
+
+  it("errores repetidos no aplazan el offline indefinidamente", () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.open());
+    act(() => source?.error());
+    act(() => vi.advanceTimersByTime(3_000));
+    act(() => source?.error());
+    act(() => vi.advanceTimersByTime(2_000));
+
+    expect(result.current.status).toBe("offline");
+  });
+
+  it("desmontar no deja el temporizador de offline vivo", () => {
+    vi.useFakeTimers();
+    const { result, unmount } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.open());
+    act(() => source?.error());
+    unmount();
+
+    act(() => vi.advanceTimersByTime(5_000));
+    expect(result.current.status).toBe("reconnecting");
   });
 });

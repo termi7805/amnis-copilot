@@ -1,11 +1,13 @@
 import type { StateResponse } from "@amnis/shared";
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "./Dashboard.tsx";
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
   listeners = new Map<string, (e: MessageEvent) => void>();
+  onopen: (() => void) | null = null;
+  onerror: (() => void) | null = null;
 
   constructor(public url: string) {
     FakeEventSource.instances.push(this);
@@ -19,6 +21,14 @@ class FakeEventSource {
     this.listeners.get(event)?.(
       new MessageEvent(event, { data: JSON.stringify(data) }),
     );
+  }
+
+  open() {
+    this.onopen?.();
+  }
+
+  error() {
+    this.onerror?.();
   }
 
   close() {}
@@ -49,15 +59,31 @@ describe("Dashboard", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    cleanup();
   });
 
   it("pinta un StateResponse recibido por hello", () => {
     render(<Dashboard />);
 
     const [source] = FakeEventSource.instances;
+    act(() => source?.open());
     act(() => source?.emit("hello", fakeState));
 
-    expect(screen.getByText("conectado")).toBeInTheDocument();
+    expect(screen.getByTestId("connection-status")).toHaveTextContent(
+      "conectado",
+    );
     expect(screen.getByTestId("pet").dataset.state).toBe("coding");
+  });
+
+  it("un error del stream se ve como reconectando, no como conectado", () => {
+    render(<Dashboard />);
+
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.error());
+
+    expect(screen.getByTestId("connection-status")).toHaveTextContent(
+      "reconectando",
+    );
   });
 });
