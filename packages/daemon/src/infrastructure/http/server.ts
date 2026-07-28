@@ -17,6 +17,13 @@ export type RouteHandler = (ctx: RouteContext) => void | Promise<void>;
  */
 export interface HttpServerDeps {
   routes: Record<string, RouteHandler>;
+  /**
+   * Se dispara cuando ninguna ruta exacta encaja y el path no empieza
+   * por `/api/` — esa guarda vive aquí porque STACK.md §4 ya declara
+   * "la API bajo /api" como la regla que separa las dos cosas que el
+   * daemon sirve por el mismo puerto (routes/static.ts, #38).
+   */
+  fallback?: RouteHandler;
 }
 
 export interface AmnisHttpServer {
@@ -31,6 +38,22 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
+function dispatch(handler: RouteHandler, ctx: RouteContext): void {
+  Promise.resolve(handler(ctx)).catch((err) => {
+    // Un handler que revienta no puede tumbar el daemon entero: una
+    // promesa rechazada sin catch es fatal en Node 24. /api/events ya
+    // ha escrito cabeceras SSE antes de fallar, así que un writeHead
+    // aquí volvería a lanzar — solo se intenta si aún no se ha
+    // respondido nada.
+    console.error("Error en handler:", err);
+    if (!ctx.res.headersSent) {
+      sendJson(ctx.res, 500, { error: "Error interno." });
+    } else {
+      ctx.res.end();
+    }
+  });
+}
+
 export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
   const openResponses = new Set<ServerResponse>();
 
@@ -40,22 +63,16 @@ export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
 
     const method = req.method ?? "GET";
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    const ctx: RouteContext = { req, res, url };
     const handler = deps.routes[`${method} ${url.pathname}`];
 
     if (handler) {
-      Promise.resolve(handler({ req, res, url })).catch((err) => {
-        // Un handler que revienta no puede tumbar el daemon entero: una
-        // promesa rechazada sin catch es fatal en Node 24. /api/events ya
-        // ha escrito cabeceras SSE antes de fallar, así que un writeHead
-        // aquí volvería a lanzar — solo se intenta si aún no se ha
-        // respondido nada.
-        console.error("Error en handler:", err);
-        if (!res.headersSent) {
-          sendJson(res, 500, { error: "Error interno." });
-        } else {
-          res.end();
-        }
-      });
+      dispatch(handler, ctx);
+      return;
+    }
+
+    if (deps.fallback && !url.pathname.startsWith("/api/")) {
+      dispatch(deps.fallback, ctx);
       return;
     }
 

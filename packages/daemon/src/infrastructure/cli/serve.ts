@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
 import {
   fatigueFrom,
   type GetStateDeps,
@@ -14,6 +15,7 @@ import { createHookRoute } from "../http/routes/hook.ts";
 import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
 import { createHttpServer } from "../http/server.ts";
+import { createStaticRoute } from "../http/static.ts";
 import { ensureAccount } from "../persistence/accounts.ts";
 import { openDb } from "../persistence/db.ts";
 import {
@@ -27,6 +29,10 @@ import { startQuotaPoller } from "../poller.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { providers } from "../providers/index.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
+
+const WEB_DIST = fileURLToPath(
+  new URL("../../../../../apps/web/dist", import.meta.url),
+);
 
 function makeHookDeps(
   db: DatabaseSync,
@@ -88,7 +94,7 @@ export function runServeCli(): void {
 
   const server = createHttpServer({
     routes: {
-      "GET /": createDashboardRoute(),
+      "GET /debug": createDashboardRoute(),
       "POST /api/hook/claude": createHookRoute(
         makeHookDeps(db, accountId, () => watcher.check()),
       ),
@@ -99,6 +105,7 @@ export function runServeCli(): void {
         hello: () => getState(stateDeps, new Date()),
       }),
     },
+    fallback: createStaticRoute(WEB_DIST),
   });
 
   const sample = createQuotaSampler(db, accountId, anthropicProvider);

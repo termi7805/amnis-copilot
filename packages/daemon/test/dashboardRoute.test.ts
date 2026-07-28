@@ -3,13 +3,13 @@ import { test } from "node:test";
 import { createDashboardRoute } from "../src/infrastructure/http/routes/dashboard.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
 
-test("GET / sirve la página de depuración con EventSource", async () => {
+test("GET /debug sirve la página de depuración con EventSource", async () => {
   const server = createHttpServer({
-    routes: { "GET /": createDashboardRoute() },
+    routes: { "GET /debug": createDashboardRoute() },
   });
   const port = await server.listen(0);
   try {
-    const response = await fetch(`http://127.0.0.1:${port}/`);
+    const response = await fetch(`http://127.0.0.1:${port}/debug`);
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("content-type"), "text/html");
 

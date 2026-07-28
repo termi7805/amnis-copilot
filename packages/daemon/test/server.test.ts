@@ -85,6 +85,40 @@ test("un handler que rechaza responde 500 sin tumbar el servidor (#46)", async (
   );
 });
 
+test("con un fallback registrado, /api/desconocida sigue dando 404 JSON (#38)", async () => {
+  await withServer(
+    {
+      routes: {},
+      fallback: ({ res }) => {
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end("<html>spa</html>");
+      },
+    },
+    async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/no-existe`);
+      assert.equal(response.status, 404);
+      assert.equal(response.headers.get("content-type"), "application/json");
+    },
+  );
+});
+
+test("con un fallback registrado, una ruta fuera de /api sí lo usa", async () => {
+  await withServer(
+    {
+      routes: {},
+      fallback: ({ res }) => {
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end("<html>spa</html>");
+      },
+    },
+    async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/pet`);
+      assert.equal(response.status, 200);
+      assert.match(await response.text(), /spa/);
+    },
+  );
+});
+
 test("close() termina las respuestas abiertas y libera el puerto", async () => {
   let releaseResponse: (() => void) | undefined;
   const server = createHttpServer({
