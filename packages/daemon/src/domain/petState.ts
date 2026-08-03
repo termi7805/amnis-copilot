@@ -46,6 +46,12 @@ export function derivePetState(
     if (tool === "Bash" && event.command && TEST_COMMAND.test(event.command)) {
       return { state: "testing", reason: `PreToolUse Bash: ${event.command}` };
     }
+    if (tool === "Bash") {
+      return {
+        state: "terminal",
+        reason: `PreToolUse Bash: ${event.command ?? ""}`,
+      };
+    }
     if (tool && RESEARCH_TOOLS.has(tool)) {
       return { state: "researching", reason: `PreToolUse ${tool}` };
     }

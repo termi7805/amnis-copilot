@@ -10,7 +10,8 @@ export type PetState =
   | "planning"
   | "waiting"
   | "resting"
-  | "sleeping";
+  | "sleeping"
+  | "terminal";
 
 export type ProviderId = "anthropic";
 

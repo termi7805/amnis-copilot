@@ -1,7 +1,7 @@
 import type { PetSnapshot } from "@amnis/shared";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { fatigueLevel, Pet } from "./Pet.tsx";
+import { fatigueLevel, Pet, PetOffline } from "./Pet.tsx";
 
 // Cada `it` renderiza sobre el mismo `document`; sin esto, los `it`
 // sucesivos acumulan varios <svg data-testid="pet"> y las queries por
@@ -16,6 +16,7 @@ const ALL_STATES: PetSnapshot["state"][] = [
   "waiting",
   "resting",
   "sleeping",
+  "terminal",
 ];
 
 describe("fatigueLevel", () => {
@@ -61,18 +62,46 @@ describe("Pet", () => {
     expect(pet.querySelector("title")?.textContent).toMatch(/permiso/i);
   });
 
-  it("cada estado produce un `data-look` distinto en su acompañante", () => {
+  it("cada estado produce un `data-look` distinto en su escena", () => {
     const looks = new Set<string | undefined>();
 
     for (const state of ALL_STATES) {
       const { container, unmount } = render(
         <Pet state={state} level={1} fatigue={0} />,
       );
-      const accessory = container.querySelector("[data-look]");
-      looks.add(accessory?.getAttribute("data-look") ?? undefined);
+      const scene = container.querySelector("[data-look]");
+      looks.add(scene?.getAttribute("data-look") ?? undefined);
       unmount();
     }
 
     expect(looks.size).toBe(ALL_STATES.length);
+  });
+
+  it("la fatiga no cambia la geometría de la escena, solo el tempo", () => {
+    const { container: fresh, unmount: unmountFresh } = render(
+      <Pet state="coding" level={1} fatigue={0} />,
+    );
+    const freshMarkup = fresh.querySelector("[data-testid='pet']")?.innerHTML;
+    unmountFresh();
+
+    const { container: tired, unmount: unmountTired } = render(
+      <Pet state="coding" level={1} fatigue={1} />,
+    );
+    const tiredMarkup = tired.querySelector("[data-testid='pet']")?.innerHTML;
+    unmountTired();
+
+    expect(freshMarkup).toBe(tiredMarkup);
+  });
+});
+
+describe("PetOffline", () => {
+  it("es una escena propia, distinta de cualquier PetState", () => {
+    render(<PetOffline />);
+
+    const pet = screen.getByRole("img");
+    expect(pet.querySelector("title")?.textContent).toMatch(/sin conexión/i);
+    expect(pet.querySelector("[data-look]")?.getAttribute("data-look")).toBe(
+      "offline",
+    );
   });
 });

@@ -1,10 +1,16 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Permisos de la ventana pet: solo lo que PetWindow.tsx necesita invocar.",
+  "description": "Permisos de la ventana pet: solo lo que PetWindow.tsx necesita invocar. `remote` es obligatorio porque la ventana carga la URL del daemon (WebviewUrl::External, http://127.0.0.1) — con solo `local: true` (el valor por defecto) el ACL deniega en runtime todos los comandos, incluido `start_dragging`, aunque estén en `permissions` (medido: 'not allowed on windows pet, URL: http://127.0.0.1:4747... capability: default').",
   "windows": ["pet"],
+  "local": true,
+  "remote": {
+    "urls": ["http://127.0.0.1:*"]
+  },
   "permissions": [
     "core:window:allow-start-dragging",
-    "core:window:allow-set-size"
+    "core:window:allow-set-size",
+    "core:window:allow-set-resizable",
+    "core:window:allow-set-min-size"
   ]
 }

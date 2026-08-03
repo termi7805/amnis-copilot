@@ -97,7 +97,12 @@ describe("PetWindow", () => {
     // movimiento no cambia nada (ver el test de "un click" de arriba).
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
     vi.doMock("@tauri-apps/api/window", () => ({
-      getCurrentWindow: () => ({ startDragging: vi.fn(), setSize: vi.fn() }),
+      getCurrentWindow: () => ({
+        startDragging: vi.fn(),
+        setSize: vi.fn(),
+        setResizable: vi.fn(),
+        setMinSize: vi.fn(),
+      }),
       LogicalSize: class {},
     }));
 
@@ -145,5 +150,23 @@ describe("PetWindow", () => {
     );
 
     expect(screen.getByText("Claude")).toBeInTheDocument();
+  });
+
+  it("al pasar a offline cambia a la escena de 'sin conexión', no solo a gris", () => {
+    vi.useFakeTimers();
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", fakeState));
+
+    act(() => source?.onerror?.());
+    // useAmnisStream.ts: OFFLINE_AFTER_MS espera 5s antes de declarar
+    // "offline" — un corte breve es "reconnecting", no debe cambiar nada.
+    act(() => vi.advanceTimersByTime(5_000));
+
+    const scene = screen.getByTestId("pet").querySelector("[data-look]");
+    expect(scene?.getAttribute("data-look")).toBe("offline");
+
+    vi.useRealTimers();
   });
 });

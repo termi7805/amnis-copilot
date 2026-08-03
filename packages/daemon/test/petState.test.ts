@@ -42,11 +42,11 @@ test("PreToolUse con Bash y un comando de test → testing", () => {
   }
 });
 
-test("PreToolUse con Bash y un comando que no es de test → null", () => {
+test("PreToolUse con Bash y un comando que no es de test → terminal", () => {
   const result = derivePetState(
     makeEvent({ toolName: "Bash", command: "ls -la" }),
   );
-  assert.equal(result, null);
+  assert.equal(result?.state, "terminal");
 });
 
 test("PreToolUse con Read/Grep/Glob/WebSearch/WebFetch → researching", () => {

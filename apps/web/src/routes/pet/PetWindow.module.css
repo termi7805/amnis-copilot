@@ -1,6 +1,12 @@
+/* Transparente por defecto (docs/STACK.md §2): plegada, la ventana no
+   debe llevar chrome propio, solo el SVG de BIT flotando sobre el
+   escritorio. Desplegada, el panel de cuota necesita un fondo sólido
+   para su texto — ver la regla [data-expanded="true"] de abajo. */
 .petWindow {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
   background: transparent;
   position: relative;
   display: flex;
@@ -8,35 +14,24 @@
   align-items: center;
 }
 
+.petWindow[data-expanded="true"] {
+  background: #fff;
+}
+
 /* Tamaño fijo del bicho en las dos vistas (#42): la ventana nativa es
-   la que crece/encoge vía setSize(), no el propio Pet. */
+   la que crece/encoge vía setSize(), no el propio Pet. Apaisado
+   (150×110) porque la escena de BIT lo es (#47). */
 .petArea {
-  width: 120px;
-  height: 120px;
+  width: 150px;
+  height: 110px;
   flex-shrink: 0;
 }
 
 /* Desaturar solo con offline: un corte de red que se resuelve solo
-   (reconnecting) no debe apagar la mascota, sería ruido. */
+   (reconnecting) no debe apagar la mascota, sería ruido. La escena en
+   sí ya cambia a la de "sin conexión" (Pet.tsx PetOffline) — el
+   grayscale es un refuerzo, no el único indicador. */
 .petWindow[data-status="offline"] {
   filter: grayscale(1);
   opacity: 0.6;
-}
-
-.statusDot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #7fd88f;
-}
-
-.statusDot[data-status="reconnecting"] {
-  background: #e0b84a;
-}
-
-.statusDot[data-status="offline"] {
-  background: #b0b0b0;
 }

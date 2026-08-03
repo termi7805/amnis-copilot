@@ -12,8 +12,10 @@ use tauri_plugin_window_state::StateFlags;
 use url::Url;
 
 /// Tamaño de arranque plegado (#42): antes de que cargue el JS que decide
-/// si el panel de cuota estaba desplegado.
-const COLLAPSED_SIZE: (f64, f64) = (140.0, 140.0);
+/// si el panel de cuota estaba desplegado. Debe coincidir con
+/// `COLLAPSED_SIZE` de `useTauriWindow.ts` — si diverge, la ventana nace
+/// con un tamaño y salta al correcto en cuanto el JS llama a `resizeWindow`.
+const COLLAPSED_SIZE: (f64, f64) = (150.0, 110.0);
 
 // 500ms basta para distinguir "nada escuchando" de "está tardando": el
 // daemon en 127.0.0.1 responde en microsegundos si está vivo.
@@ -63,7 +65,7 @@ fn main() {
             builder = builder
                 .decorations(false)
                 .transparent(true)
-                .resizable(false)
+                .resizable(true)
                 .skip_taskbar(true)
                 .inner_size(COLLAPSED_SIZE.0, COLLAPSED_SIZE.1);
 
@@ -74,6 +76,23 @@ fn main() {
             // ventana normal en vez de entrar en pánico (issue #32).
             if let Err(e) = window.set_always_on_top(true) {
                 log::warn!("always-on-top no soportado por el compositor: {e}");
+            }
+
+            // Sin un mínimo explícito, GTK le pone a la ventana su propio
+            // "tamaño natural" como suelo — el `setSize()` de
+            // `resizeWindow()` (useTauriWindow.ts) se quedaba clavado en
+            // ~230-250px de alto en vez de los 110 pedidos (medido con
+            // xwininfo). Pedirlo con `.min_inner_size()` en el builder
+            // (antes de `.build()`) provoca un segfault en GTK con estos
+            // valores — hay que fijarlo en tiempo de ejecución, después de
+            // construir la ventana, y una sola vez: basta para que todos
+            // los `setSize()` posteriores (plegar y desplegar) respeten el
+            // tamaño exacto pedido, sin tocarlo de nuevo desde el JS.
+            if let Err(e) = window.set_min_size(Some(tauri::LogicalSize {
+                width: COLLAPSED_SIZE.0,
+                height: COLLAPSED_SIZE.1,
+            })) {
+                log::warn!("no se pudo fijar el tamaño mínimo de la ventana: {e}");
             }
 
             log::info!("amnis-pet arrancado, ventana 'pet' cargando {url}");

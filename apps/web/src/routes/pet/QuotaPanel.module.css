@@ -1,6 +1,6 @@
 .panel {
   font-family: system-ui, sans-serif;
-  color: #eee;
+  color: #222;
   padding: 0.25rem 0.5rem 0.5rem;
   width: 100%;
   box-sizing: border-box;
@@ -23,7 +23,7 @@
 }
 
 .error {
-  color: #ff8a80;
+  color: #b3261e;
   font-size: 0.7rem;
   text-align: center;
   margin: 0 0 0.25rem;

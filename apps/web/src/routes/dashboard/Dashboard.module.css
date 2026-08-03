@@ -3,9 +3,11 @@
   padding: 1rem;
 }
 
+/* Apaisado (200×150) porque la escena de BIT lo es — viewBox 150×110
+   (#47) — y un contenedor cuadrado la letterboxea. */
 .petCard {
-  width: 160px;
-  height: 160px;
+  width: 200px;
+  height: 150px;
   border: 1px solid #ccc;
   border-radius: 8px;
 }

@@ -1,4 +1,4 @@
-import type { PetSnapshot } from "@amnis/shared";
+import type { PetSnapshot, PetState } from "@amnis/shared";
 import type { CSSProperties } from "react";
 import styles from "./Pet.module.css";
 
@@ -8,41 +8,21 @@ export interface PetProps {
   fatigue: number;
 }
 
-type EyeShape = "open" | "half" | "side" | "up" | "wide" | "happy" | "line";
-type AccessoryKind =
-  | "cursor"
-  | "check"
-  | "magnifier"
-  | "dots"
-  | "question"
-  | "zzz"
-  | "none";
-
-interface StateLook {
-  eyes: EyeShape;
-  accessory: AccessoryKind;
-  /** Español, para `<title>` — describe el estado, no lo repite literal. */
-  title: string;
-}
-
 /**
- * Un estado nuevo en `PetState` sin entrada aquí no compila: es la
- * garantía de que la mascota nunca se queda muda ante un estado real
- * (docs/DESIGN.md §4 — la máquina de estados no sabe de gráficos, pero
- * este mapa es la única pieza que sí sabe traducirlos).
+ * Español, para `<title>` — describe el estado, no lo repite literal.
+ * `Record<PetState, …>` exhaustivo: un estado nuevo sin entrada aquí no
+ * compila, la mascota nunca se queda muda ante un estado real
+ * (docs/DESIGN.md §4).
  */
-const STATE_LOOK: Record<PetSnapshot["state"], StateLook> = {
-  coding: { eyes: "open", accessory: "cursor", title: "Escribiendo código" },
-  testing: { eyes: "half", accessory: "check", title: "Corriendo tests" },
-  researching: {
-    eyes: "side",
-    accessory: "magnifier",
-    title: "Buscando información",
-  },
-  planning: { eyes: "up", accessory: "dots", title: "Planificando" },
-  waiting: { eyes: "wide", accessory: "question", title: "Esperando permiso" },
-  resting: { eyes: "happy", accessory: "none", title: "Descansando" },
-  sleeping: { eyes: "line", accessory: "zzz", title: "Durmiendo" },
+const STATE_TITLE: Record<PetState, string> = {
+  coding: "Escribiendo código",
+  testing: "Corriendo tests",
+  researching: "Buscando información",
+  planning: "Planificando",
+  waiting: "Esperando permiso",
+  resting: "Descansando",
+  sleeping: "Durmiendo",
+  terminal: "Ejecutando un comando",
 };
 
 /**
@@ -55,128 +35,1371 @@ export function fatigueLevel(fatigue: number): number {
   return Math.min(1, Math.max(0, t));
 }
 
-function Eyes({ shape }: { shape: EyeShape }) {
-  switch (shape) {
-    case "open":
+/**
+ * BIT, robot de sobremesa, interactuando con un objeto propio por
+ * estado (variante 2a del proyecto de diseño "Mascota IA con siete
+ * estados"). `data-look` conserva un valor distinto por estado para
+ * que el estado se lea por la escena, no solo por `<title>`.
+ */
+function Scene({ state }: { state: PetState }) {
+  switch (state) {
+    case "coding":
       return (
-        <>
-          <circle className={styles.eye} cx="38" cy="48" r="5" />
-          <circle className={styles.eye} cx="62" cy="48" r="5" />
-        </>
+        <g data-look="coding">
+          <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(23,29,38,.12)" />
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "55px 99px",
+              animation: `${styles["pet-bob"]} var(--t) ease-in-out infinite`,
+            }}
+          >
+            <rect x="35" y="72" width="40" height="20" rx="4" fill="#3C4552" />
+            <rect
+              x="41"
+              y="78"
+              width="28"
+              height="2.2"
+              rx="1.1"
+              fill="#2A313B"
+            />
+            <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "34px 76px",
+                animation: `${styles["pet-tapA2"]} calc(var(--t)*.5) ease-in-out infinite`,
+              }}
+            >
+              <path
+                d="M34 76l-7 5v6"
+                fill="none"
+                stroke="#2F3742"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="34" cy="76" r="4.6" fill="#2F3742" />
+            </g>
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "76px 76px",
+                animation: `${styles["pet-tapA2"]} calc(var(--t)*.5) ease-in-out .25s infinite`,
+              }}
+            >
+              <path
+                d="M76 76l12 4 12 2"
+                fill="none"
+                stroke="#2F3742"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="76" cy="76" r="4.6" fill="#2F3742" />
+              <circle cx="102" cy="82" r="4.2" fill="#2F3742" />
+            </g>
+            <line
+              x1="55"
+              y1="22"
+              x2="55"
+              y2="14"
+              stroke="#3C4552"
+              strokeWidth="2.6"
+            />
+            <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
+            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+            <g
+              stroke="#39E0C8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity=".6"
+            >
+              <line x1="38" y1="35" x2="49" y2="37.5" />
+              <line x1="72" y1="35" x2="61" y2="37.5" />
+            </g>
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "55px 46px",
+                animation: `${styles["pet-blink"]} calc(var(--t)*4.5) ease-in-out infinite`,
+              }}
+            >
+              <rect x="40" y="41" width="9" height="9" rx="1" fill="#39E0C8" />
+              <rect x="61" y="41" width="9" height="9" rx="1" fill="#39E0C8" />
+            </g>
+            <g fill="#39E0C8" opacity=".6">
+              <rect x="47" y="56" width="4" height="2.6" />
+              <rect x="53" y="56" width="4" height="2.6" />
+              <rect x="59" y="56" width="4" height="2.6" />
+            </g>
+          </g>
+          <clipPath id="amnis-pet-lap-screen">
+            <rect x="97" y="51" width="42" height="31" rx="1" />
+          </clipPath>
+          <ellipse cx="118" cy="94" rx="32" ry="2.4" fill="rgba(23,29,38,.1)" />
+          <rect x="94" y="47" width="48" height="38" rx="2.5" fill="#4A5563" />
+          <rect x="97" y="51" width="42" height="31" rx="1" fill="#171D26" />
+          <g clipPath="url(#amnis-pet-lap-screen)">
+            <g
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-codeScroll"]} calc(var(--t)*2.4) steps(4,end) infinite`,
+              }}
+            >
+              <g fill="#39E0C8" opacity=".75">
+                <rect x="100" y="54" width="20" height="2.4" />
+                <rect x="104" y="60" width="26" height="2.4" />
+                <rect x="104" y="66" width="14" height="2.4" />
+                <rect x="100" y="72" width="23" height="2.4" />
+                <rect x="104" y="78" width="18" height="2.4" />
+                <rect x="100" y="84" width="27" height="2.4" />
+                <rect x="104" y="90" width="16" height="2.4" />
+                <rect x="100" y="96" width="22" height="2.4" />
+              </g>
+              <rect
+                x="125"
+                y="77"
+                width="3"
+                height="4"
+                fill="#39E0C8"
+                className={styles.animated}
+                style={{
+                  animation: `${styles["pet-cursor"]} 1s step-end infinite`,
+                }}
+              />
+            </g>
+          </g>
+          <rect x="88" y="85" width="60" height="6" rx="1.5" fill="#C6D0DA" />
+          <rect x="88" y="85" width="60" height="1.6" fill="#DCE4EB" />
+          <g fill="#39E0C8">
+            <rect
+              x="99"
+              y="87"
+              width="6"
+              height="3"
+              rx="1"
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-keyLite"]} calc(var(--t)*.5) ease-in-out infinite`,
+              }}
+            />
+            <rect
+              x="108"
+              y="87"
+              width="6"
+              height="3"
+              rx="1"
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-keyLite"]} calc(var(--t)*.5) ease-in-out .12s infinite`,
+              }}
+            />
+            <rect
+              x="117"
+              y="87"
+              width="6"
+              height="3"
+              rx="1"
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-keyLite"]} calc(var(--t)*.5) ease-in-out .25s infinite`,
+              }}
+            />
+            <rect
+              x="126"
+              y="87"
+              width="6"
+              height="3"
+              rx="1"
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-keyLite"]} calc(var(--t)*.5) ease-in-out .37s infinite`,
+              }}
+            />
+            <rect
+              x="135"
+              y="87"
+              width="6"
+              height="3"
+              rx="1"
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-keyLite"]} calc(var(--t)*.5) ease-in-out .5s infinite`,
+              }}
+            />
+          </g>
+        </g>
       );
-    case "wide":
+    case "testing":
       return (
-        <>
-          <circle className={styles.eye} cx="38" cy="48" r="7" />
-          <circle className={styles.eye} cx="62" cy="48" r="7" />
-        </>
+        <g data-look="testing">
+          <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(23,29,38,.12)" />
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "55px 99px",
+              animation: `${styles["pet-bob2"]} calc(var(--t)*1.6) ease-in-out infinite`,
+            }}
+          >
+            <rect x="35" y="72" width="40" height="20" rx="4" fill="#3C4552" />
+            <rect
+              x="41"
+              y="78"
+              width="28"
+              height="2.2"
+              rx="1.1"
+              fill="#2A313B"
+            />
+            <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "76px 76px",
+                animation: `${styles["pet-tapA2"]} calc(var(--t)*3.2) ease-in-out infinite`,
+              }}
+            >
+              <path
+                d="M76 76l10-5 9-6"
+                fill="none"
+                stroke="#2F3742"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="76" cy="76" r="4.6" fill="#2F3742" />
+              <circle cx="95" cy="65" r="4" fill="#2F3742" />
+            </g>
+            <line
+              x1="55"
+              y1="22"
+              x2="55"
+              y2="14"
+              stroke="#3C4552"
+              strokeWidth="2.6"
+            />
+            <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
+            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+            <g
+              stroke="#39E0C8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity=".55"
+            >
+              <line x1="39" y1="37" x2="50" y2="37" />
+              <line x1="60" y1="38.5" x2="71" y2="34.5" />
+            </g>
+            <rect
+              x="39"
+              y="44"
+              width="11"
+              height="3.4"
+              rx="1.7"
+              fill="#39E0C8"
+            />
+            <rect
+              x="60"
+              y="44"
+              width="11"
+              height="3.4"
+              rx="1.7"
+              fill="#39E0C8"
+            />
+            <circle
+              cx="55"
+              cy="57.5"
+              r="2.6"
+              fill="none"
+              stroke="#39E0C8"
+              strokeWidth="2"
+              opacity=".6"
+            />
+          </g>
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "120px 90px",
+              animation: `${styles["pet-swing"]} calc(var(--t)*4) ease-in-out infinite`,
+            }}
+          >
+            <rect
+              x="100"
+              y="30"
+              width="42"
+              height="58"
+              rx="2"
+              fill="#F7F9FB"
+              stroke="#C6D0DA"
+              strokeWidth="1.4"
+            />
+            <rect x="112" y="26" width="18" height="7" rx="2" fill="#4A5563" />
+            <g stroke="#C6D0DA" strokeWidth="1.6">
+              <rect x="105" y="40" width="7" height="7" fill="none" />
+              <rect x="105" y="52" width="7" height="7" fill="none" />
+              <rect x="105" y="64" width="7" height="7" fill="none" />
+            </g>
+            <g fill="#C6D0DA">
+              <rect x="116" y="42" width="21" height="2.4" />
+              <rect x="116" y="54" width="18" height="2.4" />
+              <rect x="116" y="66" width="22" height="2.4" />
+            </g>
+            <g
+              fill="none"
+              stroke="#1FB98C"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path
+                d="M106 43.5l2.4 2.6 4.4-5"
+                className={styles.animated}
+                style={{
+                  transformOrigin: "109px 44px",
+                  animation: `${styles["pet-popIn"]} calc(var(--t)*3.4) ease-out infinite`,
+                }}
+              />
+              <path
+                d="M106 55.5l2.4 2.6 4.4-5"
+                className={styles.animated}
+                style={{
+                  transformOrigin: "109px 56px",
+                  animation: `${styles["pet-popIn"]} calc(var(--t)*3.4) ease-out 1.1s infinite`,
+                }}
+              />
+              <path
+                d="M106 67.5l2.4 2.6 4.4-5"
+                className={styles.animated}
+                style={{
+                  transformOrigin: "109px 68px",
+                  animation: `${styles["pet-popIn"]} calc(var(--t)*3.4) ease-out 2.2s infinite`,
+                }}
+              />
+            </g>
+            <rect x="105" y="78" width="32" height="4" rx="2" fill="#DCE4EB" />
+            <rect
+              x="105"
+              y="78"
+              width="32"
+              height="4"
+              rx="2"
+              fill="#1FB98C"
+              className={styles.animated}
+              style={{
+                transformOrigin: "105px 80px",
+                animation: `${styles["pet-fillX"]} calc(var(--t)*3.4) linear infinite`,
+              }}
+            />
+          </g>
+        </g>
       );
-    case "half":
+    case "researching":
       return (
-        <>
-          <rect
-            className={styles.eye}
-            x="33"
-            y="46"
-            width="10"
-            height="4"
-            rx="2"
+        <g data-look="researching">
+          <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(23,29,38,.12)" />
+          <rect x="35" y="72" width="40" height="20" rx="4" fill="#3C4552" />
+          <rect x="41" y="78" width="28" height="2.2" rx="1.1" fill="#2A313B" />
+          <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+          <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+          <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
+          <line
+            x1="55"
+            y1="22"
+            x2="55"
+            y2="14"
+            stroke="#3C4552"
+            strokeWidth="2.6"
           />
-          <rect
-            className={styles.eye}
-            x="57"
-            y="46"
-            width="10"
-            height="4"
-            rx="2"
+          <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
+          <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+          <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+          <g
+            stroke="#39E0C8"
+            strokeWidth="2"
+            strokeLinecap="round"
+            opacity=".5"
+          >
+            <path d="M38 35.5q5.5-3 11 0" />
+            <path d="M61 35.5q5.5-3 11 0" />
+          </g>
+          <g
+            className={styles.animated}
+            style={{
+              animation: `${styles["pet-scanX"]} calc(var(--t)*2.4) ease-in-out infinite`,
+            }}
+          >
+            <circle cx="44.5" cy="45" r="6.4" fill="#39E0C8" />
+            <circle cx="65.5" cy="45" r="6.4" fill="#39E0C8" />
+            <circle cx="46.8" cy="45" r="2.6" fill="#171D26" />
+            <circle cx="67.8" cy="45" r="2.6" fill="#171D26" />
+          </g>
+          <path
+            d="M50 57.5q2.5-3 5 0t5 0"
+            fill="none"
+            stroke="#39E0C8"
+            strokeWidth="1.9"
+            strokeLinecap="round"
+            opacity=".65"
           />
-        </>
+          <g transform="rotate(-4 120 62)">
+            <rect
+              x="98"
+              y="34"
+              width="42"
+              height="54"
+              rx="1.5"
+              fill="#EEF2F6"
+              stroke="#C6D0DA"
+              strokeWidth="1.2"
+            />
+          </g>
+          <rect
+            x="96"
+            y="30"
+            width="42"
+            height="54"
+            rx="1.5"
+            fill="#FCFDFE"
+            stroke="#C6D0DA"
+            strokeWidth="1.4"
+          />
+          <g fill="#C6D0DA">
+            <rect x="102" y="38" width="26" height="2.6" />
+            <rect x="102" y="46" width="30" height="2.2" />
+            <rect x="102" y="53" width="22" height="2.2" />
+            <rect x="102" y="60" width="28" height="2.2" />
+            <rect x="102" y="67" width="18" height="2.2" />
+            <rect x="102" y="74" width="25" height="2.2" />
+          </g>
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "117px 57px",
+              animation: `${styles["pet-lensXY"]} calc(var(--t)*4.4) ease-in-out infinite`,
+            }}
+          >
+            <circle cx="117" cy="57" r="11" fill="#fff" fillOpacity=".92" />
+            <g fill="#8AA0B4">
+              <rect x="109" y="53" width="16" height="3.4" />
+              <rect x="109" y="59" width="11" height="3.4" />
+            </g>
+            <circle
+              cx="117"
+              cy="57"
+              r="11"
+              fill="none"
+              stroke="#171D26"
+              strokeWidth="2.6"
+            />
+            <line
+              x1="125"
+              y1="65"
+              x2="133"
+              y2="73"
+              stroke="#171D26"
+              strokeWidth="3.2"
+              strokeLinecap="round"
+            />
+          </g>
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "76px 76px",
+              animation: `${styles["pet-tapA2"]} calc(var(--t)*4.4) ease-in-out infinite`,
+            }}
+          >
+            <path
+              d="M76 76l11-2 8-4"
+              fill="none"
+              stroke="#2F3742"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle cx="76" cy="76" r="4.6" fill="#2F3742" />
+            <circle cx="95" cy="70" r="4" fill="#2F3742" />
+          </g>
+        </g>
       );
-    case "up":
+    case "planning":
       return (
-        <>
-          <circle className={styles.eye} cx="38" cy="48" r="5" />
-          <circle className={styles.eye} cx="62" cy="48" r="5" />
-          <circle className={styles.pupil} cx="38" cy="45" r="2" />
-          <circle className={styles.pupil} cx="62" cy="45" r="2" />
-        </>
+        <g data-look="planning">
+          <ellipse cx="55" cy="101" rx="24" ry="2.6" fill="rgba(23,29,38,.1)" />
+          <g
+            className={styles.animated}
+            style={{
+              animation: `${styles["pet-drift"]} calc(var(--t)*2.6) ease-in-out infinite`,
+            }}
+          >
+            <rect x="35" y="72" width="40" height="20" rx="4" fill="#3C4552" />
+            <rect
+              x="41"
+              y="78"
+              width="28"
+              height="2.2"
+              rx="1.1"
+              fill="#2A313B"
+            />
+            <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "34px 76px",
+                animation: `${styles["pet-chinTap2"]} calc(var(--t)*2.2) ease-in-out infinite`,
+              }}
+            >
+              <path
+                d="M34 76l-7-6 8-6"
+                fill="none"
+                stroke="#2F3742"
+                strokeWidth="7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <circle cx="34" cy="76" r="4.6" fill="#2F3742" />
+              <circle cx="35" cy="64" r="4" fill="#2F3742" />
+            </g>
+            <rect x="75" y="72" width="8" height="15" rx="4" fill="#2F3742" />
+            <line
+              x1="55"
+              y1="22"
+              x2="55"
+              y2="14"
+              stroke="#3C4552"
+              strokeWidth="2.6"
+            />
+            <circle
+              cx="55"
+              cy="12"
+              r="3.4"
+              className={`${styles.antenna} ${styles.animated}`}
+              style={{
+                animation: `${styles["pet-glow"]} calc(var(--t)*2) ease-in-out infinite`,
+              }}
+            />
+            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+            <g
+              stroke="#39E0C8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity=".5"
+            >
+              <line x1="38" y1="33" x2="49" y2="33" />
+              <line x1="61" y1="33" x2="72" y2="33" />
+            </g>
+            <rect x="38" y="38" width="11" height="11" rx="2" fill="#39E0C8" />
+            <rect x="61" y="38" width="11" height="11" rx="2" fill="#39E0C8" />
+            <rect
+              x="43.5"
+              y="39.5"
+              width="4"
+              height="4.5"
+              rx="1"
+              fill="#171D26"
+            />
+            <rect
+              x="66.5"
+              y="39.5"
+              width="4"
+              height="4.5"
+              rx="1"
+              fill="#171D26"
+            />
+            <rect
+              x="52"
+              y="57"
+              width="6"
+              height="2"
+              rx="1"
+              fill="#39E0C8"
+              opacity=".45"
+            />
+          </g>
+          <ellipse cx="118" cy="92" rx="26" ry="2.4" fill="rgba(23,29,38,.1)" />
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "118px 47px",
+              animation: `${styles["pet-unroll"]} calc(var(--t)*5) ease-in-out infinite`,
+            }}
+          >
+            <rect
+              x="94"
+              y="47"
+              width="48"
+              height="41"
+              fill="#FCFDFE"
+              stroke="#C6D0DA"
+              strokeWidth="1.3"
+            />
+            <g stroke="#E7ECF1" strokeWidth="1">
+              <line x1="94" y1="61" x2="142" y2="61" />
+              <line x1="94" y1="75" x2="142" y2="75" />
+              <line x1="110" y1="47" x2="110" y2="88" />
+              <line x1="126" y1="47" x2="126" y2="88" />
+            </g>
+            <path
+              d="M100 82q7-10 15-8t9-14"
+              fill="none"
+              stroke="#39E0C8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray="70"
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-draw2"]} calc(var(--t)*5) ease-in-out infinite`,
+              }}
+            />
+            <circle cx="100" cy="82" r="2.8" fill="#4A5563" />
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "124px 60px",
+                animation: `${styles["pet-popIn"]} calc(var(--t)*5) ease-out infinite`,
+              }}
+            >
+              <line
+                x1="124"
+                y1="60"
+                x2="124"
+                y2="51"
+                stroke="#4A5563"
+                strokeWidth="1.8"
+              />
+              <path d="M124 51h9l-2.4 3.4L133 58h-9z" fill="#39E0C8" />
+            </g>
+          </g>
+          <rect x="91" y="43" width="54" height="5" rx="2.5" fill="#8AA0B4" />
+          <rect x="91" y="43" width="54" height="1.6" rx=".8" fill="#A8B6C2" />
+        </g>
       );
-    case "side":
+    case "waiting":
       return (
-        <>
-          <circle className={styles.eye} cx="38" cy="48" r="5" />
-          <circle className={styles.eye} cx="62" cy="48" r="5" />
-          <circle className={styles.pupil} cx="40" cy="48" r="2" />
-          <circle className={styles.pupil} cx="64" cy="48" r="2" />
-        </>
+        <g data-look="waiting">
+          <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(70,50,10,.12)" />
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "55px 99px",
+              animation: `${styles["pet-pulseS"]} calc(var(--t)*1.1) ease-in-out infinite`,
+            }}
+          >
+            <rect x="35" y="72" width="40" height="20" rx="4" fill="#3C4552" />
+            <rect
+              x="41"
+              y="78"
+              width="28"
+              height="2.2"
+              rx="1.1"
+              fill="#2A313B"
+            />
+            <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
+            <line
+              x1="55"
+              y1="22"
+              x2="55"
+              y2="14"
+              stroke="#3C4552"
+              strokeWidth="2.6"
+            />
+            <circle
+              cx="55"
+              cy="12"
+              r="4"
+              className={`${styles.antenna} ${styles.animated}`}
+              style={
+                {
+                  "--antenna-base": "#FFB020",
+                  animation: `${styles["pet-glow"]} calc(var(--t)*1.1) ease-in-out infinite`,
+                } as CSSProperties
+              }
+            />
+            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+            <g
+              stroke="#FFB020"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity=".55"
+            >
+              <line x1="37" y1="33" x2="49" y2="31.5" />
+              <line x1="73" y1="33" x2="61" y2="31.5" />
+            </g>
+            <circle cx="44.5" cy="45" r="7" fill="#FFB020" />
+            <circle cx="65.5" cy="45" r="7" fill="#FFB020" />
+            <circle cx="42" cy="42.5" r="2.2" fill="#171D26" opacity=".35" />
+            <circle cx="63" cy="42.5" r="2.2" fill="#171D26" opacity=".35" />
+            <ellipse
+              cx="55"
+              cy="58"
+              rx="5"
+              ry="3.6"
+              fill="#FFB020"
+              opacity=".7"
+            />
+          </g>
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "76px 76px",
+              animation: `${styles["pet-knock2"]} calc(var(--t)*2.4) ease-in-out infinite`,
+            }}
+          >
+            <path
+              d="M76 76l11-6 9-5"
+              fill="none"
+              stroke="#2F3742"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle cx="76" cy="76" r="4.6" fill="#2F3742" />
+            <circle cx="96" cy="65" r="4.2" fill="#2F3742" />
+          </g>
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "118px 62px",
+              animation: `${styles["pet-shake"]} calc(var(--t)*.8) ease-in-out infinite`,
+            }}
+          >
+            <path
+              d="M108 52v-6a10 10 0 0 1 20 0v6"
+              fill="none"
+              stroke="#8A6A28"
+              strokeWidth="4.4"
+            />
+            <rect x="102" y="52" width="32" height="26" rx="3" fill="#FFB020" />
+            <rect
+              x="102"
+              y="52"
+              width="32"
+              height="26"
+              rx="3"
+              fill="none"
+              stroke="#8A6A28"
+              strokeWidth="1.6"
+            />
+            <circle cx="118" cy="62" r="3.6" fill="#8A6A28" />
+            <rect x="116.6" y="63" width="2.8" height="7" fill="#8A6A28" />
+          </g>
+          <text
+            x="118"
+            y="26"
+            textAnchor="middle"
+            fill="#8A6A28"
+            className={styles.animated}
+            style={{
+              font: "700 18px Archivo,sans-serif",
+              transformOrigin: "118px 21px",
+              animation: `${styles["pet-pulse"]} calc(var(--t)*1.1) ease-in-out infinite`,
+            }}
+          >
+            ?
+          </text>
+        </g>
       );
-    case "happy":
+    case "resting":
       return (
-        <>
-          <path className={styles.eyeArc} d="M33 49 Q38 44 43 49" />
-          <path className={styles.eyeArc} d="M57 49 Q62 44 67 49" />
-        </>
+        <g data-look="resting">
+          <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(23,29,38,.12)" />
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "55px 92px",
+              animation: `${styles["pet-breathe"]} calc(var(--t)*3.4) ease-in-out infinite`,
+            }}
+          >
+            <rect x="35" y="72" width="40" height="20" rx="4" fill="#3C4552" />
+            <rect
+              x="41"
+              y="78"
+              width="28"
+              height="2.2"
+              rx="1.1"
+              fill="#2A313B"
+            />
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "44px 91px",
+                animation: `${styles["pet-swing"]} calc(var(--t)*2.6) ease-in-out infinite`,
+              }}
+            >
+              <rect
+                x="38"
+                y="91"
+                width="12"
+                height="5"
+                rx="2.5"
+                fill="#2A313B"
+              />
+            </g>
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "66px 91px",
+                animation: `${styles["pet-swing"]} calc(var(--t)*2.6) ease-in-out .4s infinite`,
+              }}
+            >
+              <rect
+                x="60"
+                y="91"
+                width="12"
+                height="5"
+                rx="2.5"
+                fill="#2A313B"
+              />
+            </g>
+            <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
+            <line
+              x1="55"
+              y1="22"
+              x2="55"
+              y2="14"
+              stroke="#3C4552"
+              strokeWidth="2.6"
+            />
+            <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
+            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+            <path
+              d="M39 47q5.5-6.5 11 0"
+              fill="none"
+              stroke="#39E0C8"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+            <path
+              d="M60 47q5.5-6.5 11 0"
+              fill="none"
+              stroke="#39E0C8"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+            <path
+              d="M45 56q10 8 20 0"
+              fill="none"
+              stroke="#39E0C8"
+              strokeWidth="2.6"
+              strokeLinecap="round"
+              opacity=".75"
+            />
+          </g>
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "112px 88px",
+              animation: `${styles["pet-sip"]} calc(var(--t)*4.4) ease-in-out infinite`,
+            }}
+          >
+            <ellipse cx="112" cy="88" rx="21" ry="4.2" fill="#DDE4EB" />
+            <ellipse cx="112" cy="86.6" rx="21" ry="4.2" fill="#EFF3F7" />
+            <path
+              d="M124 68q9 1 9 8t-8 8"
+              fill="none"
+              stroke="#C6D0DA"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+            />
+            <path
+              d="M100 64h24l-3 19q-9 4.5-18 0z"
+              fill="#F7F9FB"
+              stroke="#C6D0DA"
+              strokeWidth="1.6"
+              strokeLinejoin="round"
+            />
+            <ellipse
+              cx="112"
+              cy="64"
+              rx="12"
+              ry="3.6"
+              fill="#FDFEFF"
+              stroke="#C6D0DA"
+              strokeWidth="1.4"
+            />
+            <ellipse cx="112" cy="64.2" rx="9" ry="2.5" fill="#8A5A32" />
+            <ellipse
+              cx="109"
+              cy="63.6"
+              rx="3"
+              ry="1"
+              fill="#A87246"
+              opacity=".7"
+            />
+          </g>
+          <g
+            fill="none"
+            stroke="#B9C4CE"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          >
+            <path
+              d="M106 60q-3-5 0-9"
+              className={styles.animated}
+              style={{
+                transformOrigin: "106px 60px",
+                animation: `${styles["pet-steam"]} calc(var(--t)*3) ease-out infinite`,
+              }}
+            />
+            <path
+              d="M112 60q3-5 0-10"
+              className={styles.animated}
+              style={{
+                transformOrigin: "112px 60px",
+                animation: `${styles["pet-steam"]} calc(var(--t)*3) ease-out .9s infinite`,
+              }}
+            />
+            <path
+              d="M118 60q-3-4 0-8"
+              className={styles.animated}
+              style={{
+                transformOrigin: "118px 60px",
+                animation: `${styles["pet-steam"]} calc(var(--t)*3) ease-out 1.8s infinite`,
+              }}
+            />
+          </g>
+          <g>
+            <path
+              d="M76 76h11l9-6"
+              fill="none"
+              stroke="#2F3742"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle cx="76" cy="76" r="4.6" fill="#2F3742" />
+            <circle cx="96" cy="70" r="4" fill="#2F3742" />
+          </g>
+        </g>
       );
-    case "line":
+    case "sleeping":
       return (
-        <>
-          <line className={styles.eyeLine} x1="33" y1="48" x2="43" y2="48" />
-          <line className={styles.eyeLine} x1="57" y1="48" x2="67" y2="48" />
-        </>
+        <g data-look="sleeping">
+          <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(23,29,38,.1)" />
+          <rect x="112" y="70" width="34" height="24" rx="2" fill="#C6D0DA" />
+          <rect x="116" y="66" width="26" height="5" rx="2" fill="#AEBAC6" />
+          <path
+            d="M75 86q22 8 37 0"
+            fill="none"
+            stroke="#8AA0B4"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "55px 92px",
+              animation: `${styles["pet-breathe"]} calc(var(--t)*5.6) ease-in-out infinite`,
+            }}
+          >
+            <rect x="35" y="72" width="40" height="20" rx="4" fill="#3C4552" />
+            <rect
+              x="41"
+              y="78"
+              width="28"
+              height="2.2"
+              rx="1.1"
+              fill="#2A313B"
+            />
+            <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
+            <rect x="75" y="72" width="8" height="15" rx="4" fill="#2F3742" />
+            <line
+              x1="55"
+              y1="22"
+              x2="55"
+              y2="16"
+              stroke="#3C4552"
+              strokeWidth="2.6"
+            />
+            <circle
+              cx="55"
+              cy="14"
+              r="3.4"
+              opacity=".3"
+              className={styles.antenna}
+            />
+            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+            <line
+              x1="39"
+              y1="46"
+              x2="50"
+              y2="46"
+              stroke="#39E0C8"
+              strokeWidth="3"
+              strokeLinecap="round"
+              opacity=".45"
+            />
+            <line
+              x1="60"
+              y1="46"
+              x2="71"
+              y2="46"
+              stroke="#39E0C8"
+              strokeWidth="3"
+              strokeLinecap="round"
+              opacity=".45"
+            />
+            <path
+              d="M52 57q3 3 6 0"
+              fill="none"
+              stroke="#39E0C8"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              opacity=".25"
+            />
+          </g>
+          <g>
+            <rect
+              x="94"
+              y="24"
+              width="26"
+              height="13"
+              rx="2"
+              fill="none"
+              stroke="#8AA0B4"
+              strokeWidth="1.8"
+            />
+            <rect x="120.5" y="28" width="3" height="5" rx="1" fill="#8AA0B4" />
+            <rect
+              x="96"
+              y="26"
+              width="22"
+              height="9"
+              fill="#39E0C8"
+              className={styles.animated}
+              style={{
+                transformOrigin: "96px 35px",
+                animation: `${styles["pet-fillX"]} calc(var(--t)*6) linear infinite`,
+              }}
+            />
+          </g>
+          <text
+            x="100"
+            y="58"
+            textAnchor="middle"
+            fill="#6E7C89"
+            className={styles.animated}
+            style={{
+              font: "700 15px Archivo,sans-serif",
+              animation: `${styles["pet-zzz"]} calc(var(--t)*3.6) ease-in infinite`,
+            }}
+          >
+            z
+          </text>
+          <text
+            x="100"
+            y="58"
+            textAnchor="middle"
+            fill="#6E7C89"
+            className={styles.animated}
+            style={{
+              font: "700 11px Archivo,sans-serif",
+              animation: `${styles["pet-zzz"]} calc(var(--t)*3.6) ease-in 1.3s infinite`,
+            }}
+          >
+            z
+          </text>
+        </g>
+      );
+    case "terminal":
+      return (
+        <g data-look="terminal">
+          <clipPath id="amnis-pet-terminal-screen">
+            <rect x="92" y="52" width="54" height="34" />
+          </clipPath>
+          <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(23,29,38,.12)" />
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "55px 99px",
+              animation: `${styles["pet-bob"]} calc(var(--t)*2.6) ease-in-out infinite`,
+            }}
+          >
+            <rect x="35" y="72" width="40" height="20" rx="4" fill="#3C4552" />
+            <rect
+              x="41"
+              y="78"
+              width="28"
+              height="2.2"
+              rx="1.1"
+              fill="#2A313B"
+            />
+            <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
+            <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
+            <line
+              x1="55"
+              y1="22"
+              x2="55"
+              y2="14"
+              stroke="#3C4552"
+              strokeWidth="2.6"
+            />
+            <circle
+              cx="55"
+              cy="12"
+              r="3.4"
+              className={`${styles.antenna} ${styles.animated}`}
+              style={{
+                animation: `${styles["pet-glow"]} calc(var(--t)*1.2) ease-in-out infinite`,
+              }}
+            />
+            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+            <g
+              fill="none"
+              stroke="#39E0C8"
+              strokeWidth="3.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M40 40l5 5-5 5" />
+              <path d="M61 40l5 5-5 5" />
+            </g>
+            <rect
+              x="49"
+              y="57"
+              width="12"
+              height="2.4"
+              rx="1.2"
+              fill="#39E0C8"
+              opacity=".7"
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-cursor"]} calc(var(--t)*.8) step-end infinite`,
+              }}
+            />
+          </g>
+          <g
+            className={styles.animated}
+            style={{
+              transformOrigin: "76px 76px",
+              animation: `${styles["pet-hitKey"]} calc(var(--t)*4) ease-in-out infinite`,
+            }}
+          >
+            <path
+              d="M76 76l11 6 9 4"
+              fill="none"
+              stroke="#2F3742"
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <circle cx="76" cy="76" r="4.6" fill="#2F3742" />
+            <circle cx="96" cy="86" r="4.2" fill="#2F3742" />
+          </g>
+          <ellipse cx="119" cy="96" rx="30" ry="2.4" fill="rgba(23,29,38,.1)" />
+          <rect x="92" y="44" width="54" height="46" rx="2" fill="#0E1319" />
+          <rect x="92" y="44" width="54" height="8" rx="2" fill="#2A313B" />
+          <rect x="92" y="49" width="54" height="3" fill="#2A313B" />
+          <g fill="#5D6A7A">
+            <circle cx="97" cy="48" r="1.6" />
+            <circle cx="102" cy="48" r="1.6" />
+            <circle cx="107" cy="48" r="1.6" />
+          </g>
+          <g clipPath="url(#amnis-pet-terminal-screen)">
+            <text
+              x="96"
+              y="61"
+              fill="#39E0C8"
+              style={{ font: "600 6px ui-monospace,Menlo,monospace" }}
+            >
+              $
+            </text>
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "101px 61px",
+                animation: `${styles["pet-typeW"]} calc(var(--t)*4) steps(8,end) infinite`,
+              }}
+            >
+              <rect x="101" y="56.5" width="30" height="2.2" fill="#DCE4EB" />
+            </g>
+            <g fill="#8AA0B4">
+              <rect
+                x="96"
+                y="66"
+                width="34"
+                height="2"
+                className={styles.animated}
+                style={{
+                  animation: `${styles["pet-outLine"]} calc(var(--t)*4) steps(1,end) infinite`,
+                }}
+              />
+              <rect
+                x="96"
+                y="71"
+                width="26"
+                height="2"
+                className={styles.animated}
+                style={{
+                  animation: `${styles["pet-outLine2"]} calc(var(--t)*4) steps(1,end) infinite`,
+                }}
+              />
+              <rect
+                x="96"
+                y="76"
+                width="30"
+                height="2"
+                className={styles.animated}
+                style={{
+                  animation: `${styles["pet-outLine3"]} calc(var(--t)*4) steps(1,end) infinite`,
+                }}
+              />
+            </g>
+            <g
+              className={styles.animated}
+              style={{
+                transformOrigin: "99px 83px",
+                animation: `${styles["pet-spinBar"]} calc(var(--t)*.6) steps(4,end) infinite`,
+              }}
+            >
+              <rect x="96.6" y="81.4" width="4.8" height="1.6" fill="#39E0C8" />
+            </g>
+            <rect
+              x="105"
+              y="80"
+              width="3"
+              height="4.4"
+              fill="#39E0C8"
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-cursor"]} .9s step-end infinite`,
+              }}
+            />
+          </g>
+          <rect
+            x="92"
+            y="44"
+            width="54"
+            height="46"
+            rx="2"
+            fill="none"
+            stroke="#39E0C8"
+            strokeOpacity=".14"
+          />
+          <rect x="88" y="90" width="26" height="6" rx="1.5" fill="#C6D0DA" />
+          <rect
+            x="103"
+            y="91.4"
+            width="8"
+            height="3.2"
+            rx="1"
+            fill="#39E0C8"
+            className={styles.animated}
+            style={{
+              animation: `${styles["pet-enterLite"]} calc(var(--t)*4) steps(1,end) infinite`,
+            }}
+          />
+        </g>
       );
   }
 }
 
-function Accessory({ kind }: { kind: AccessoryKind }) {
-  switch (kind) {
-    case "cursor":
-      return (
-        <rect className={styles.cursor} x="48" y="68" width="4" height="10" />
-      );
-    case "check":
-      return <path className={styles.check} d="M40 66 L47 73 L61 58" />;
-    case "magnifier":
-      return (
-        <g className={styles.magnifier}>
-          <circle cx="78" cy="42" r="7" />
-          <line x1="83" y1="47" x2="90" y2="54" />
+/**
+ * "Sin conexión" no es un `PetState` — es el eje de conexión de
+ * `useAmnisStream.ts` (`ConnectionStatus`), independiente de la fatiga
+ * y de cualquier snapshot del daemon (que, por definición, no llega
+ * mientras esto se muestra). Por eso fija `--pet-fatigue` a 0 en vez
+ * de heredar el último valor conocido: la tele estática de BIT no
+ * tiene nada que ver con el cansancio.
+ */
+export function PetOffline() {
+  const style = { "--pet-fatigue": 0 } as CSSProperties;
+
+  return (
+    <svg
+      className={styles.pet}
+      viewBox="0 0 150 110"
+      width="100%"
+      height="100%"
+      role="img"
+      data-testid="pet"
+      style={style}
+    >
+      <title>Sin conexión</title>
+      <g data-look="offline">
+        <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(23,29,38,.08)" />
+        <rect x="112" y="70" width="34" height="24" rx="2" fill="#CFD5DB" />
+        <path
+          d="M75 86q14 10 24 2"
+          fill="none"
+          stroke="#A9B2BB"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+        <circle cx="100" cy="87" r="3" fill="#A9B2BB" />
+        <rect x="35" y="72" width="40" height="20" rx="4" fill="#4A5158" />
+        <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#3A4046" />
+        <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#3A4046" />
+        <rect x="25" y="72" width="8" height="15" rx="4" fill="#3A4046" />
+        <rect x="75" y="72" width="8" height="15" rx="4" fill="#3A4046" />
+        <line
+          x1="55"
+          y1="22"
+          x2="55"
+          y2="14"
+          stroke="#4A5158"
+          strokeWidth="2.6"
+        />
+        <circle cx="55" cy="12" r="3.4" fill="#9AA1A8" />
+        <rect x="24" y="22" width="62" height="48" rx="7" fill="#5A6168" />
+        <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+        <g
+          fill="#8B9298"
+          className={styles.animated}
+          style={{
+            animation: `${styles["pet-static"]} calc(var(--t)*.6) steps(2) infinite`,
+          }}
+        >
+          <rect x="30" y="30" width="50" height="2" />
+          <rect x="30" y="36" width="50" height="3" />
+          <rect x="30" y="44" width="50" height="2" />
+          <rect x="30" y="52" width="50" height="4" />
+          <rect x="30" y="60" width="50" height="2" />
         </g>
-      );
-    case "dots":
-      return (
-        <g className={styles.dots}>
-          <circle className={styles.dot} cx="42" cy="16" r="2.5" />
-          <circle className={styles.dot} cx="50" cy="16" r="2.5" />
-          <circle className={styles.dot} cx="58" cy="16" r="2.5" />
+        <g
+          stroke="#8B9298"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          className={styles.animated}
+          style={{
+            animation: `${styles["pet-flicker"]} calc(var(--t)*2) steps(1,end) infinite`,
+          }}
+        >
+          <line x1="41" y1="42" x2="49" y2="50" />
+          <line x1="49" y1="42" x2="41" y2="50" />
+          <line x1="61" y1="42" x2="69" y2="50" />
+          <line x1="69" y1="42" x2="61" y2="50" />
         </g>
-      );
-    case "question":
-      return (
-        <text className={styles.question} x="50" y="20" textAnchor="middle">
-          ?
-        </text>
-      );
-    case "zzz":
-      return (
-        <text className={styles.zzz} x="70" y="22" textAnchor="middle">
-          z
-        </text>
-      );
-    case "none":
-      return null;
-  }
+      </g>
+    </svg>
+  );
 }
 
 /**
  * `<Pet>` recibe `{state, level, fatigue}` y no sabe nada de sprites
  * (docs/DESIGN.md §4). SVG/CSS procedural, sin assets externos.
  * `viewBox` + `100%` — nunca `width`/`height` fijos — es lo que permite
- * al mismo componente servir de icono de 160 px y de viewport completo
+ * al mismo componente servir de icono y de viewport completo
  * (docs/STACK.md §2), y no lleva fondo, marco ni tamaño propio: eso
- * vive en las envolturas de routes/.
+ * vive en las envolturas de routes/. La fatiga no toca la geometría
+ * de la escena — solo el tempo (`--t`) y la luz de la antena, vía
+ * custom properties resueltas en Pet.module.css.
  */
 export function Pet({ state, level, fatigue }: PetProps) {
-  const look = STATE_LOOK[state];
   const style = {
     "--pet-fatigue": fatigueLevel(fatigue),
   } as CSSProperties;
@@ -184,7 +1407,7 @@ export function Pet({ state, level, fatigue }: PetProps) {
   return (
     <svg
       className={styles.pet}
-      viewBox="0 0 100 100"
+      viewBox="0 0 150 110"
       width="100%"
       height="100%"
       role="img"
@@ -193,14 +1416,8 @@ export function Pet({ state, level, fatigue }: PetProps) {
       data-level={level}
       style={style}
     >
-      <title>{look.title}</title>
-      <ellipse className={styles.body} cx="50" cy="58" rx="34" ry="30" />
-      <g className={styles.eyes}>
-        <Eyes shape={look.eyes} />
-      </g>
-      <g className={styles.accessory} data-look={look.accessory}>
-        <Accessory kind={look.accessory} />
-      </g>
+      <title>{STATE_TITLE[state]}</title>
+      <Scene state={state} />
     </svg>
   );
 }
