@@ -11,7 +11,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  /* `stretch`, no `center`: el panel desplegado (320px, diseño 3b) debe
+     llenar el ancho de la ventana, no quedar centrado con margen — en
+     plegado no cambia nada, `.petArea` ya es del mismo ancho que la
+     ventana. */
+  align-items: stretch;
 }
 
 .petWindow[data-expanded="true"] {

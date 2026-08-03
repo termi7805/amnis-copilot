@@ -103,20 +103,29 @@ export function PetWindow() {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
     >
-      <div className={styles.petArea}>
-        {status === "offline" ? (
-          <PetOffline />
-        ) : state ? (
-          <Pet
-            state={state.pet.state}
-            level={state.pet.level}
-            fatigue={state.pet.fatigue}
-          />
-        ) : (
-          <span>{CONNECTION_LABEL[status]}</span>
-        )}
-      </div>
-      {expanded && state && <QuotaPanel quotas={state.quotas} now={now} />}
+      {!expanded && (
+        <div className={styles.petArea}>
+          {status === "offline" ? (
+            <PetOffline />
+          ) : state ? (
+            <Pet
+              state={state.pet.state}
+              level={state.pet.level}
+              fatigue={state.pet.fatigue}
+            />
+          ) : (
+            <span>{CONNECTION_LABEL[status]}</span>
+          )}
+        </div>
+      )}
+      {expanded && state && (
+        <QuotaPanel
+          pet={state.pet}
+          status={status}
+          quotas={state.quotas}
+          now={now}
+        />
+      )}
     </div>
   );
 }

@@ -32,6 +32,7 @@ test("check() con el mismo estado consecutivo no vuelve a broadcastear", () => {
     toolName: "Edit",
     derivedState: "coding",
     ts: "2026-01-01T00:00:00.000Z",
+    stateEnteredAt: "2026-01-01T00:00:00.000Z",
   };
   const { watcher, broadcasts } = makeWatcher(() => event);
 
@@ -55,6 +56,7 @@ test("check() con un estado distinto broadcastea de nuevo", () => {
     toolName: "Edit",
     derivedState,
     ts: "2026-01-01T00:00:00.000Z",
+    stateEnteredAt: "2026-01-01T00:00:00.000Z",
   }));
 
   assert.equal(broadcasts.length, 1);
@@ -72,6 +74,7 @@ test("evento antiguo (idle): check() transiciona a sleeping y broadcastea", () =
     toolName: "Edit",
     derivedState: "coding",
     ts: "2026-01-01T00:00:00.000Z",
+    stateEnteredAt: "2026-01-01T00:00:00.000Z",
   };
   const { watcher, broadcasts } = makeWatcher(() => event);
 

@@ -1,30 +1,162 @@
 .panel {
   font-family: system-ui, sans-serif;
-  color: #222;
-  padding: 0.25rem 0.5rem 0.5rem;
+  color: #201e1d;
   width: 100%;
   box-sizing: border-box;
 }
 
+.header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-bottom: 2px solid #201e1d;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+}
+
+.wordmark {
+  font:
+    600 9px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.12em;
+  color: #201e1d;
+}
+
+.refreshButton {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #6b6660;
+  cursor: pointer;
+}
+
+.refreshButton:hover:not(:disabled) {
+  color: #201e1d;
+}
+
+.refreshButton:disabled {
+  cursor: default;
+}
+
+.refreshButton[data-refreshing="true"] svg {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refreshButton[data-refreshing="true"] svg {
+    animation: none;
+    opacity: 0.4;
+  }
+}
+
+.activity {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: #edf1f5;
+  border-bottom: 2px solid #201e1d;
+}
+
+/* 196px de ancho, alto derivado del viewBox de BIT (150×110) para no
+   deformar la escena — 196 * 110 / 150. */
+.activityPet {
+  flex: none;
+  width: 196px;
+  height: 143.73px;
+}
+
+.activityText {
+  flex: 1;
+  padding: 0 12px 0 0;
+  min-width: 0;
+}
+
+.cap {
+  display: block;
+  font:
+    600 9px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9a948a;
+  margin-bottom: 5px;
+}
+
+.activityLabel {
+  display: block;
+  font:
+    600 13px / 1.25 Archivo,
+    sans-serif;
+  color: #201e1d;
+}
+
+.activityDuration {
+  display: block;
+  margin-top: 6px;
+  font:
+    400 10px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  color: #6b6660;
+}
+
 .provider + .provider {
-  margin-top: 0.5rem;
+  border-top: 1px solid #c9c6c2;
+}
+
+.providerRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 0;
 }
 
 .providerLabel {
-  font-size: 0.8rem;
-  margin: 0 0 0.25rem;
-  text-align: center;
+  font:
+    600 9px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9a948a;
+  margin: 0;
 }
 
 .rings {
   display: flex;
-  justify-content: center;
-  gap: 0.75rem;
+}
+
+.ringCell {
+  flex: 1;
+  padding: 14px 12px;
+}
+
+.ringCell + .ringCell {
+  border-left: 1px solid #c9c6c2;
 }
 
 .error {
   color: #b3261e;
   font-size: 0.7rem;
-  text-align: center;
-  margin: 0 0 0.25rem;
+  padding: 6px 14px 0;
+  margin: 0;
 }

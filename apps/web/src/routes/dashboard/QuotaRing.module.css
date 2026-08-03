@@ -56,3 +56,25 @@
   opacity: 0.7;
   min-height: 1em;
 }
+
+/* Panel 3b de la ventana flotante desplegada: anillo a la izquierda,
+   cifra/cuenta atrás a la derecha, en vez de apilados. */
+.ring[data-layout="row"] {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.ring[data-layout="row"] .readout {
+  align-items: flex-start;
+  text-align: left;
+}
+
+/* Jerarquía visual (5h manda, 7d acompaña) sin tocar el dato. */
+.ring[data-tone="muted"] .authoritative {
+  stroke: #8b857e;
+}
+
+.ring[data-tone="muted"] .value {
+  color: #6b6660;
+}

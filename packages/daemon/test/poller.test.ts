@@ -19,7 +19,7 @@ const FAKE_SNAPSHOT: QuotaSnapshot = {
 
 test("toma una muestra inmediata al arrancar, sin esperar al primer intervalo", async () => {
   const samples: QuotaSnapshot[] = [];
-  const stop = startQuotaPoller({
+  const { stop } = startQuotaPoller({
     sample: () => Promise.resolve(FAKE_SNAPSHOT),
     onSample: (s) => samples.push(s),
     intervalMs: 10_000,
@@ -33,7 +33,7 @@ test("toma una muestra inmediata al arrancar, sin esperar al primer intervalo", 
 
 test("sigue muestreando cada intervalo hasta que se llama a stop()", async () => {
   const samples: QuotaSnapshot[] = [];
-  const stop = startQuotaPoller({
+  const { stop } = startQuotaPoller({
     sample: () => Promise.resolve(FAKE_SNAPSHOT),
     onSample: (s) => samples.push(s),
     intervalMs: 15,
@@ -57,7 +57,7 @@ test("una muestra que rechaza llega a onError y el intervalo sobrevive", async (
   const errors: Error[] = [];
   const samples: QuotaSnapshot[] = [];
 
-  const stop = startQuotaPoller({
+  const { stop } = startQuotaPoller({
     sample: () => {
       calls++;
       if (calls === 1) return Promise.reject(new Error("fallo simulado"));
@@ -83,7 +83,7 @@ test("una muestra lenta no se solapa: el tick que cae mientras hay una en vuelo 
   let concurrent = 0;
   let maxConcurrent = 0;
 
-  const stop = startQuotaPoller({
+  const { stop } = startQuotaPoller({
     sample: async () => {
       concurrent++;
       maxConcurrent = Math.max(maxConcurrent, concurrent);
@@ -95,6 +95,47 @@ test("una muestra lenta no se solapa: el tick que cae mientras hay una en vuelo 
   });
 
   await sleep(80);
+  stop();
+
+  assert.equal(maxConcurrent, 1);
+});
+
+test("pollNow fuerza una muestra sin esperar al intervalo", async () => {
+  const samples: QuotaSnapshot[] = [];
+  const { stop, pollNow } = startQuotaPoller({
+    sample: () => Promise.resolve(FAKE_SNAPSHOT),
+    onSample: (s) => samples.push(s),
+    intervalMs: 10_000,
+  });
+
+  await sleep(5);
+  const afterStart = samples.length;
+
+  pollNow();
+  await sleep(5);
+  stop();
+
+  assert.equal(samples.length, afterStart + 1);
+});
+
+test("pollNow durante una muestra en vuelo no apila una segunda — mismo guard que el intervalo", async () => {
+  let concurrent = 0;
+  let maxConcurrent = 0;
+
+  const { stop, pollNow } = startQuotaPoller({
+    sample: async () => {
+      concurrent++;
+      maxConcurrent = Math.max(maxConcurrent, concurrent);
+      await sleep(40);
+      concurrent--;
+      return FAKE_SNAPSHOT;
+    },
+    intervalMs: 10_000,
+  });
+
+  pollNow();
+  pollNow();
+  await sleep(60);
   stop();
 
   assert.equal(maxConcurrent, 1);

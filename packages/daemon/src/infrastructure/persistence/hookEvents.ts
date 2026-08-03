@@ -36,37 +36,60 @@ export interface LastKnownStateEvent {
   toolName: string | null;
   derivedState: string;
   ts: string;
+  /** `ts` del primer evento de la racha actual en `derivedState` — cuándo
+   * se entró de verdad en el estado, no el último evento cualquiera
+   * dentro de él (ver comentario de más abajo). */
+  stateEnteredAt: string;
 }
 
 /**
- * El evento más reciente con un estado reconocible. `derived_state =
- * 'unknown'` (hooks que `derivePetState` no supo mapear) no cuenta: no es
+ * El evento más reciente con un estado reconocible, más cuándo empezó la
+ * racha actual en ese estado. `derived_state = 'unknown'` (hooks que
+ * `derivePetState` no supo mapear) no cuenta en ninguno de los dos: no es
  * información sobre qué estás haciendo, es ruido — para GET /api/state (#26).
+ *
+ * `stateEnteredAt` importa porque Claude Code dispara un `PreToolUse` por
+ * cada herramienta: sin esto, "cuánto llevas programando" se reiniciaba a
+ * cero en cada `Edit` aunque llevaras 20 minutos encadenándolos. Se calcula
+ * en JS, no en SQL — con los volúmenes de un daemon local (cientos de
+ * eventos, no millones) es más simple de leer que una window function, y
+ * el límite de 500 filas acota el coste sin necesitar ser exacto: una
+ * racha real de miles de eventos sin un solo estado distinto en medio no
+ * pasa en la práctica.
  */
 export function lastKnownStateEvent(
   db: DatabaseSync,
   accountId: number,
 ): LastKnownStateEvent | null {
-  const row = db
+  const rows = db
     .prepare(`
       SELECT hook, tool_name, derived_state, ts FROM hook_events
       WHERE account_id = ? AND derived_state != 'unknown'
-      ORDER BY ts DESC LIMIT 1
+      ORDER BY ts DESC
+      LIMIT 500
     `)
-    .get(accountId) as
-    | {
-        hook: string;
-        tool_name: string | null;
-        derived_state: string;
-        ts: string;
-      }
-    | undefined;
-  if (!row) return null;
+    .all(accountId) as Array<{
+    hook: string;
+    tool_name: string | null;
+    derived_state: string;
+    ts: string;
+  }>;
+
+  const latest = rows[0];
+  if (!latest) return null;
+
+  let stateEnteredAt = latest.ts;
+  for (const row of rows) {
+    if (row.derived_state !== latest.derived_state) break;
+    stateEnteredAt = row.ts;
+  }
+
   return {
-    hook: row.hook,
-    toolName: row.tool_name,
-    derivedState: row.derived_state,
-    ts: row.ts,
+    hook: latest.hook,
+    toolName: latest.tool_name,
+    derivedState: latest.derived_state,
+    ts: latest.ts,
+    stateEnteredAt,
   };
 }
 

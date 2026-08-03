@@ -51,6 +51,7 @@ test("evento reciente: el estado y el reason reflejan el último evento con esta
     toolName: "Edit",
     derivedState: "coding",
     ts: new Date(NOW.getTime() - 1000).toISOString(),
+    stateEnteredAt: new Date(NOW.getTime() - 1000).toISOString(),
   };
   const state = await getState(
     makeDeps({ lastKnownStateEvent: () => event }),
@@ -58,16 +59,34 @@ test("evento reciente: el estado y el reason reflejan el último evento con esta
   );
 
   assert.equal(state.pet.state, "coding");
-  assert.equal(state.pet.since, event.ts);
+  assert.equal(state.pet.since, event.stateEnteredAt);
   assert.ok(state.pet.reason.includes("Edit"));
 });
 
-test("evento antiguo (> 10 min): sleeping, since = ts del último evento", async () => {
+test("since es stateEnteredAt, no el ts del último evento — una racha de varios PreToolUse en el mismo estado no la reinicia", async () => {
+  const event: LastKnownStateEvent = {
+    hook: "PreToolUse",
+    toolName: "Edit",
+    derivedState: "coding",
+    ts: new Date(NOW.getTime() - 1000).toISOString(),
+    stateEnteredAt: new Date(NOW.getTime() - 20 * 60_000).toISOString(),
+  };
+  const state = await getState(
+    makeDeps({ lastKnownStateEvent: () => event }),
+    NOW,
+  );
+
+  assert.equal(state.pet.since, event.stateEnteredAt);
+  assert.notEqual(state.pet.since, event.ts);
+});
+
+test("evento antiguo (> 10 min): sleeping, la inactividad se mide por ts, no por stateEnteredAt", async () => {
   const event: LastKnownStateEvent = {
     hook: "PreToolUse",
     toolName: "Edit",
     derivedState: "coding",
     ts: new Date(NOW.getTime() - 15 * 60_000).toISOString(),
+    stateEnteredAt: new Date(NOW.getTime() - 15 * 60_000).toISOString(),
   };
   const state = await getState(
     makeDeps({ lastKnownStateEvent: () => event }),
@@ -75,7 +94,7 @@ test("evento antiguo (> 10 min): sleeping, since = ts del último evento", async
   );
 
   assert.equal(state.pet.state, "sleeping");
-  assert.equal(state.pet.since, event.ts);
+  assert.equal(state.pet.since, event.stateEnteredAt);
 });
 
 test("eventsReceived y usageEvents reflejan lo que devuelven las deps", async () => {

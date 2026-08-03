@@ -64,6 +64,63 @@ test("lastKnownStateEvent devuelve el más reciente por ts", () => {
   assert.equal(last?.ts, "2026-01-01T00:05:00.000Z");
 });
 
+test("stateEnteredAt es el primer evento de la racha, no el último — varios PreToolUse seguidos en el mismo estado no lo reinician", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "coding", {
+    toolName: "Edit",
+  });
+  insert(db, accountId, "2026-01-01T00:05:00.000Z", "coding", {
+    toolName: "Write",
+  });
+  insert(db, accountId, "2026-01-01T00:10:00.000Z", "coding", {
+    toolName: "Edit",
+  });
+
+  const last = lastKnownStateEvent(db, accountId);
+
+  assert.equal(last?.ts, "2026-01-01T00:10:00.000Z");
+  assert.equal(last?.stateEnteredAt, "2026-01-01T00:00:00.000Z");
+});
+
+test("un cambio de estado corta la racha: stateEnteredAt es el primer evento del estado nuevo", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "researching", {
+    toolName: "Read",
+  });
+  insert(db, accountId, "2026-01-01T00:10:00.000Z", "coding", {
+    toolName: "Edit",
+  });
+  insert(db, accountId, "2026-01-01T00:12:00.000Z", "coding", {
+    toolName: "Edit",
+  });
+
+  const last = lastKnownStateEvent(db, accountId);
+
+  assert.equal(last?.derivedState, "coding");
+  assert.equal(last?.stateEnteredAt, "2026-01-01T00:10:00.000Z");
+});
+
+test("un evento 'unknown' en medio no corta la racha — no cuenta como cambio de estado", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "coding", {
+    toolName: "Edit",
+  });
+  insert(db, accountId, "2026-01-01T00:05:00.000Z", "unknown", {
+    hook: "UserPromptSubmit",
+    toolName: null,
+  });
+  insert(db, accountId, "2026-01-01T00:10:00.000Z", "coding", {
+    toolName: "Edit",
+  });
+
+  const last = lastKnownStateEvent(db, accountId);
+
+  assert.equal(last?.stateEnteredAt, "2026-01-01T00:00:00.000Z");
+});
+
 test("countHookEvents cuenta solo los de la cuenta indicada", () => {
   const db = openDb(":memory:");
   const accountId = ensureAccount(db, "anthropic", "default");

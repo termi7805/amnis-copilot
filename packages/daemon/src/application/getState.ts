@@ -6,6 +6,10 @@ export interface LastKnownStateEvent {
   toolName: string | null;
   derivedState: string;
   ts: string;
+  /** `ts` del primer evento de la racha actual en `derivedState` — lo que
+   * alimenta `since` (ver `petPhaseFrom`). `ts` en sí sigue siendo el del
+   * último evento, y es lo que usa `sleepAfter` para detectar inactividad. */
+  stateEnteredAt: string;
 }
 
 /**
@@ -35,11 +39,13 @@ export interface PetPhase {
  * misma lógica para disparar un evento SSE sin pagar el poll de cuota que
  * `getState()` sí hace en cada llamada.
  *
- * `since` es una aproximación barata — el ts del último evento con estado
- * reconocible, o `startedAt` si nunca hubo ninguno — no "cuánto llevas
- * exactamente en este estado". `reason` se reconstruye desde
- * `hook`/`toolName` porque `hook_events` no guarda el texto libre de
- * `DerivedState.reason` (#23).
+ * `since` es `stateEnteredAt` (racha actual en el mismo estado), no `ts`
+ * (último evento cualquiera) — un `PreToolUse` por herramienta reiniciaría
+ * "cuánto llevas programando" en cada `Edit` si usara `ts`. La detección
+ * de inactividad (`sleepAfter`) sí usa `ts`: un estado que lleva rato
+ * activo no debe parecer "reciente" a efectos de dormir. `reason` se
+ * reconstruye desde `hook`/`toolName` porque `hook_events` no guarda el
+ * texto libre de `DerivedState.reason` (#23).
  */
 export function petPhaseFrom(
   lastEvent: LastKnownStateEvent | null,
@@ -52,7 +58,7 @@ export function petPhaseFrom(
   const state: PetState = asleep
     ? "sleeping"
     : (lastEvent?.derivedState as PetState);
-  const since = lastEventAt?.toISOString() ?? startedAt;
+  const since = lastEvent?.stateEnteredAt ?? startedAt;
   const reason = lastEvent
     ? `${lastEvent.hook}${lastEvent.toolName ? ` ${lastEvent.toolName}` : ""}`
     : "sin eventos";

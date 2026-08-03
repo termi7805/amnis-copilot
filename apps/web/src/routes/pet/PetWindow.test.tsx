@@ -59,6 +59,10 @@ describe("PetWindow", () => {
   beforeEach(() => {
     FakeEventSource.instances = [];
     vi.stubGlobal("EventSource", FakeEventSource);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response("{}"))),
+    );
     localStorage.clear();
   });
 
@@ -102,8 +106,12 @@ describe("PetWindow", () => {
         setSize: vi.fn(),
         setResizable: vi.fn(),
         setMinSize: vi.fn(),
+        outerPosition: () => Promise.resolve({ x: 0, y: 0 }),
+        setPosition: vi.fn(),
       }),
       LogicalSize: class {},
+      LogicalPosition: class {},
+      currentMonitor: () => Promise.resolve(null),
     }));
 
     render(<PetWindow />);
@@ -149,7 +157,39 @@ describe("PetWindow", () => {
       }),
     );
 
-    expect(screen.getByText("Claude")).toBeInTheDocument();
+    expect(screen.getAllByTestId("quota-value").length).toBeGreaterThan(0);
+  });
+
+  it("pulsar el botón de recarga no pliega el panel — no debe burbujear al toggle de la ventana", () => {
+    localStorage.setItem(EXPANDED_KEY, "1");
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() =>
+      source?.emit("hello", {
+        ...fakeState,
+        quotas: [
+          {
+            provider: "anthropic",
+            authoritative: null,
+            local: {
+              fiveHourTokens: 0,
+              fiveHourUtilization: 10,
+              windowStartedAt: "2026-01-01T00:00:00Z",
+            },
+            divergence: null,
+            sampledAt: "2026-01-01T00:00:00Z",
+            error: null,
+          },
+        ],
+      }),
+    );
+
+    const button = screen.getByRole("button", { name: "Recargar cuota" });
+    fireEvent.pointerDown(button);
+    fireEvent.pointerUp(button);
+
+    expect(localStorage.getItem(EXPANDED_KEY)).toBe("1");
   });
 
   it("al pasar a offline cambia a la escena de 'sin conexión', no solo a gris", () => {

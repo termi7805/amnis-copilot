@@ -12,6 +12,7 @@ import { createEventBroadcaster } from "../http/events.ts";
 import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
+import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
 import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
 import { createHttpServer } from "../http/server.ts";
@@ -92,24 +93,8 @@ export function runServeCli(): void {
       broadcaster.broadcast({ event: "state", data: snapshot }),
   });
 
-  const server = createHttpServer({
-    routes: {
-      "GET /debug": createDashboardRoute(),
-      "POST /api/hook/claude": createHookRoute(
-        makeHookDeps(db, accountId, () => watcher.check()),
-      ),
-      "GET /api/usage": createUsageRoute(db, accountId),
-      "GET /api/state": createStateRoute(stateDeps),
-      "GET /api/events": createEventsRoute({
-        broadcaster,
-        hello: () => getState(stateDeps, new Date()),
-      }),
-    },
-    fallback: createStaticRoute(WEB_DIST),
-  });
-
   const sample = createQuotaSampler(db, accountId, anthropicProvider);
-  const stopPoller = startQuotaPoller({
+  const poller = startQuotaPoller({
     sample,
     onSample: (snapshot) => {
       cachedFatigue = fatigueFrom([snapshot]);
@@ -118,11 +103,28 @@ export function runServeCli(): void {
     onError: (err) => console.error("Fallo muestreando cuota:", err.message),
   });
 
+  const server = createHttpServer({
+    routes: {
+      "GET /debug": createDashboardRoute(),
+      "POST /api/hook/claude": createHookRoute(
+        makeHookDeps(db, accountId, () => watcher.check()),
+      ),
+      "GET /api/usage": createUsageRoute(db, accountId),
+      "GET /api/state": createStateRoute(stateDeps),
+      "POST /api/quota/refresh": createQuotaRefreshRoute(poller.pollNow),
+      "GET /api/events": createEventsRoute({
+        broadcaster,
+        hello: () => getState(stateDeps, new Date()),
+      }),
+    },
+    fallback: createStaticRoute(WEB_DIST),
+  });
+
   let shuttingDown = false;
   const shutdown = () => {
     if (shuttingDown) return;
     shuttingDown = true;
-    stopPoller();
+    poller.stop();
     watcher.stop();
     broadcaster.stop();
     server

@@ -14,7 +14,7 @@ export interface PetProps {
  * compila, la mascota nunca se queda muda ante un estado real
  * (docs/DESIGN.md §4).
  */
-const STATE_TITLE: Record<PetState, string> = {
+export const STATE_TITLE: Record<PetState, string> = {
   coding: "Escribiendo código",
   testing: "Corriendo tests",
   researching: "Buscando información",

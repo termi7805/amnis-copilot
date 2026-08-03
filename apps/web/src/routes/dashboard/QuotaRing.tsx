@@ -12,6 +12,12 @@ export interface QuotaRingProps {
   /** Lado del `<svg>` en px. El `viewBox` sigue en 0-100, así que la
    * geometría escala sola (#42 lo usa más pequeño en la mascota). */
   size?: number;
+  /** `"row"` pone el anillo junto al `readout` en vez de encima (panel
+   * 3b de la ventana flotante desplegada). */
+  layout?: "column" | "row";
+  /** `"muted"` atenúa el anillo y la cifra — jerarquía visual (5h manda,
+   * 7d acompaña) sin tocar el dato en sí. */
+  tone?: "default" | "muted";
 }
 
 /**
@@ -33,6 +39,8 @@ export function QuotaRing({
   estimated,
   now,
   size = 96,
+  layout = "column",
+  tone = "default",
 }: QuotaRingProps) {
   const hasData = authoritative !== null || estimated !== null;
   const displayValue = authoritative?.utilization ?? estimated;
@@ -41,7 +49,7 @@ export function QuotaRing({
     : null;
 
   return (
-    <div className={styles.ring}>
+    <div className={styles.ring} data-layout={layout} data-tone={tone}>
       <svg viewBox="0 0 100 100" width={size} height={size} role="img">
         <title>
           {label}: {hasData ? `${displayValue}%` : "sin dato"}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatUntil } from "./countdown.ts";
+import { formatElapsed, formatUntil } from "./countdown.ts";
 
 const NOW = new Date("2026-01-01T00:00:00Z");
 
@@ -35,5 +35,27 @@ describe("formatUntil", () => {
 
   it("a partir de 1d muestra días y horas", () => {
     expect(formatUntil(at((2 * 24 + 5) * 60 * 60_000), NOW)).toBe("2d 5h");
+  });
+});
+
+describe("formatElapsed", () => {
+  it("un instante futuro (reloj desincronizado) no da minutos negativos", () => {
+    expect(formatElapsed(at(60_000), NOW)).toBe("0 min");
+  });
+
+  it("por debajo de 1h muestra solo minutos", () => {
+    expect(formatElapsed(at(-12 * 60_000), NOW)).toBe("12 min");
+  });
+
+  it("justo en el límite de 1h ya cuenta como hora", () => {
+    expect(formatElapsed(at(-60 * 60_000), NOW)).toBe("1h 0m");
+  });
+
+  it("entre 1h y 1d muestra horas y minutos", () => {
+    expect(formatElapsed(at(-(1 * 60 + 47) * 60_000), NOW)).toBe("1h 47m");
+  });
+
+  it("a partir de 1d muestra días y horas", () => {
+    expect(formatElapsed(at(-(2 * 24 + 5) * 60 * 60_000), NOW)).toBe("2d 5h");
   });
 });
