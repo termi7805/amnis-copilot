@@ -8,6 +8,9 @@ export interface PetStateWatcherDeps {
   lastKnownStateEvent(): LastKnownStateEvent | null;
   startedAt: string;
   getCachedFatigue(): number;
+  /** Hermano exacto de `getCachedFatigue`: cuota agotada, cacheada del
+   * último poll — un `state` disparado por hooks no debe pagar el poll. */
+  getCachedExhausted(): boolean;
   broadcast(snapshot: PetSnapshot): void;
   intervalMs?: number;
 }
@@ -33,7 +36,12 @@ export function startPetStateWatcher(
   let lastBroadcastState: PetState | null = null;
 
   function check(now: Date = new Date()): void {
-    const phase = petPhaseFrom(deps.lastKnownStateEvent(), deps.startedAt, now);
+    const phase = petPhaseFrom(
+      deps.lastKnownStateEvent(),
+      deps.startedAt,
+      now,
+      deps.getCachedExhausted(),
+    );
     if (phase.state === lastBroadcastState) return;
     lastBroadcastState = phase.state;
     deps.broadcast({

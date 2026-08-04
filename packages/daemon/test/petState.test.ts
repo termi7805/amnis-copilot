@@ -49,6 +49,32 @@ test("PreToolUse con Bash y un comando que no es de test → terminal", () => {
   assert.equal(result?.state, "terminal");
 });
 
+test("PreToolUse con Task → subagents", () => {
+  const result = derivePetState(makeEvent({ toolName: "Task" }));
+  assert.equal(result?.state, "subagents");
+});
+
+test("PreToolUse con Bash y git commit → committing", () => {
+  const result = derivePetState(
+    makeEvent({ toolName: "Bash", command: 'git commit -m "fix"' }),
+  );
+  assert.equal(result?.state, "committing");
+});
+
+test("PreToolUse con Bash y git push → pushing", () => {
+  const result = derivePetState(
+    makeEvent({ toolName: "Bash", command: "git push origin main" }),
+  );
+  assert.equal(result?.state, "pushing");
+});
+
+test("git commit con 'test' en el mensaje → committing, no testing", () => {
+  const result = derivePetState(
+    makeEvent({ toolName: "Bash", command: 'git commit -m "arregla el test"' }),
+  );
+  assert.equal(result?.state, "committing");
+});
+
 test("PreToolUse con Read/Grep/Glob/WebSearch/WebFetch → researching", () => {
   for (const toolName of ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]) {
     const result = derivePetState(makeEvent({ toolName }));

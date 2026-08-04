@@ -11,7 +11,11 @@ export type PetState =
   | "waiting"
   | "resting"
   | "sleeping"
-  | "terminal";
+  | "terminal"
+  | "subagents"
+  | "committing"
+  | "pushing"
+  | "limited";
 
 export type ProviderId = "anthropic";
 

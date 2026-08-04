@@ -6,12 +6,16 @@ import { startPetStateWatcher } from "../src/infrastructure/petStateWatcher.ts";
 
 const STARTED_AT = "2026-01-01T00:00:00.000Z";
 
-function makeWatcher(lastEvent: () => LastKnownStateEvent | null) {
+function makeWatcher(
+  lastEvent: () => LastKnownStateEvent | null,
+  getCachedExhausted: () => boolean = () => false,
+) {
   const broadcasts: PetSnapshot[] = [];
   const watcher = startPetStateWatcher({
     lastKnownStateEvent: lastEvent,
     startedAt: STARTED_AT,
     getCachedFatigue: () => 0.5,
+    getCachedExhausted,
     broadcast: (snapshot) => broadcasts.push(snapshot),
     intervalMs: 3_600_000,
   });
@@ -92,5 +96,23 @@ test("evento antiguo (idle): check() transiciona a sleeping y broadcastea", () =
 test("el snapshot broadcastado lleva la fatiga cacheada", () => {
   const { watcher, broadcasts } = makeWatcher(() => null);
   assert.equal(broadcasts[0]?.fatigue, 0.5);
+  watcher.stop();
+});
+
+test("pasar de exhausted false→true broadcastea limited; repetirlo no vuelve a emitir", () => {
+  let exhausted = false;
+  const { watcher, broadcasts } = makeWatcher(
+    () => null,
+    () => exhausted,
+  );
+  const beforeLimit = broadcasts.length;
+
+  exhausted = true;
+  watcher.check(new Date("2026-01-01T00:00:01.000Z"));
+  assert.equal(broadcasts.length, beforeLimit + 1);
+  assert.equal(broadcasts.at(-1)?.state, "limited");
+
+  watcher.check(new Date("2026-01-01T00:00:02.000Z"));
+  assert.equal(broadcasts.length, beforeLimit + 1);
   watcher.stop();
 });

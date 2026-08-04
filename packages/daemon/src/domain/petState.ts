@@ -2,6 +2,8 @@ import type { NormalizedHookEvent, PetState } from "@amnis/shared";
 
 /** Comandos de Bash que cuentan como "correr tests". */
 const TEST_COMMAND = /\btest\b|\bpytest\b|\bjest\b|\bvitest\b|cargo test/;
+const GIT_PUSH_COMMAND = /\bgit\s+push\b/;
+const GIT_COMMIT_COMMAND = /\bgit\s+commit\b/;
 
 const CODING_TOOLS = new Set(["Edit", "Write", "NotebookEdit"]);
 const RESEARCH_TOOLS = new Set([
@@ -42,6 +44,28 @@ export function derivePetState(
     const tool = event.toolName;
     if (tool && CODING_TOOLS.has(tool)) {
       return { state: "coding", reason: `PreToolUse ${tool}` };
+    }
+    if (tool === "Task") {
+      return { state: "subagents", reason: "PreToolUse Task" };
+    }
+    // Los dos `git` van antes de TEST_COMMAND: un `git commit -m "arregla
+    // el test"` matchea /\btest\b/ y caería en `testing` si no.
+    if (
+      tool === "Bash" &&
+      event.command &&
+      GIT_PUSH_COMMAND.test(event.command)
+    ) {
+      return { state: "pushing", reason: `PreToolUse Bash: ${event.command}` };
+    }
+    if (
+      tool === "Bash" &&
+      event.command &&
+      GIT_COMMIT_COMMAND.test(event.command)
+    ) {
+      return {
+        state: "committing",
+        reason: `PreToolUse Bash: ${event.command}`,
+      };
     }
     if (tool === "Bash" && event.command && TEST_COMMAND.test(event.command)) {
       return { state: "testing", reason: `PreToolUse Bash: ${event.command}` };

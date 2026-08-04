@@ -5,6 +5,7 @@ import {
   type GetStateDeps,
   getState,
   type LastKnownStateEvent,
+  quotaExhausted,
 } from "../src/application/getState.ts";
 
 const STARTED_AT = "2026-01-01T00:00:00.000Z";
@@ -159,4 +160,54 @@ test("fatiga usa la vía local cuando no hay autoritativa", async () => {
   );
 
   assert.equal(state.pet.fatigue, 0.4);
+});
+
+test("cuota autoritativa al 100%: limited gana a sleeping", async () => {
+  const state = await getState(
+    makeDeps({
+      sampleQuotas: () =>
+        Promise.resolve([
+          makeQuota({
+            authoritative: {
+              fiveHour: { utilization: 100, resetsAt: null },
+              sevenDay: { utilization: 10, resetsAt: null },
+              sevenDayOpus: null,
+            },
+          }),
+        ]),
+    }),
+    NOW,
+  );
+
+  assert.equal(state.pet.state, "limited");
+});
+
+test("cuota local al 100% sin autoritativa: no dispara limited", () => {
+  assert.equal(
+    quotaExhausted([
+      makeQuota({
+        local: {
+          fiveHourTokens: 1000,
+          fiveHourUtilization: 100,
+          windowStartedAt: STARTED_AT,
+        },
+      }),
+    ]),
+    false,
+  );
+});
+
+test("cuota autoritativa por debajo de 100%: no dispara limited", () => {
+  assert.equal(
+    quotaExhausted([
+      makeQuota({
+        authoritative: {
+          fiveHour: { utilization: 99, resetsAt: null },
+          sevenDay: { utilization: 10, resetsAt: null },
+          sevenDayOpus: null,
+        },
+      }),
+    ]),
+    false,
+  );
 });

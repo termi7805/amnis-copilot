@@ -4,6 +4,7 @@ import {
   fatigueFrom,
   type GetStateDeps,
   getState,
+  quotaExhausted,
 } from "../../application/getState.ts";
 import type { RecordHookDeps } from "../../application/recordHook.ts";
 import { DB_PATH, PORT, VERSION } from "../../config.ts";
@@ -82,13 +83,15 @@ export function runServeCli(): void {
   const broadcaster = createEventBroadcaster();
   const stateDeps = makeStateDeps(db, accountId, startedAt);
 
-  // Cacheada del último poll de cuota: un `state` disparado por hooks no
+  // Cacheadas del último poll de cuota: un `state` disparado por hooks no
   // debe pagar un poll en vivo (PreToolUse dispara muchísimo).
   let cachedFatigue = 0;
+  let cachedExhausted = false;
   const watcher = startPetStateWatcher({
     lastKnownStateEvent: stateDeps.lastKnownStateEvent,
     startedAt,
     getCachedFatigue: () => cachedFatigue,
+    getCachedExhausted: () => cachedExhausted,
     broadcast: (snapshot) =>
       broadcaster.broadcast({ event: "state", data: snapshot }),
   });
@@ -98,7 +101,12 @@ export function runServeCli(): void {
     sample,
     onSample: (snapshot) => {
       cachedFatigue = fatigueFrom([snapshot]);
+      cachedExhausted = quotaExhausted([snapshot]);
       broadcaster.broadcast({ event: "quota", data: [snapshot] });
+      // Entrar/salir de `limited` no debe esperar hasta 30s al
+      // temporizador del watcher — deduplica por `state`, así que llamar
+      // sin cambio real no emite nada de más.
+      watcher.check();
     },
     onError: (err) => console.error("Fallo muestreando cuota:", err.message),
   });

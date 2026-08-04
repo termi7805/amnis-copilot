@@ -47,11 +47,25 @@ export interface PetPhase {
  * reconstruye desde `hook`/`toolName` porque `hook_events` no guarda el
  * texto libre de `DerivedState.reason` (#23).
  */
+/**
+ * `exhausted` gana a todo, incluido `sleeping`: "estás parado" y "estás
+ * parado porque no te queda cuota" no son la misma información, y la
+ * segunda explica la primera. Se limpia sola en el reset de la ventana.
+ */
 export function petPhaseFrom(
   lastEvent: LastKnownStateEvent | null,
   startedAt: string,
   now: Date,
+  exhausted = false,
 ): PetPhase {
+  if (exhausted) {
+    return {
+      state: "limited",
+      since: lastEvent?.stateEnteredAt ?? startedAt,
+      reason: "cuota de 5 h agotada",
+    };
+  }
+
   const lastEventAt = lastEvent ? new Date(lastEvent.ts) : null;
   const asleep = sleepAfter(lastEventAt, now);
 
@@ -78,13 +92,29 @@ export function fatigueFrom(quotas: readonly QuotaSnapshot[]): number {
   return Math.min(1, Math.max(0, utilization / 100));
 }
 
+/**
+ * Solo la fuente autoritativa dispara `limited` — la estimación local es
+ * una estimación, y por debajo de 100% de verdad puede leer 100% de
+ * ruido (docs/DESIGN.md). Sin `authoritative`, nunca hay `limited`.
+ */
+export function quotaExhausted(quotas: readonly QuotaSnapshot[]): boolean {
+  const primary = quotas[0];
+  if (!primary?.authoritative) return false;
+  return primary.authoritative.fiveHour.utilization >= 100;
+}
+
 /** `GET /api/state` (#26): rebanada vertical del proyecto. */
 export async function getState(
   deps: GetStateDeps,
   now: Date,
 ): Promise<StateResponse> {
-  const phase = petPhaseFrom(deps.lastKnownStateEvent(), deps.startedAt, now);
   const quotas = await deps.sampleQuotas();
+  const phase = petPhaseFrom(
+    deps.lastKnownStateEvent(),
+    deps.startedAt,
+    now,
+    quotaExhausted(quotas),
+  );
 
   return {
     pet: {
