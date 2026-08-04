@@ -12,6 +12,7 @@ const HELLO_STATE: StateResponse = {
     fatigue: 0,
     level: 1,
     reason: "sin eventos",
+    commitHash: null,
   },
   quotas: [],
   daemon: {
@@ -86,6 +87,7 @@ test("GET /api/events: un broadcast posterior llega al cliente conectado", async
         fatigue: 0.1,
         level: 1,
         reason: "PreToolUse Edit",
+        commitHash: null,
       },
     };
     broadcaster.broadcast(event);

@@ -24,6 +24,7 @@ const EVENT: AmnisEvent = {
     fatigue: 0,
     level: 1,
     reason: "x",
+    commitHash: null,
   },
 };
 

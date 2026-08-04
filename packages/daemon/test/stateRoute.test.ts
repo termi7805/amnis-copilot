@@ -12,6 +12,7 @@ function makeDeps(): GetStateDeps {
     lastKnownStateEvent: () => null,
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
+    readCommitHash: () => null,
     sampleQuotas: () =>
       Promise.resolve([
         {

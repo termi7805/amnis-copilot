@@ -13,7 +13,11 @@ function insert(
   accountId: number,
   ts: string,
   derivedState: string,
-  overrides: { hook?: string; toolName?: string | null } = {},
+  overrides: {
+    hook?: string;
+    toolName?: string | null;
+    project?: string | null;
+  } = {},
 ): void {
   insertHookEvent(db, {
     accountId,
@@ -22,7 +26,7 @@ function insert(
     hook: overrides.hook ?? "PreToolUse",
     toolName: overrides.toolName ?? "Edit",
     sessionId: null,
-    project: null,
+    project: overrides.project ?? null,
     derivedState,
   });
 }
@@ -62,6 +66,19 @@ test("lastKnownStateEvent devuelve el más reciente por ts", () => {
 
   assert.equal(last?.derivedState, "coding");
   assert.equal(last?.ts, "2026-01-01T00:05:00.000Z");
+});
+
+test("lastKnownStateEvent devuelve el project del evento — de ahí sale el cwd para leer HEAD", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "pushing", {
+    toolName: "Bash",
+    project: "/home/termi/amnis-copilot",
+  });
+
+  const last = lastKnownStateEvent(db, accountId);
+
+  assert.equal(last?.project, "/home/termi/amnis-copilot");
 });
 
 test("stateEnteredAt es el primer evento de la racha, no el último — varios PreToolUse seguidos en el mismo estado no lo reinician", () => {

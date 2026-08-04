@@ -9,6 +9,9 @@ export interface PetProps {
   /** ISO8601, reset de la ventana de 5h. Solo lo usa la escena `limited`
    * (cartel de cuenta atrás) — `null` cuando no hay dato autoritativo. */
   resetsAt?: string | null;
+  /** Solo lo usa la escena `pushing` (sello sobre la caja). `null` en
+   * cualquier otro estado, o si el daemon no pudo leer `HEAD`. */
+  commitHash?: string | null;
 }
 
 /**
@@ -51,9 +54,11 @@ export function fatigueLevel(fatigue: number): number {
 function Scene({
   state,
   resetsAt,
+  commitHash,
 }: {
   state: PetState;
   resetsAt?: string | null;
+  commitHash?: string | null;
 }) {
   switch (state) {
     case "coding":
@@ -1694,15 +1699,6 @@ function Scene({
               stroke="#EC3013"
               strokeWidth="1.6"
             />
-            <text
-              x="120"
-              y="83.6"
-              textAnchor="middle"
-              fill="#EC3013"
-              style={{ font: "700 5.5px ui-monospace,Menlo,monospace" }}
-            >
-              a3f9c1
-            </text>
           </g>
         </g>
       );
@@ -1844,7 +1840,7 @@ function Scene({
               fill="#EC3013"
               style={{ font: "700 4px ui-monospace,Menlo,monospace" }}
             >
-              a3f9c1
+              {commitHash ?? "······"}
             </text>
           </g>
           <g
@@ -2155,7 +2151,13 @@ export function PetOffline() {
  * de la escena — solo el tempo (`--t`) y la luz de la antena, vía
  * custom properties resueltas en Pet.module.css.
  */
-export function Pet({ state, level, fatigue, resetsAt = null }: PetProps) {
+export function Pet({
+  state,
+  level,
+  fatigue,
+  resetsAt = null,
+  commitHash = null,
+}: PetProps) {
   const style = {
     "--pet-fatigue": fatigueLevel(fatigue),
   } as CSSProperties;
@@ -2173,7 +2175,7 @@ export function Pet({ state, level, fatigue, resetsAt = null }: PetProps) {
       style={style}
     >
       <title>{STATE_TITLE[state]}</title>
-      <Scene state={state} resetsAt={resetsAt} />
+      <Scene state={state} resetsAt={resetsAt} commitHash={commitHash} />
     </svg>
   );
 }

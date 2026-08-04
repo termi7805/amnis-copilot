@@ -41,6 +41,7 @@ const fakeState: StateResponse = {
     fatigue: 0.5,
     level: 1,
     reason: "test",
+    commitHash: null,
   },
   quotas: [],
   daemon: {

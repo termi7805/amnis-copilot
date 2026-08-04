@@ -1,5 +1,6 @@
 import type { PetSnapshot, PetState } from "@amnis/shared";
 import {
+  commitHashFrom,
   type LastKnownStateEvent,
   petPhaseFrom,
 } from "../application/getState.ts";
@@ -11,6 +12,8 @@ export interface PetStateWatcherDeps {
   /** Hermano exacto de `getCachedFatigue`: cuota agotada, cacheada del
    * último poll — un `state` disparado por hooks no debe pagar el poll. */
   getCachedExhausted(): boolean;
+  /** `HEAD` corto del repo — solo se llama en `pushing` (commitHashFrom). */
+  readCommitHash(project: string): string | null;
   broadcast(snapshot: PetSnapshot): void;
   intervalMs?: number;
 }
@@ -36,8 +39,9 @@ export function startPetStateWatcher(
   let lastBroadcastState: PetState | null = null;
 
   function check(now: Date = new Date()): void {
+    const lastEvent = deps.lastKnownStateEvent();
     const phase = petPhaseFrom(
-      deps.lastKnownStateEvent(),
+      lastEvent,
       deps.startedAt,
       now,
       deps.getCachedExhausted(),
@@ -48,6 +52,7 @@ export function startPetStateWatcher(
       ...phase,
       fatigue: deps.getCachedFatigue(),
       level: 1,
+      commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
     });
   }
 

@@ -6,6 +6,9 @@ export interface LastKnownStateEvent {
   toolName: string | null;
   derivedState: string;
   ts: string;
+  /** `cwd` del hook que produjo este estado — de dónde leer `HEAD` para
+   * el hash real en `pushing` (#47). */
+  project: string | null;
   /** `ts` del primer evento de la racha actual en `derivedState` — lo que
    * alimenta `since` (ver `petPhaseFrom`). `ts` en sí sigue siendo el del
    * último evento, y es lo que usa `sleepAfter` para detectar inactividad. */
@@ -25,6 +28,9 @@ export interface GetStateDeps {
   countUsageEvents(): number;
   /** Uno por proveedor, ya con `.provider` puesto (quotaSampler.ts). */
   sampleQuotas(): Promise<QuotaSnapshot[]>;
+  /** `HEAD` corto del repo en `project` — solo se llama en `pushing`
+   * (infrastructure/git.ts). */
+  readCommitHash(project: string): string | null;
 }
 
 export interface PetPhase {
@@ -103,14 +109,31 @@ export function quotaExhausted(quotas: readonly QuotaSnapshot[]): boolean {
   return primary.authoritative.fiveHour.utilization >= 100;
 }
 
+/**
+ * Solo `pushing` cablea un hash real: en `PreToolUse` el commit al que
+ * apunta ya existe (es el paso anterior), así que `HEAD` en ese instante
+ * es el que se está subiendo. En `committing`, `HEAD` todavía es el
+ * commit *anterior* — mostrarlo sería inventar un dato, así que no se
+ * llama a `readCommitHash` en ningún otro estado.
+ */
+export function commitHashFrom(
+  phase: PetPhase,
+  lastEvent: LastKnownStateEvent | null,
+  readCommitHash: (project: string) => string | null,
+): string | null {
+  if (phase.state !== "pushing" || !lastEvent?.project) return null;
+  return readCommitHash(lastEvent.project);
+}
+
 /** `GET /api/state` (#26): rebanada vertical del proyecto. */
 export async function getState(
   deps: GetStateDeps,
   now: Date,
 ): Promise<StateResponse> {
   const quotas = await deps.sampleQuotas();
+  const lastEvent = deps.lastKnownStateEvent();
   const phase = petPhaseFrom(
-    deps.lastKnownStateEvent(),
+    lastEvent,
     deps.startedAt,
     now,
     quotaExhausted(quotas),
@@ -121,6 +144,7 @@ export async function getState(
       ...phase,
       fatigue: fatigueFrom(quotas),
       level: 1,
+      commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
     },
     quotas,
     daemon: {

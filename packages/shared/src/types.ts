@@ -30,6 +30,9 @@ export interface PetSnapshot {
   level: number;
   /** Qué evento produjo este estado, para depurar. */
   reason: string;
+  /** Short hash de `HEAD` en el momento de `pushing` — `null` en
+   * cualquier otro estado, o si no se pudo leer (fuera de un repo git). */
+  commitHash: string | null;
 }
 
 export interface QuotaWindow {

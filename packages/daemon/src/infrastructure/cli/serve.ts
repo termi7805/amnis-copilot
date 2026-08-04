@@ -9,6 +9,7 @@ import {
 import type { RecordHookDeps } from "../../application/recordHook.ts";
 import { DB_PATH, PORT, VERSION } from "../../config.ts";
 import { derivePetState } from "../../domain/petState.ts";
+import { readCommitHash } from "../git.ts";
 import { createEventBroadcaster } from "../http/events.ts";
 import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
@@ -66,6 +67,7 @@ function makeStateDeps(
     countHookEvents: () => countHookEvents(db, accountId),
     countUsageEvents: () => countUsageEvents(db, accountId),
     sampleQuotas: () => Promise.all(quotaSamplers.map((sample) => sample())),
+    readCommitHash,
   };
 }
 
@@ -92,6 +94,7 @@ export function runServeCli(): void {
     startedAt,
     getCachedFatigue: () => cachedFatigue,
     getCachedExhausted: () => cachedExhausted,
+    readCommitHash,
     broadcast: (snapshot) =>
       broadcaster.broadcast({ event: "state", data: snapshot }),
   });

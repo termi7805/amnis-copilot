@@ -22,6 +22,7 @@ export function Dashboard() {
             level={state.pet.level}
             fatigue={state.pet.fatigue}
             resetsAt={state.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
+            commitHash={state.pet.commitHash}
           />
         ) : (
           <span>conectando…</span>

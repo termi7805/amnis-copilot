@@ -41,6 +41,7 @@ const hello: StateResponse = {
     fatigue: 0.5,
     level: 1,
     reason: "test",
+    commitHash: null,
   },
   quotas: [
     {

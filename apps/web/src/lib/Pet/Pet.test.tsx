@@ -118,6 +118,26 @@ describe("Pet", () => {
       "Límite alcanzado",
     );
   });
+
+  it("pushing con commitHash pinta el hash real", () => {
+    render(<Pet state="pushing" level={1} fatigue={0} commitHash="a1b2c3d" />);
+
+    expect(screen.getByRole("img").textContent).toContain("a1b2c3d");
+  });
+
+  it("pushing sin commitHash pinta un placeholder, no un hash inventado", () => {
+    render(<Pet state="pushing" level={1} fatigue={0} commitHash={null} />);
+
+    expect(screen.getByRole("img").textContent).toContain("······");
+  });
+
+  it("committing no muestra ningún hash — todavía no existe", () => {
+    render(<Pet state="committing" level={1} fatigue={0} />);
+
+    const pet = screen.getByRole("img");
+    expect(pet.textContent).not.toMatch(/[0-9a-f]{7}/);
+    expect(pet.textContent).not.toContain("······");
+  });
 });
 
 describe("PetOffline", () => {

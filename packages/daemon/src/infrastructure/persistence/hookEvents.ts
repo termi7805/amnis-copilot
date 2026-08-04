@@ -36,6 +36,9 @@ export interface LastKnownStateEvent {
   toolName: string | null;
   derivedState: string;
   ts: string;
+  /** `cwd` del hook que produjo este estado — de dónde leer `HEAD` para
+   * el hash real en `pushing` (#47). */
+  project: string | null;
   /** `ts` del primer evento de la racha actual en `derivedState` — cuándo
    * se entró de verdad en el estado, no el último evento cualquiera
    * dentro de él (ver comentario de más abajo). */
@@ -63,7 +66,7 @@ export function lastKnownStateEvent(
 ): LastKnownStateEvent | null {
   const rows = db
     .prepare(`
-      SELECT hook, tool_name, derived_state, ts FROM hook_events
+      SELECT hook, tool_name, derived_state, ts, project FROM hook_events
       WHERE account_id = ? AND derived_state != 'unknown'
       ORDER BY ts DESC
       LIMIT 500
@@ -73,6 +76,7 @@ export function lastKnownStateEvent(
     tool_name: string | null;
     derived_state: string;
     ts: string;
+    project: string | null;
   }>;
 
   const latest = rows[0];
@@ -89,6 +93,7 @@ export function lastKnownStateEvent(
     toolName: latest.tool_name,
     derivedState: latest.derived_state,
     ts: latest.ts,
+    project: latest.project,
     stateEnteredAt,
   };
 }

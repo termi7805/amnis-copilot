@@ -11,6 +11,7 @@ const basePet: PetSnapshot = {
   fatigue: 0.3,
   level: 1,
   reason: "test",
+  commitHash: null,
 };
 
 const baseQuota: QuotaSnapshot = {

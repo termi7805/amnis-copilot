@@ -9,6 +9,7 @@ const STARTED_AT = "2026-01-01T00:00:00.000Z";
 function makeWatcher(
   lastEvent: () => LastKnownStateEvent | null,
   getCachedExhausted: () => boolean = () => false,
+  readCommitHash: (project: string) => string | null = () => null,
 ) {
   const broadcasts: PetSnapshot[] = [];
   const watcher = startPetStateWatcher({
@@ -16,6 +17,7 @@ function makeWatcher(
     startedAt: STARTED_AT,
     getCachedFatigue: () => 0.5,
     getCachedExhausted,
+    readCommitHash,
     broadcast: (snapshot) => broadcasts.push(snapshot),
     intervalMs: 3_600_000,
   });
@@ -36,6 +38,7 @@ test("check() con el mismo estado consecutivo no vuelve a broadcastear", () => {
     toolName: "Edit",
     derivedState: "coding",
     ts: "2026-01-01T00:00:00.000Z",
+    project: null,
     stateEnteredAt: "2026-01-01T00:00:00.000Z",
   };
   const { watcher, broadcasts } = makeWatcher(() => event);
@@ -60,6 +63,7 @@ test("check() con un estado distinto broadcastea de nuevo", () => {
     toolName: "Edit",
     derivedState,
     ts: "2026-01-01T00:00:00.000Z",
+    project: null,
     stateEnteredAt: "2026-01-01T00:00:00.000Z",
   }));
 
@@ -78,6 +82,7 @@ test("evento antiguo (idle): check() transiciona a sleeping y broadcastea", () =
     toolName: "Edit",
     derivedState: "coding",
     ts: "2026-01-01T00:00:00.000Z",
+    project: null,
     stateEnteredAt: "2026-01-01T00:00:00.000Z",
   };
   const { watcher, broadcasts } = makeWatcher(() => event);
@@ -114,5 +119,27 @@ test("pasar de exhausted false→true broadcastea limited; repetirlo no vuelve a
 
   watcher.check(new Date("2026-01-01T00:00:02.000Z"));
   assert.equal(broadcasts.length, beforeLimit + 1);
+  watcher.stop();
+});
+
+test("pushing lleva el commitHash de readCommitHash(project)", () => {
+  const event: LastKnownStateEvent = {
+    hook: "PreToolUse",
+    toolName: "Bash",
+    derivedState: "pushing",
+    ts: "2026-01-01T00:00:00.000Z",
+    project: "/repo",
+    stateEnteredAt: "2026-01-01T00:00:00.000Z",
+  };
+  const { watcher, broadcasts } = makeWatcher(
+    () => event,
+    () => false,
+    (project) => (project === "/repo" ? "cafe123" : null),
+  );
+
+  watcher.check(new Date("2026-01-01T00:00:01.000Z"));
+
+  assert.equal(broadcasts.at(-1)?.state, "pushing");
+  assert.equal(broadcasts.at(-1)?.commitHash, "cafe123");
   watcher.stop();
 });

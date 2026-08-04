@@ -115,6 +115,7 @@ export function PetWindow() {
               resetsAt={
                 state.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null
               }
+              commitHash={state.pet.commitHash}
             />
           ) : (
             <span>{CONNECTION_LABEL[status]}</span>

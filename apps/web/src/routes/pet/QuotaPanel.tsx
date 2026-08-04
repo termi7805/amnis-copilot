@@ -98,6 +98,7 @@ export function QuotaPanel({ pet, status, quotas, now }: QuotaPanelProps) {
               level={pet.level}
               fatigue={pet.fatigue}
               resetsAt={quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
+              commitHash={pet.commitHash}
             />
           )}
         </div>
