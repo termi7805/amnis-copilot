@@ -21,6 +21,7 @@ export function Dashboard() {
             state={state.pet.state}
             level={state.pet.level}
             fatigue={state.pet.fatigue}
+            resetsAt={state.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
           />
         ) : (
           <span>conectando…</span>

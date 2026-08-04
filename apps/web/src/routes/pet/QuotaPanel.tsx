@@ -93,7 +93,12 @@ export function QuotaPanel({ pet, status, quotas, now }: QuotaPanelProps) {
           {status === "offline" ? (
             <PetOffline />
           ) : (
-            <Pet state={pet.state} level={pet.level} fatigue={pet.fatigue} />
+            <Pet
+              state={pet.state}
+              level={pet.level}
+              fatigue={pet.fatigue}
+              resetsAt={quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
+            />
           )}
         </div>
         <div className={styles.activityText}>

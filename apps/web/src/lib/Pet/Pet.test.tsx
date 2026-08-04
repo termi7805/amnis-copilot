@@ -17,6 +17,10 @@ const ALL_STATES: PetSnapshot["state"][] = [
   "resting",
   "sleeping",
   "terminal",
+  "subagents",
+  "committing",
+  "pushing",
+  "limited",
 ];
 
 describe("fatigueLevel", () => {
@@ -91,6 +95,28 @@ describe("Pet", () => {
     unmountTired();
 
     expect(freshMarkup).toBe(tiredMarkup);
+  });
+
+  it("limited con resetsAt pinta la cuenta atrás", () => {
+    render(
+      <Pet
+        state="limited"
+        level={1}
+        fatigue={1}
+        resetsAt={new Date(Date.now() + 102 * 60_000).toISOString()}
+      />,
+    );
+
+    const pet = screen.getByRole("img");
+    expect(pet.textContent).toMatch(/1h 4[0-3]m/);
+  });
+
+  it("limited sin resetsAt no rompe", () => {
+    render(<Pet state="limited" level={1} fatigue={1} resetsAt={null} />);
+
+    expect(screen.getByRole("img").querySelector("title")?.textContent).toBe(
+      "Límite alcanzado",
+    );
   });
 });
 
