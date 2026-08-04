@@ -45,8 +45,11 @@ export function derivePetState(
     if (tool && CODING_TOOLS.has(tool)) {
       return { state: "coding", reason: `PreToolUse ${tool}` };
     }
-    if (tool === "Task") {
-      return { state: "subagents", reason: "PreToolUse Task" };
+    // "Task" es el nombre documentado de Claude Code; "Agent" es el que
+    // de verdad llega en este harness (comprobado en hook_events) — se
+    // cubren los dos por si el nombre cambia según entorno/versión.
+    if (tool === "Task" || tool === "Agent") {
+      return { state: "subagents", reason: `PreToolUse ${tool}` };
     }
     // Los dos `git` van antes de TEST_COMMAND: un `git commit -m "arregla
     // el test"` matchea /\btest\b/ y caería en `testing` si no.

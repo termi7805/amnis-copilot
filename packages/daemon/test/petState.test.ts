@@ -49,9 +49,11 @@ test("PreToolUse con Bash y un comando que no es de test → terminal", () => {
   assert.equal(result?.state, "terminal");
 });
 
-test("PreToolUse con Task → subagents", () => {
-  const result = derivePetState(makeEvent({ toolName: "Task" }));
-  assert.equal(result?.state, "subagents");
+test("PreToolUse con Task o Agent → subagents", () => {
+  for (const toolName of ["Task", "Agent"]) {
+    const result = derivePetState(makeEvent({ toolName }));
+    assert.equal(result?.state, "subagents");
+  }
 });
 
 test("PreToolUse con Bash y git commit → committing", () => {
