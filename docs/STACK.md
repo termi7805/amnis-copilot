@@ -139,15 +139,38 @@ poder ejecutarse con un `node` pelado y nada más; que el repo tenga un linter n
 - **Vitest + Testing Library** en `apps/web`, que necesita el pipeline de Vite igualmente.
 - **Biome** para formato y lint del monorepo entero: un paquete, y rápido.
 
-## 6. Empaquetado del daemon (fuera del MVP, decidido para no bloquear)
+## 6. Empaquetado del daemon: sidecar Node SEA (#41)
 
-Tauri lanza el daemon como sidecar. En el MVP eso es **invocar el `node` del sistema** sobre el
-entrypoint del daemon (`tauri-plugin-shell`), lo cual asume Node 24 instalado — aceptable
-mientras el único usuario seas tú.
+Tauri lanza el daemon como **sidecar**: un binario autocontenido producido con **Node SEA**
+(single executable application), así que la app arranca en una máquina sin Node instalado.
+`pnpm --filter @amnis/daemon build:sea` (`packages/daemon/scripts/build-sea.ts`) lo genera, y
+`tauri build` lo invoca solo vía `beforeBuildCommand`.
 
-El día del instalador, la salida es **Node SEA** (single executable application): produce un
-binario autocontenido que Tauri empaqueta como sidecar de verdad. No condiciona nada del código
-de hoy salvo mantener un entrypoint único y sin dependencias, que ya es el plan.
+Lo que se midió antes de decidirlo, y que condiciona el build:
+
+- **`node:sqlite` funciona dentro del SEA** (Node 24.15), con el entorno vacío (`env -i`). Era la
+  premisa que podía tumbar la estrategia entera; no la tumba.
+- **Node 24 no acepta ESM como entrypoint de un SEA** (`mainFormat: "module"` falla al cargar).
+  Por eso hay un paso de bundle: esbuild aplana `src/cli.ts` —con `@amnis/shared` dentro— a un
+  solo `dist/amnis.cjs`. esbuild y postject son tooling; el daemon sigue sin dependencias en
+  runtime.
+- **El binario pesa ~123 MB**: es el `node` entero con el blob inyectado.
+
+**Recursos fuera del binario.** El SPA, el dashboard de depuración y el script del hook viajan
+como `bundle.resources` de Tauri, no dentro del blob: `createStaticRoute` sigue sirviendo desde
+disco sin cambios. `resolveResources()` (`config.ts`) decide de dónde salen: `AMNIS_RESOURCES_DIR`
+(lo pasa Tauri) → junto al ejecutable si es SEA → el repo si corre con `node`.
+
+**El hook se copia a `~/.amnis/hooks/`** al hacer `install-hooks`: `settings.json` necesita una
+ruta estable, y una AppImage monta sus recursos en una ruta distinta en cada arranque.
+
+**Ciclo de vida.** La app solo lanza el sidecar si no hay ya un daemon escuchando (en desarrollo,
+el de `pnpm dev` gana y no se toca). Lo lanza con `serve --exit-with-parent`: el daemon se cierra
+al recibir EOF en su stdin, que es lo que pasa cuando la app muere por cualquier vía —SIGTERM y
+crash incluidos, que `RunEvent::Exit` no cubre—.
+
+Solo Linux por ahora: en macOS habría que quitar y rehacer la firma del binario tras inyectar el
+blob.
 
 ## 7. Layout y arquitectura interna
 
@@ -309,5 +332,5 @@ binario autocontenido necesita un punto de entrada único y sin dependencias de 
 |---|---|
 | El webview de la mascota depende del daemon | Página de fallback empaquetada + reconexión SSE automática |
 | Compilar Tauri en Linux necesita `libwebkit2gtk-4.1-dev` | No instalado en esta máquina: es un prerrequisito de la épica 6, no una sorpresa a mitad |
-| Node SEA aún no está probado aquí | Fuera del MVP; el entrypoint se mantiene único y sin deps para que sea viable |
+| El binario SEA pesa ~123 MB (node entero) | Aceptable para una app de escritorio; el job `sea` del CI verifica que arranca sin Node |
 | Type-stripping nativo no hace type-checking | `tsc --noEmit` en CI: Node ejecuta los tipos, no los valida |

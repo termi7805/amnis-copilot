@@ -25,3 +25,43 @@ jobs:
       - run: pnpm typecheck
 
       - run: pnpm test
+
+  # #41: el binario SEA del daemon tiene que arrancar sin Node en el sistema.
+  # `env -i` vacía el entorno —PATH incluido—, así que si el binario
+  # dependiera del `node` instalado, este job fallaría.
+  sea:
+    runs-on: ubuntu-latest
+    env:
+      TAURI_ENV_TARGET_TRIPLE: x86_64-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter @amnis/web build
+
+      - run: pnpm --filter @amnis/daemon build:sea
+
+      - name: Arranca el SEA sin Node y sirve estado, SPA y dashboard
+        run: |
+          bin=apps/pet/src-tauri/binaries/amnis-daemon-$TAURI_ENV_TARGET_TRIPLE
+          tmp=$(mktemp -d)
+          env -i "$bin" --version
+          env -i HOME="$tmp" AMNIS_DIR="$tmp/amnis" AMNIS_PORT=4747 \
+            AMNIS_RESOURCES_DIR="$PWD/apps/pet/src-tauri/resources" \
+            "$bin" serve &
+          for _ in $(seq 50); do
+            curl -sf -o /dev/null http://127.0.0.1:4747/api/state && break
+            sleep 0.2
+          done
+          for path in /api/state /pet /debug; do
+            curl -sf -o /dev/null "http://127.0.0.1:4747$path"
+            echo "$path OK"
+          done
