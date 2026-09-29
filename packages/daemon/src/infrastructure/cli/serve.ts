@@ -1,5 +1,4 @@
 import type { DatabaseSync } from "node:sqlite";
-import { fileURLToPath } from "node:url";
 import {
   fatigueFrom,
   type GetStateDeps,
@@ -7,7 +6,7 @@ import {
   quotaExhausted,
 } from "../../application/getState.ts";
 import type { RecordHookDeps } from "../../application/recordHook.ts";
-import { DB_PATH, PORT, VERSION } from "../../config.ts";
+import { DB_PATH, PORT, RESOURCES, VERSION } from "../../config.ts";
 import { derivePetState } from "../../domain/petState.ts";
 import { readCommitHash } from "../git.ts";
 import { createEventBroadcaster } from "../http/events.ts";
@@ -32,10 +31,6 @@ import { startQuotaPoller } from "../poller.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { providers } from "../providers/index.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
-
-const WEB_DIST = fileURLToPath(
-  new URL("../../../../../apps/web/dist", import.meta.url),
-);
 
 function makeHookDeps(
   db: DatabaseSync,
@@ -128,7 +123,7 @@ export function runServeCli(): void {
         hello: () => getState(stateDeps, new Date()),
       }),
     },
-    fallback: createStaticRoute(WEB_DIST),
+    fallback: createStaticRoute(RESOURCES.webDist),
   });
 
   let shuttingDown = false;

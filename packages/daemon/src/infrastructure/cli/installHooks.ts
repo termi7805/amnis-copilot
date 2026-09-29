@@ -6,8 +6,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { AMNIS_DIR, CLAUDE_SETTINGS } from "../../config.ts";
+import { AMNIS_DIR, CLAUDE_SETTINGS, RESOURCES } from "../../config.ts";
 
 /** Marca de identidad: cualquier hook cuyo `command` contenga esto es de Amnis. */
 export const IDENTITY_MARK = "amnis-hook";
@@ -92,12 +91,6 @@ export function mergeHooks(
   return { ...settings, hooks };
 }
 
-function hookScriptPath(): string {
-  return fileURLToPath(
-    new URL("../../../hooks/amnis-hook.sh", import.meta.url),
-  );
-}
-
 /** Cualquier JSON que no sea un objeto (array, primitivo, null, o fichero
  * inexistente/corrupto) se trata como "sin configuración previa", nunca
  * como un error que bloquee la instalación. */
@@ -139,7 +132,7 @@ export function writeSettingsAtomic(
 }
 
 export function runInstallHooksCli(): void {
-  const command = `/bin/sh '${hookScriptPath()}'`;
+  const command = `/bin/sh '${RESOURCES.hookScript}'`;
   const entries: HookEntry[] = [
     { event: "PreToolUse", matcher: "*", command },
     { event: "Notification", command },
