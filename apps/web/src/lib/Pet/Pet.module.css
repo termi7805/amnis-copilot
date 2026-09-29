@@ -739,17 +739,17 @@
    así que la clase es el hook que permite apagarlo con `!important`
    sin tocar cada `calc(var(--t)*N)` uno a uno. */
 @media (prefers-reduced-motion: reduce) {
-  /* biome-ignore lint/complexity/noImportantStyles: la animación vive
-     en el atributo `style` inline de cada elemento (calc(var(--t)*N)
-     por escena); solo !important gana esa especificidad sin reescribir
-     cada valor a mano. */
   .animated {
+    /* biome-ignore lint/complexity/noImportantStyles: la animación vive
+       en el atributo `style` inline de cada elemento (calc(var(--t)*N)
+       por escena); solo !important gana esa especificidad sin reescribir
+       cada valor a mano. */
     animation: none !important;
   }
 
-  /* biome-ignore lint/complexity/noImportantStyles: mismo motivo — la
-     transición del color de la antena vive en la regla de arriba. */
   .antenna {
+    /* biome-ignore lint/complexity/noImportantStyles: mismo motivo — la
+       transición del color de la antena vive en la regla de arriba. */
     transition: none !important;
   }
 }
