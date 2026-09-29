@@ -7,9 +7,14 @@
     "amnis": "./src/cli.ts"
   },
   "scripts": {
-    "dev": "node src/cli.ts serve"
+    "dev": "node src/cli.ts serve",
+    "build:sea": "node scripts/build-sea.ts"
   },
   "dependencies": {
     "@amnis/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "postject": "1.0.0-alpha.6"
   }
 }

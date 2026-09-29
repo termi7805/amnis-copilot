@@ -12,3 +12,8 @@ apps/pet/src-tauri/gen/
 *.sqlite-wal
 *.sqlite-shm
 .amnis/
+
+# Generados por packages/daemon/scripts/build-sea.ts (#41): el binario SEA
+# del daemon y los recursos que viajan con él.
+apps/pet/src-tauri/binaries/
+apps/pet/src-tauri/resources/
