@@ -72,7 +72,7 @@ function makeStateDeps(
  * SIGINT/SIGTERM — si no, el proceso no libera el puerto (server.ts
  * `close()` lo exige).
  */
-export function runServeCli(): void {
+export function runServeCli(args: readonly string[] = []): void {
   const db = openDb(DB_PATH);
   const accountId = ensureAccount(db, "anthropic", "default");
   const startedAt = new Date().toISOString();
@@ -141,6 +141,15 @@ export function runServeCli(): void {
   };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
+
+  // La app de Tauri lanza el daemon como sidecar con un pipe en stdin (#41).
+  // Si la app muere sin cerrar limpio (SIGTERM, cierre de sesión, crash),
+  // el kernel cierra su extremo del pipe y aquí llega EOF: sin esto el
+  // daemon quedaba huérfano escuchando en el puerto (medido).
+  if (args.includes("--exit-with-parent")) {
+    process.stdin.on("end", shutdown);
+    process.stdin.resume();
+  }
 
   server.listen(PORT).then((port) => {
     console.log(`amnis-daemon escuchando en http://127.0.0.1:${port}`);

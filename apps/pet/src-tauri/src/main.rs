@@ -6,8 +6,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::net::TcpStream;
-use std::time::Duration;
-use tauri::{WebviewUrl, WebviewWindowBuilder};
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
+use tauri::{App, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_shell::process::{CommandChild, CommandEvent};
+use tauri_plugin_shell::ShellExt;
 use tauri_plugin_window_state::StateFlags;
 use url::Url;
 
@@ -33,10 +36,69 @@ fn daemon_alive(url: &Url) -> bool {
         .any(|addr| TcpStream::connect_timeout(&addr, PROBE_TIMEOUT).is_ok())
 }
 
+// Lo que tarda el sidecar en abrir el puerto: SQLite + rutas, medido en
+// ~100ms. 5s es el margen para una máquina lenta antes de rendirse y
+// enseñar el fallback (#39), que sigue reconectando por su cuenta.
+const SIDECAR_STARTUP: Duration = Duration::from_secs(5);
+const SIDECAR_POLL: Duration = Duration::from_millis(100);
+
+/// El daemon que lanzó esta app, si lanzó alguno (#41). Se mata al salir:
+/// si ya había uno vivo (p. ej. `pnpm dev`), no es nuestro y no se toca.
+struct Sidecar(Mutex<Option<CommandChild>>);
+
+/// Lanza el daemon empaquetado (binario Node SEA) en el puerto de `url`.
+/// No depende del `node` del sistema: es lo que permite que la app arranque
+/// en una máquina sin Node instalado.
+fn spawn_daemon(app: &App, url: &Url) -> Result<CommandChild, Box<dyn std::error::Error>> {
+    let resources = app.path().resource_dir()?.join("resources");
+    let port = url.port_or_known_default().unwrap_or(4747).to_string();
+    let (mut rx, child) = app
+        .shell()
+        .sidecar("amnis-daemon")?
+        .args(["serve", "--exit-with-parent"])
+        .env("AMNIS_PORT", port)
+        .env("AMNIS_RESOURCES_DIR", resources)
+        .spawn()?;
+
+    // Drenar la salida: sin esto se pierde el log del daemon, que es lo
+    // único que explica por qué no arrancó.
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                CommandEvent::Stdout(line) => {
+                    log::info!("daemon: {}", String::from_utf8_lossy(&line).trim_end())
+                }
+                CommandEvent::Stderr(line) => {
+                    log::warn!("daemon: {}", String::from_utf8_lossy(&line).trim_end())
+                }
+                CommandEvent::Terminated(status) => {
+                    log::warn!("el daemon terminó: {status:?}")
+                }
+                _ => {}
+            }
+        }
+    });
+
+    Ok(child)
+}
+
+fn wait_for_daemon(url: &Url, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        if daemon_alive(url) {
+            return true;
+        }
+        std::thread::sleep(SIDECAR_POLL);
+    }
+    false
+}
+
 fn main() {
     env_logger::init();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .manage(Sidecar(Mutex::new(None)))
         .plugin(
             // Solo posición: el tamaño ahora lo decide el JS según
             // `expanded` en localStorage (#42). Restaurar SIZE aquí
@@ -51,7 +113,18 @@ fn main() {
                 .unwrap_or_else(|_| "http://127.0.0.1:4747/pet".to_string());
             let url: Url = url_str.parse()?;
 
-            let mut builder = if daemon_alive(&url) {
+            let mut alive = daemon_alive(&url);
+            if !alive {
+                match spawn_daemon(app, &url) {
+                    Ok(child) => {
+                        *app.state::<Sidecar>().0.lock().unwrap() = Some(child);
+                        alive = wait_for_daemon(&url, SIDECAR_STARTUP);
+                    }
+                    Err(e) => log::error!("no se pudo lanzar el daemon empaquetado: {e}"),
+                }
+            }
+
+            let mut builder = if alive {
                 WebviewWindowBuilder::new(app, "pet", WebviewUrl::External(url.clone()))
             } else {
                 log::warn!("daemon inalcanzable en {url}, mostrando fallback empaquetado (#39)");
@@ -99,6 +172,15 @@ fn main() {
 
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error al arrancar amnis-pet");
+        .build(tauri::generate_context!())
+        .expect("error al arrancar amnis-pet")
+        .run(|app, event| {
+            if let RunEvent::Exit = event {
+                if let Some(child) = app.state::<Sidecar>().0.lock().unwrap().take() {
+                    if let Err(e) = child.kill() {
+                        log::warn!("no se pudo parar el daemon: {e}");
+                    }
+                }
+            }
+        });
 }

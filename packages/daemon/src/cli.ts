@@ -15,7 +15,10 @@ Comandos:
                         (merge no destructivo; reinstalar reemplaza en su sitio).
   uninstall-hooks        Quita los hooks de Amnis de ~/.claude/settings.json,
                         dejándolo equivalente al original.
-  serve                  Arranca el daemon: BD, rutas HTTP y poller de cuota.
+  serve [--exit-with-parent]
+                        Arranca el daemon: BD, rutas HTTP y poller de cuota.
+                        --exit-with-parent se cierra al cerrarse su stdin
+                        (lo usa la app de Tauri al lanzarlo como sidecar).
   doctor                 Diagnostica daemon, hooks, credenciales, endpoint,
                         BD e ingesta, con el remedio de cada fallo.
   --help                Muestra esta ayuda.
@@ -36,7 +39,7 @@ async function main(argv: readonly string[]): Promise<void> {
       runUninstallHooksCli();
       return;
     case "serve":
-      runServeCli();
+      runServeCli(rest);
       return;
     case "doctor":
       await runDoctorCli();
