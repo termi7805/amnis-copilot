@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import {
   type ClaudeSettings,
   type HookEntry,
@@ -122,4 +127,40 @@ test("funciona igual con cualquier otro hook de terceros ya instalado, no solo u
   assert.equal(preToolUse.length, 2);
   assert.ok(preToolUse.some((m) => m.hooks[0]?.command === thirdPartyCommand));
   assert.ok(preToolUse.some((m) => m.hooks[0]?.command.includes("amnis-hook")));
+});
+
+test("amnis install-hooks copia el script a AMNIS_DIR/hooks y lo registra desde ahí", () => {
+  const cli = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
+  const source = fileURLToPath(
+    new URL("../hooks/amnis-hook.sh", import.meta.url),
+  );
+  const claudeDir = mkdtempSync(join(tmpdir(), "amnis-hooks-claude-"));
+  const amnisDir = mkdtempSync(join(tmpdir(), "amnis-hooks-amnis-"));
+  try {
+    execFileSync("node", [cli, "install-hooks"], {
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: claudeDir,
+        AMNIS_DIR: amnisDir,
+      },
+    });
+
+    const installed = join(amnisDir, "hooks", "amnis-hook.sh");
+    assert.equal(readFileSync(installed, "utf8"), readFileSync(source, "utf8"));
+    assert.equal(statSync(installed).mode & 0o777, 0o755);
+
+    const settings = JSON.parse(
+      readFileSync(join(claudeDir, "settings.json"), "utf8"),
+    ) as ClaudeSettings;
+    const commands = Object.values(settings.hooks ?? {}).flatMap((ms) =>
+      ms.flatMap((m) => m.hooks.map((h) => h.command)),
+    );
+    assert.equal(commands.length, 3);
+    for (const command of commands) {
+      assert.equal(command, `/bin/sh '${installed}'`);
+    }
+  } finally {
+    rmSync(claudeDir, { recursive: true, force: true });
+    rmSync(amnisDir, { recursive: true, force: true });
+  }
 });

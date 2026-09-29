@@ -1,4 +1,6 @@
 import {
+  chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -6,7 +8,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { AMNIS_DIR, CLAUDE_SETTINGS, RESOURCES } from "../../config.ts";
+import {
+  AMNIS_DIR,
+  CLAUDE_SETTINGS,
+  INSTALLED_HOOK_SCRIPT,
+  RESOURCES,
+} from "../../config.ts";
 
 /** Marca de identidad: cualquier hook cuyo `command` contenga esto es de Amnis. */
 export const IDENTITY_MARK = "amnis-hook";
@@ -131,8 +138,19 @@ export function writeSettingsAtomic(
   renameSync(tmpPath, path);
 }
 
+/** Copia el script a ~/.amnis/hooks en vez de apuntar a él donde esté:
+ * settings.json necesita una ruta que no cambie, y ni la del repo (se puede
+ * mover) ni la de los recursos de la app (una AppImage se monta en una ruta
+ * distinta en cada arranque) lo garantizan. Reinstalar la sobrescribe. */
+export function installHookScript(from: string, to: string): void {
+  mkdirSync(dirname(to), { recursive: true });
+  copyFileSync(from, to);
+  chmodSync(to, 0o755);
+}
+
 export function runInstallHooksCli(): void {
-  const command = `/bin/sh '${RESOURCES.hookScript}'`;
+  installHookScript(RESOURCES.hookScript, INSTALLED_HOOK_SCRIPT);
+  const command = `/bin/sh '${INSTALLED_HOOK_SCRIPT}'`;
   const entries: HookEntry[] = [
     { event: "PreToolUse", matcher: "*", command },
     { event: "Notification", command },
