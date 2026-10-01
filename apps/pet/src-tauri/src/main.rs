@@ -137,6 +137,7 @@ fn main() {
 
             builder = builder
                 .decorations(false)
+                .shadow(false)
                 .transparent(true)
                 .resizable(true)
                 .skip_taskbar(true)
