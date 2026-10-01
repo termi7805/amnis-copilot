@@ -22,6 +22,16 @@ Forzar una sola plantilla dejaría media docena de campos vacíos en las épicas
 con secciones que se dejan en blanco por norma se aprende a ignorar entera**, y la siguiente
 issue vuelve a ser un párrafo suelto.
 
+### Issues de seguimiento: un nivel intermedio, no un tercer género
+
+Cuando una épica pasa de unas diez tareas, se agrupan en **issues de seguimiento**: hijas de la
+épica y madres de las tareas. Usan la **plantilla de épica** (`**Seguimiento.**` en vez de
+`**Épica.**`), porque responden a lo mismo a menor escala: por qué existe el bloque y cuándo se
+cierra. Las tareas no cambian.
+
+El agrupamiento es solo jerarquía: los `blocked by` siguen entre tareas, aunque crucen de un
+bloque a otro. Ejemplo: E8 → `E8.A`…`E8.D`.
+
 ## Las reglas
 
 ### 1. El "por qué" es obligatorio, incluso en tareas mecánicas
@@ -93,9 +103,10 @@ rigor.
 - **Milestone** = épica. Uno por cada una.
 - **Capa:** `daemon` · `ui` · `mascota` · `infra`
 - **Alcance:** `mvp` · `fase-2`
-- **`épica`** solo en las épicas.
+- **`épica`** solo en las épicas; las issues de seguimiento llevan la etiqueta de capa de su bloque.
 
 ## Títulos
 
-`N.M · Descripción` para tareas, `EN · Nombre` para épicas. El prefijo numérico ordena el backlog
+`N.M · Descripción` para tareas, `EN · Nombre` para épicas y `EN.X · Nombre` (X = A, B, C…) para
+issues de seguimiento. El prefijo numérico ordena el backlog
 alfabéticamente sin depender de ninguna vista guardada.
