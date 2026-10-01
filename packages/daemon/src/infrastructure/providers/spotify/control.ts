@@ -214,6 +214,7 @@ interface SpotifyDevicesBody {
     name?: string;
     type?: string;
     is_active?: boolean;
+    is_restricted?: boolean;
   }[];
 }
 
@@ -256,6 +257,7 @@ export function createMediaControl(deps: ControlDeps = {}): MediaControl {
             name: d.name ?? "",
             type: d.type ?? "",
             isActive: d.is_active === true,
+            isRestricted: d.is_restricted === true,
           })),
         };
       } catch {

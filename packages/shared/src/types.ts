@@ -108,6 +108,8 @@ export type Vibe =
 /** Un dispositivo Spotify Connect de `GET /api/media/devices`. */
 export interface MediaDeviceOption extends MediaDevice {
   isActive: boolean;
+  /** No acepta órdenes de la Web API: se lista, pero no se puede elegir. */
+  isRestricted: boolean;
 }
 
 /**

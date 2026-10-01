@@ -140,6 +140,77 @@
   background: #201e1d;
 }
 
+.devices {
+  padding: 0 12px 10px;
+}
+
+.deviceTrigger,
+.deviceRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 8px;
+  border: 2px solid #201e1d;
+  background: none;
+  color: #201e1d;
+  font:
+    600 11px / 1.2 system-ui,
+    sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.deviceTrigger:hover:not(:disabled),
+.deviceRow:hover:not(:disabled) {
+  background: #edf1f5;
+}
+
+.deviceTrigger:disabled,
+.deviceRow:disabled {
+  cursor: default;
+}
+
+.deviceTrigger:disabled {
+  opacity: 0.45;
+}
+
+.deviceName {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deviceList {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* El activo se ve relleno; el restringido, atenuado pero legible: debe verse
+   por qué no se puede elegir, no desaparecer. */
+.deviceRow[data-active="true"] {
+  background: #201e1d;
+  color: #fff;
+}
+
+.deviceRow:disabled:not([data-active="true"]) {
+  opacity: 0.55;
+}
+
+.deviceNote {
+  flex: none;
+  font-weight: 400;
+  font-size: 10px;
+}
+
 .empty {
   display: flex;
   flex-direction: column;

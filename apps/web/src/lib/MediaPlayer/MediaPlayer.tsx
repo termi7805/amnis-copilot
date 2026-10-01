@@ -1,6 +1,11 @@
 import type { MediaSnapshot } from "@amnis/shared";
 import { type ReactNode, useEffect, useRef, useState } from "react";
-import type { MediaCommand, MediaCommandResult } from "../../api/media.ts";
+import type {
+  MediaCommand,
+  MediaCommandResult,
+  MediaDevicesResult,
+} from "../../api/media.ts";
+import { DeviceSelector } from "./DeviceSelector.tsx";
 import styles from "./MediaPlayer.module.css";
 import { ProgressBar } from "./ProgressBar.tsx";
 
@@ -13,6 +18,8 @@ export interface MediaPlayerProps {
   /** `null` = sin datos del daemon (caído, o aún sin el primer `hello`). */
   media: MediaSnapshot | null;
   onCommand: (command: MediaCommand) => Promise<MediaCommandResult>;
+  /** Lista de dispositivos Connect; se pide al abrir el selector (#55). */
+  loadDevices: () => Promise<MediaDevicesResult>;
 }
 
 /** Cada uno se ve distinto: un panel en blanco no distingue "no has hecho
@@ -47,7 +54,11 @@ interface ErrorInfo {
  * una caída de red) llega por el mismo `onCommand` y se ve aquí mismo, no en
  * la consola.
  */
-export function MediaPlayer({ media, onCommand }: MediaPlayerProps) {
+export function MediaPlayer({
+  media,
+  onCommand,
+  loadDevices,
+}: MediaPlayerProps) {
   const state = stateOf(media);
   const status = media?.status ?? null;
 
@@ -156,6 +167,15 @@ export function MediaPlayer({ media, onCommand }: MediaPlayerProps) {
 
       {(state === "ok" || state === "no-track") && media && (
         <Player media={media} busy={busy} run={run} />
+      )}
+
+      {(state === "ok" || state === "no-track" || state === "no-device") && (
+        <DeviceSelector
+          current={media?.device ?? null}
+          loadDevices={loadDevices}
+          onTransfer={(deviceId) => run({ kind: "transfer", deviceId })}
+          disabled={busy}
+        />
       )}
 
       {error && (

@@ -39,12 +39,15 @@ const empty = (status: MediaSnapshot["status"]): MediaSnapshot => ({
 });
 
 const ok: MediaCommandResult = { ok: true };
+const noDevices = () => Promise.resolve({ ok: true as const, devices: [] });
 
 function setup(media: MediaSnapshot | null, result: MediaCommandResult = ok) {
   const onCommand = vi.fn<(c: MediaCommand) => Promise<MediaCommandResult>>(
     () => Promise.resolve(result),
   );
-  const view = render(<MediaPlayer media={media} onCommand={onCommand} />);
+  const view = render(
+    <MediaPlayer media={media} onCommand={onCommand} loadDevices={noDevices} />,
+  );
   return { onCommand, ...view };
 }
 
@@ -197,13 +200,71 @@ describe("MediaPlayer — seek", () => {
   });
 });
 
+describe("MediaPlayer — dispositivo", () => {
+  it("elegir un dispositivo manda transfer por onCommand", async () => {
+    const onCommand = vi.fn(() => Promise.resolve(ok));
+    const loadDevices = () =>
+      Promise.resolve({
+        ok: true as const,
+        devices: [
+          {
+            id: "movil",
+            name: "Otro móvil",
+            type: "Smartphone",
+            isActive: false,
+            isRestricted: false,
+          },
+        ],
+      });
+    render(
+      <MediaPlayer
+        media={playing}
+        onCommand={onCommand}
+        loadDevices={loadDevices}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dispositivo de reproducción" }),
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Otro móvil/ }));
+    await act(async () => {});
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "transfer",
+      deviceId: "movil",
+    });
+  });
+
+  it("también hay selector sin dispositivo activo (para arrancar en uno)", () => {
+    setup(empty("no-device"));
+    expect(
+      screen.getByRole("button", { name: "Dispositivo de reproducción" }),
+    ).toBeInTheDocument();
+  });
+
+  it("no hay selector sin login ni cuando Amnis no responde", () => {
+    for (const media of [empty("not-logged-in"), null]) {
+      const { unmount } = setup(media);
+      expect(
+        screen.queryByRole("button", { name: "Dispositivo de reproducción" }),
+      ).toBeNull();
+      unmount();
+    }
+  });
+});
+
 describe("MediaPlayer — órdenes en vuelo y errores", () => {
   it("mientras una orden no vuelve, los botones están deshabilitados y un segundo clic no lanza otra", async () => {
     let finish: (r: MediaCommandResult) => void = () => {};
     const onCommand = vi.fn(
       () => new Promise<MediaCommandResult>((r) => (finish = r)),
     );
-    render(<MediaPlayer media={playing} onCommand={onCommand} />);
+    render(
+      <MediaPlayer
+        media={playing}
+        onCommand={onCommand}
+        loadDevices={noDevices}
+      />,
+    );
 
     const pause = screen.getByRole("button", { name: "Pausar" });
     fireEvent.click(pause);
@@ -232,7 +293,13 @@ describe("MediaPlayer — órdenes en vuelo y errores", () => {
       .fn<(c: MediaCommand) => Promise<MediaCommandResult>>()
       .mockResolvedValueOnce({ ok: false, message: "403 sin Premium" })
       .mockResolvedValueOnce(ok);
-    render(<MediaPlayer media={playing} onCommand={onCommand} />);
+    render(
+      <MediaPlayer
+        media={playing}
+        onCommand={onCommand}
+        loadDevices={noDevices}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Pausar" }));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
@@ -254,7 +321,13 @@ describe("MediaPlayer — órdenes en vuelo y errores", () => {
 
   it("si onCommand lanza, también se ve un error y no se queda bloqueado", async () => {
     const onCommand = vi.fn(() => Promise.reject(new Error("boom")));
-    render(<MediaPlayer media={playing} onCommand={onCommand} />);
+    render(
+      <MediaPlayer
+        media={playing}
+        onCommand={onCommand}
+        loadDevices={noDevices}
+      />,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Pausar" }));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pausar" })).toBeEnabled();
@@ -286,18 +359,32 @@ describe("MediaPlayer — conectar", () => {
   it("el aviso desaparece cuando cambia el estado y no vuelve si regresa al mismo", async () => {
     const onCommand = vi.fn(() => Promise.resolve(ok));
     const { rerender } = render(
-      <MediaPlayer media={empty("not-logged-in")} onCommand={onCommand} />,
+      <MediaPlayer
+        media={empty("not-logged-in")}
+        onCommand={onCommand}
+        loadDevices={noDevices}
+      />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Conectar Spotify" }));
     expect(
       await screen.findByText(/Autoriza en el navegador/),
     ).toBeInTheDocument();
 
-    rerender(<MediaPlayer media={playing} onCommand={onCommand} />);
+    rerender(
+      <MediaPlayer
+        media={playing}
+        onCommand={onCommand}
+        loadDevices={noDevices}
+      />,
+    );
     expect(screen.queryByText(/Autoriza en el navegador/)).toBeNull();
 
     rerender(
-      <MediaPlayer media={empty("not-logged-in")} onCommand={onCommand} />,
+      <MediaPlayer
+        media={empty("not-logged-in")}
+        onCommand={onCommand}
+        loadDevices={noDevices}
+      />,
     );
     expect(screen.queryByText(/Autoriza en el navegador/)).toBeNull();
   });
@@ -309,7 +396,11 @@ describe("MediaPlayer — dentro de la ventana de la mascota", () => {
     const onUp = vi.fn();
     render(
       <div onPointerDown={onDown} onPointerUp={onUp}>
-        <MediaPlayer media={playing} onCommand={() => Promise.resolve(ok)} />
+        <MediaPlayer
+          media={playing}
+          onCommand={() => Promise.resolve(ok)}
+          loadDevices={noDevices}
+        />
       </div>,
     );
     const button = screen.getByRole("button", { name: "Pausar" });

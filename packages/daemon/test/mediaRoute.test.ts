@@ -213,7 +213,15 @@ test("cada ruta llama a su acción con el valor del body", async () => {
 });
 
 test("GET /api/media/devices devuelve la lista", async () => {
-  const devices = [{ id: "a", name: "PC", type: "Computer", isActive: true }];
+  const devices = [
+    {
+      id: "a",
+      name: "PC",
+      type: "Computer",
+      isActive: true,
+      isRestricted: false,
+    },
+  ];
   await withMedia(
     controlReturning({ ok: true, devices }),
     async ({ hit, after }) => {

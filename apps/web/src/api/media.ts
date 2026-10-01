@@ -1,3 +1,4 @@
+import type { MediaDeviceOption } from "@amnis/shared";
 import { useEffect } from "react";
 import { daemonUrl } from "./config.ts";
 
@@ -49,11 +50,14 @@ export type SimpleMediaCommand =
 /** Órdenes con body: cada una añade su variante a esta unión. */
 export type MediaCommand =
   | SimpleMediaCommand
-  | { kind: "seek"; positionMs: number };
+  | { kind: "seek"; positionMs: number }
+  | { kind: "transfer"; deviceId: string };
 
 export type MediaCommandResult =
   | { ok: true }
   | { ok: false; message: string; remedy?: string };
+
+type MediaFailure = Extract<MediaCommandResult, { ok: false }>;
 
 const ROUTE: Record<SimpleMediaCommand, string> = {
   play: "/api/media/play",
@@ -63,31 +67,30 @@ const ROUTE: Record<SimpleMediaCommand, string> = {
   connect: "/api/spotify/login",
 };
 
-/**
- * `POST` de una orden al daemon. El daemon ya traduce los errores de Spotify
- * a texto en español (409 sin dispositivo, 403 sin Premium…): aquí solo se
- * recoge ese texto, no se reinterpreta.
- */
-export async function sendMediaCommand(
-  command: MediaCommand,
-): Promise<MediaCommandResult> {
-  let response: Response;
-  try {
-    response =
-      typeof command === "string"
-        ? await fetch(`${daemonUrl()}${ROUTE[command]}`, { method: "POST" })
-        : await fetch(`${daemonUrl()}/api/media/seek`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              positionMs: Math.max(0, Math.round(command.positionMs)),
-            }),
-          });
-  } catch {
-    return { ok: false, message: "No se pudo contactar con Amnis." };
+function bodyRequest(command: Exclude<MediaCommand, string>): {
+  path: string;
+  body: unknown;
+} {
+  switch (command.kind) {
+    case "seek":
+      return {
+        path: "/api/media/seek",
+        body: { positionMs: Math.max(0, Math.round(command.positionMs)) },
+      };
+    case "transfer":
+      return {
+        path: "/api/media/transfer",
+        body: { deviceId: command.deviceId },
+      };
   }
-  if (response.ok) return { ok: true };
+}
 
+/**
+ * El daemon ya traduce los errores de Spotify a texto en español (409 sin
+ * dispositivo, 403 sin Premium…): aquí solo se recoge ese texto, no se
+ * reinterpreta.
+ */
+async function failureOf(response: Response): Promise<MediaFailure> {
   try {
     const body = (await response.json()) as {
       error?: unknown;
@@ -104,4 +107,57 @@ export async function sendMediaCommand(
     // Cuerpo que no es JSON: el status basta.
   }
   return { ok: false, message: `Spotify respondió ${response.status}.` };
+}
+
+const UNREACHABLE: MediaFailure = {
+  ok: false,
+  message: "No se pudo contactar con Amnis.",
+};
+
+/** `POST` de una orden al daemon. */
+export async function sendMediaCommand(
+  command: MediaCommand,
+): Promise<MediaCommandResult> {
+  let response: Response;
+  try {
+    if (typeof command === "string") {
+      response = await fetch(`${daemonUrl()}${ROUTE[command]}`, {
+        method: "POST",
+      });
+    } else {
+      const { path, body } = bodyRequest(command);
+      response = await fetch(`${daemonUrl()}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    }
+  } catch {
+    return UNREACHABLE;
+  }
+  return response.ok ? { ok: true } : failureOf(response);
+}
+
+export type MediaDevicesResult =
+  | { ok: true; devices: MediaDeviceOption[] }
+  | MediaFailure;
+
+/**
+ * Lista de dispositivos Spotify Connect. Se pide al abrir el selector, no en
+ * el sondeo: cambia poco y gastaría cuota de rate limit para nada.
+ */
+export async function fetchMediaDevices(): Promise<MediaDevicesResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${daemonUrl()}/api/media/devices`);
+  } catch {
+    return UNREACHABLE;
+  }
+  if (!response.ok) return failureOf(response);
+  try {
+    const body = (await response.json()) as { devices?: MediaDeviceOption[] };
+    return { ok: true, devices: body.devices ?? [] };
+  } catch {
+    return { ok: false, message: "Respuesta de Amnis no válida." };
+  }
 }

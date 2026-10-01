@@ -201,6 +201,13 @@ test("devices() mapea la lista", async () => {
       devices: [
         { id: "a", name: "PC", type: "Computer", is_active: true },
         { id: null, name: "Móvil", type: "Smartphone", is_active: false },
+        {
+          id: "c",
+          name: "Altavoz",
+          type: "Speaker",
+          is_active: false,
+          is_restricted: true,
+        },
       ],
     }),
   );
@@ -208,8 +215,27 @@ test("devices() mapea la lista", async () => {
   assert.deepEqual(result, {
     ok: true,
     devices: [
-      { id: "a", name: "PC", type: "Computer", isActive: true },
-      { id: null, name: "Móvil", type: "Smartphone", isActive: false },
+      {
+        id: "a",
+        name: "PC",
+        type: "Computer",
+        isActive: true,
+        isRestricted: false,
+      },
+      {
+        id: null,
+        name: "Móvil",
+        type: "Smartphone",
+        isActive: false,
+        isRestricted: false,
+      },
+      {
+        id: "c",
+        name: "Altavoz",
+        type: "Speaker",
+        isActive: false,
+        isRestricted: true,
+      },
     ],
   });
   assert.equal(s.calls[0]?.url, `${API}/devices`);

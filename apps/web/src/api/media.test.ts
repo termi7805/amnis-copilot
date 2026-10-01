@@ -1,6 +1,7 @@
 import { cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  fetchMediaDevices,
   type MediaCommand,
   sendMediaCommand,
   useRefreshMediaOnFocus,
@@ -47,6 +48,21 @@ describe("sendMediaCommand", () => {
     );
   });
 
+  it("transfer hace POST a /api/media/transfer con el deviceId en el body", async () => {
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    await expect(
+      sendMediaCommand({ kind: "transfer", deviceId: "movil" }),
+    ).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/media/transfer"),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId: "movil" }),
+      },
+    );
+  });
+
   it("un 409 con el texto del daemon lo devuelve tal cual", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
@@ -85,6 +101,43 @@ describe("sendMediaCommand", () => {
   it("si fetch lanza, un mensaje de red y no una excepción", async () => {
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
     await expect(sendMediaCommand("previous")).resolves.toEqual({
+      ok: false,
+      message: "No se pudo contactar con Amnis.",
+    });
+  });
+});
+
+describe("fetchMediaDevices", () => {
+  it("pide GET /api/media/devices y devuelve la lista", async () => {
+    const devices = [
+      {
+        id: "a",
+        name: "PC",
+        type: "Computer",
+        isActive: true,
+        isRestricted: false,
+      },
+    ];
+    fetchMock.mockResolvedValue(Response.json({ devices }));
+    await expect(fetchMediaDevices()).resolves.toEqual({ ok: true, devices });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/media/devices"),
+    );
+  });
+
+  it("un error del daemon se devuelve con su texto", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ error: "Spotify no responde." }, { status: 502 }),
+    );
+    await expect(fetchMediaDevices()).resolves.toEqual({
+      ok: false,
+      message: "Spotify no responde.",
+    });
+  });
+
+  it("si fetch lanza, un mensaje de red y no una excepción", async () => {
+    fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
+    await expect(fetchMediaDevices()).resolves.toEqual({
       ok: false,
       message: "No se pudo contactar con Amnis.",
     });
