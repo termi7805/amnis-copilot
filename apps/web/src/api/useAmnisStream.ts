@@ -1,6 +1,12 @@
-import type { PetSnapshot, QuotaSnapshot, StateResponse } from "@amnis/shared";
+import type {
+  MediaSnapshot,
+  PetSnapshot,
+  QuotaSnapshot,
+  StateResponse,
+} from "@amnis/shared";
 import { useEffect, useState } from "react";
 import { daemonUrl } from "./config.ts";
+import { useRefreshMediaOnFocus } from "./media.ts";
 
 /**
  * `EventSource` ya reconecta solo; lo único que hace falta escribir es
@@ -28,10 +34,11 @@ export const CONNECTION_LABEL: Record<ConnectionStatus, string> = {
 
 /**
  * GET /api/events por SSE (docs/STACK.md §4): `hello` trae el
- * StateResponse completo al conectar, `state`/`quota` solo sustituyen su
- * parte — nunca se pierde lo que el otro evento ya trajo.
+ * StateResponse completo al conectar, `state`/`quota`/`media` solo
+ * sustituyen su parte — nunca se pierde lo que otro evento ya trajo.
  */
 export function useAmnisStream(): AmnisStream {
+  useRefreshMediaOnFocus();
   const [state, setState] = useState<StateResponse | null>(null);
   // Arranca en "reconnecting": antes del primer `onopen` no se ha
   // alcanzado al daemon todavía, y "connected" sería inventárselo.
@@ -53,6 +60,11 @@ export function useAmnisStream(): AmnisStream {
     source.addEventListener("quota", (e: MessageEvent<string>) => {
       const quotas = JSON.parse(e.data) as QuotaSnapshot[];
       setState((current) => (current ? { ...current, quotas } : current));
+    });
+
+    source.addEventListener("media", (e: MessageEvent<string>) => {
+      const media = JSON.parse(e.data) as MediaSnapshot;
+      setState((current) => (current ? { ...current, media } : current));
     });
 
     source.onopen = () => {

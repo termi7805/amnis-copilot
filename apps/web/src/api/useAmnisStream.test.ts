@@ -1,4 +1,9 @@
-import type { PetSnapshot, QuotaSnapshot, StateResponse } from "@amnis/shared";
+import type {
+  MediaSnapshot,
+  PetSnapshot,
+  QuotaSnapshot,
+  StateResponse,
+} from "@amnis/shared";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAmnisStream } from "./useAmnisStream.ts";
@@ -113,6 +118,21 @@ describe("useAmnisStream", () => {
 
     expect(result.current.state?.quotas).toHaveLength(0);
     expect(result.current.state?.pet.state).toBe("coding");
+  });
+
+  it("aplica media sin perder pet ni quotas", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.emit("hello", hello));
+    expect(result.current.state?.media.status).toBe("not-configured");
+
+    const nextMedia: MediaSnapshot = { ...hello.media, status: "no-device" };
+    act(() => source?.emit("media", nextMedia));
+
+    expect(result.current.state?.media.status).toBe("no-device");
+    expect(result.current.state?.pet.state).toBe("coding");
+    expect(result.current.state?.quotas).toHaveLength(1);
   });
 
   it("arranca en reconnecting, no en connected — todavía no se alcanzó al daemon", () => {

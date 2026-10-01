@@ -1,0 +1,161 @@
+/* Sin tamaño de ventana ni fondo propios: eso vive en las envolturas
+   (docs/STACK.md §2). Solo ocupa el ancho de su contenedor. Mismo
+   vocabulario visual que QuotaPanel. */
+.root {
+  font-family: system-ui, sans-serif;
+  color: #201e1d;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.cover {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border: 2px solid #201e1d;
+  box-sizing: border-box;
+  background: #edf1f5;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.title,
+.artists {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.title {
+  font:
+    600 13px / 1.25 Archivo,
+    sans-serif;
+  color: #201e1d;
+}
+
+.artists {
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.2;
+  color: #6b6660;
+}
+
+.controls {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid #201e1d;
+  background: none;
+  color: #201e1d;
+  cursor: pointer;
+}
+
+.control:hover:not(:disabled) {
+  background: #edf1f5;
+}
+
+.control[data-primary="true"] {
+  background: #201e1d;
+  color: #fff;
+}
+
+.control[data-primary="true"]:hover:not(:disabled) {
+  background: #3a3735;
+}
+
+.control:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px;
+}
+
+.emptyTitle {
+  font:
+    600 13px / 1.25 Archivo,
+    sans-serif;
+  color: #201e1d;
+}
+
+.hint {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #6b6660;
+}
+
+.command {
+  display: block;
+  /* Un clic selecciona todo el comando, listo para copiar. */
+  user-select: all;
+  padding: 6px 8px;
+  border: 1px solid #c9c6c2;
+  background: #edf1f5;
+  font:
+    400 10px / 1.4 ui-monospace,
+    Menlo,
+    monospace;
+  color: #201e1d;
+  word-break: break-all;
+}
+
+.connect {
+  padding: 6px 10px;
+  border: 2px solid #201e1d;
+  background: #201e1d;
+  color: #fff;
+  font:
+    600 11px / 1 system-ui,
+    sans-serif;
+  cursor: pointer;
+}
+
+.connect:hover:not(:disabled) {
+  background: #3a3735;
+}
+
+.connect:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0 12px 10px;
+  color: #b3261e;
+  font-size: 11px;
+  line-height: 1.35;
+}
