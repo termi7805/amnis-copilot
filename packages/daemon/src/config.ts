@@ -22,6 +22,13 @@ export const DB_PATH = join(AMNIS_DIR, "amnis.sqlite");
 /** Token refrescado por Amnis. Nunca de vuelta en ~/.claude/. Permisos 0600. */
 export const TOKEN_CACHE_PATH = join(AMNIS_DIR, "token.json");
 
+/** Client ID de Spotify, del usuario (cada uno registra su app). */
+export const SPOTIFY_CONFIG_PATH = join(AMNIS_DIR, "spotify.json");
+/** Token de Spotify, de Amnis. Permisos 0600. */
+export const SPOTIFY_TOKEN_PATH = join(AMNIS_DIR, "spotify-token.json");
+/** Spotify solo admite HTTP con IP de loopback literal, nunca `localhost`. */
+export const SPOTIFY_REDIRECT_URI = `http://127.0.0.1:${PORT}/api/spotify/callback`;
+
 /** Ficheros que el daemon sirve o instala, fuera del propio código. */
 export interface Resources {
   webDist: string;

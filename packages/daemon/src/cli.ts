@@ -4,6 +4,7 @@ import { runDoctorCli } from "./infrastructure/cli/doctor.ts";
 import { runIngestCli } from "./infrastructure/cli/ingest.ts";
 import { runInstallHooksCli } from "./infrastructure/cli/installHooks.ts";
 import { runServeCli } from "./infrastructure/cli/serve.ts";
+import { runSpotifyCli } from "./infrastructure/cli/spotify.ts";
 import { runUninstallHooksCli } from "./infrastructure/cli/uninstallHooks.ts";
 
 const HELP = `amnis <comando>
@@ -21,6 +22,10 @@ Comandos:
                         (lo usa la app de Tauri al lanzarlo como sidecar).
   doctor                 Diagnostica daemon, hooks, credenciales, endpoint,
                         BD e ingesta, con el remedio de cada fallo.
+  spotify login [--client-id X]
+                        Conecta Spotify (OAuth PKCE); el daemon abre el navegador.
+                        El primer --client-id se guarda en ~/.amnis/spotify.json.
+  spotify logout         Borra el token de Spotify (conserva el Client ID).
   --help                Muestra esta ayuda.
   --version             Muestra la versión.
 `;
@@ -40,6 +45,9 @@ async function main(argv: readonly string[]): Promise<void> {
       return;
     case "serve":
       runServeCli(rest);
+      return;
+    case "spotify":
+      await runSpotifyCli(rest);
       return;
     case "doctor":
       await runDoctorCli();

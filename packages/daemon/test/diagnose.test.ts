@@ -13,6 +13,11 @@ function makeFacts(overrides: Partial<DiagnoseFacts> = {}): DiagnoseFacts {
     quotaError: null,
     dbError: null,
     lastIngestAt: new Date("2026-01-01T23:00:00.000Z"),
+    spotify: {
+      hasClientId: true,
+      token: "valid",
+      redirectUri: "http://127.0.0.1:4747/api/spotify/callback",
+    },
     ...overrides,
   };
 }
@@ -23,10 +28,58 @@ function find(checks: ReturnType<typeof diagnose>, name: string) {
   return check;
 }
 
-test("todo en verde produce siete chequeos, todos ok", () => {
+test("todo en verde produce ocho chequeos, todos ok", () => {
   const checks = diagnose(makeFacts(), NOW);
-  assert.equal(checks.length, 7);
+  assert.equal(checks.length, 8);
   assert.ok(checks.every((c) => c.ok));
+});
+
+const REDIRECT = "http://127.0.0.1:4747/api/spotify/callback";
+
+test("spotify sin Client ID no es un fallo y da el redirect URI", () => {
+  const check = find(
+    diagnose(
+      makeFacts({
+        spotify: { hasClientId: false, token: "none", redirectUri: REDIRECT },
+      }),
+      NOW,
+    ),
+    "spotify",
+  );
+  assert.equal(check.ok, true);
+  assert.ok(check.message.includes(REDIRECT));
+});
+
+test("spotify con Client ID y sin login falla y el remedio da el comando y el redirect URI", () => {
+  const check = find(
+    diagnose(
+      makeFacts({
+        spotify: { hasClientId: true, token: "none", redirectUri: REDIRECT },
+      }),
+      NOW,
+    ),
+    "spotify",
+  );
+  assert.equal(check.ok, false);
+  assert.ok(check.remedy?.includes("amnis spotify login"));
+  assert.ok(check.remedy?.includes(REDIRECT));
+});
+
+test("spotify con token caducado pero renovable es ok", () => {
+  const check = find(
+    diagnose(
+      makeFacts({
+        spotify: {
+          hasClientId: true,
+          token: "expired-refreshable",
+          redirectUri: REDIRECT,
+        },
+      }),
+      NOW,
+    ),
+    "spotify",
+  );
+  assert.equal(check.ok, true);
 });
 
 test("hooks desinstalados: el chequeo falla y el remedio menciona install-hooks", () => {

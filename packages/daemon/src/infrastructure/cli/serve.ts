@@ -6,7 +6,13 @@ import {
   quotaExhausted,
 } from "../../application/getState.ts";
 import type { RecordHookDeps } from "../../application/recordHook.ts";
-import { DB_PATH, PORT, RESOURCES, VERSION } from "../../config.ts";
+import {
+  DB_PATH,
+  PORT,
+  RESOURCES,
+  SPOTIFY_REDIRECT_URI,
+  VERSION,
+} from "../../config.ts";
 import { derivePetState } from "../../domain/petState.ts";
 import { readCommitHash } from "../git.ts";
 import { createEventBroadcaster } from "../http/events.ts";
@@ -14,10 +20,12 @@ import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
 import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
+import { createSpotifyRoutes } from "../http/routes/spotify.ts";
 import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
 import { createHttpServer } from "../http/server.ts";
 import { createStaticRoute } from "../http/static.ts";
+import { openBrowser } from "../openBrowser.ts";
 import { ensureAccount } from "../persistence/accounts.ts";
 import { openDb } from "../persistence/db.ts";
 import {
@@ -25,11 +33,16 @@ import {
   insertHookEvent,
   lastKnownStateEvent,
 } from "../persistence/hookEvents.ts";
+import {
+  readSpotifyConfig,
+  writeSpotifyToken,
+} from "../persistence/spotifyToken.ts";
 import { countUsageEvents } from "../persistence/usageEvents.ts";
 import { startPetStateWatcher } from "../petStateWatcher.ts";
 import { startQuotaPoller } from "../poller.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { providers } from "../providers/index.ts";
+import { exchangeCode } from "../providers/spotify/oauth.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
 
 function makeHookDeps(
@@ -121,6 +134,13 @@ export function runServeCli(args: readonly string[] = []): void {
       "GET /api/events": createEventsRoute({
         broadcaster,
         hello: () => getState(stateDeps, new Date()),
+      }),
+      ...createSpotifyRoutes({
+        readClientId: () => readSpotifyConfig()?.clientId ?? null,
+        redirectUri: SPOTIFY_REDIRECT_URI,
+        openBrowser,
+        exchangeCode,
+        saveToken: (token) => writeSpotifyToken(token),
       }),
     },
     fallback: createStaticRoute(RESOURCES.webDist),

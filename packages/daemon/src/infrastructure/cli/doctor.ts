@@ -1,7 +1,16 @@
 import { type Check, diagnose } from "../../application/diagnose.ts";
-import { CLAUDE_SETTINGS, DB_PATH, PORT } from "../../config.ts";
+import {
+  CLAUDE_SETTINGS,
+  DB_PATH,
+  PORT,
+  SPOTIFY_REDIRECT_URI,
+} from "../../config.ts";
 import { openDb } from "../persistence/db.ts";
 import { lastIngestAt } from "../persistence/ingestOffsets.ts";
+import {
+  readSpotifyConfig,
+  readSpotifyToken,
+} from "../persistence/spotifyToken.ts";
 import { readCredentials } from "../providers/anthropic/credentials.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { isAmnisMatcher, readSettings } from "./installHooks.ts";
@@ -56,6 +65,20 @@ function dbFacts(): { error: string | null; lastIngest: Date | null } {
   }
 }
 
+/** Solo lee ficheros: un diagnóstico no refresca el token que diagnostica. */
+function spotifyFacts(now: Date) {
+  const token = readSpotifyToken();
+  return {
+    hasClientId: readSpotifyConfig() !== null,
+    token: !token
+      ? ("none" as const)
+      : now.getTime() < token.expiresAt
+        ? ("valid" as const)
+        : ("expired-refreshable" as const),
+    redirectUri: SPOTIFY_REDIRECT_URI,
+  };
+}
+
 function printCheck(check: Check): void {
   const mark = check.ok ? "✓" : "✗";
   console.log(`${mark} ${check.name}: ${check.message}`);
@@ -69,6 +92,7 @@ export async function runDoctorCli(): Promise<void> {
   ]);
   const { error: dbError, lastIngest } = dbFacts();
 
+  const now = new Date();
   const checks = diagnose(
     {
       daemonAlive,
@@ -78,8 +102,9 @@ export async function runDoctorCli(): Promise<void> {
       quotaError: quota.error,
       dbError,
       lastIngestAt: lastIngest,
+      spotify: spotifyFacts(now),
     },
-    new Date(),
+    now,
   );
 
   for (const check of checks) printCheck(check);

@@ -104,6 +104,8 @@ El daemon sirve dos cosas por el mismo puerto, así que se separan por prefijo:
 | `GET /api/usage` | Agregados por día, proyecto y modelo |
 | `GET /api/events` | SSE: cambios de estado y de cuota |
 | `POST /api/hook/claude` | Receptor de hooks, fire-and-forget |
+| `POST /api/spotify/login` | Inicia el OAuth PKCE de Spotify: el daemon abre el navegador |
+| `GET /api/spotify/callback` | Redirect de Spotify: valida `state`, guarda el token |
 
 Sin auth: escucha en loopback y no hay dato de otra persona en juego. El día del túnel, el auth
 se añade en una sola capa delante de `/api`.

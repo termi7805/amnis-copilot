@@ -29,6 +29,11 @@ export interface DiagnoseFacts {
   quotaError: string | null;
   dbError: string | null;
   lastIngestAt: Date | null;
+  spotify: {
+    hasClientId: boolean;
+    token: "none" | "valid" | "expired-refreshable";
+    redirectUri: string;
+  };
 }
 
 function checkDaemon(facts: DiagnoseFacts): Check {
@@ -176,6 +181,34 @@ function checkIngest(facts: DiagnoseFacts, now: Date): Check {
   };
 }
 
+function checkSpotify(facts: DiagnoseFacts): Check {
+  const { hasClientId, token, redirectUri } = facts.spotify;
+  // Spotify es opcional: sin Client ID no es un fallo, o `doctor` saldría
+  // con código 1 para quien no lo usa.
+  if (!hasClientId) {
+    return {
+      name: "spotify",
+      ok: true,
+      message: `No configurado (opcional). Redirect URI a registrar: ${redirectUri}`,
+      remedy: null,
+    };
+  }
+  if (token === "none") {
+    return {
+      name: "spotify",
+      ok: false,
+      message: "Hay Client ID pero no has hecho login.",
+      remedy: `Ejecuta \`amnis spotify login\`. El redirect URI de tu app debe ser exactamente ${redirectUri}`,
+    };
+  }
+  return {
+    name: "spotify",
+    ok: true,
+    message: `Sesión de Spotify activa. Redirect URI: ${redirectUri}`,
+    remedy: null,
+  };
+}
+
 export function diagnose(facts: DiagnoseFacts, now: Date): Check[] {
   return [
     checkDaemon(facts),
@@ -185,5 +218,6 @@ export function diagnose(facts: DiagnoseFacts, now: Date): Check[] {
     checkEndpoint(facts),
     checkDb(facts),
     checkIngest(facts, now),
+    checkSpotify(facts),
   ];
 }
