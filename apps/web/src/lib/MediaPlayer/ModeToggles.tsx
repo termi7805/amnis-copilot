@@ -29,11 +29,7 @@ export interface ModeTogglesProps {
   onCommand: (command: MediaCommand) => unknown;
 }
 
-/**
- * Shuffle y repeat. No guardan estado: pintan lo que dice el último `media`,
- * así que tras pulsar el botón no cambia hasta que Spotify confirma. Un
- * optimista local podría divergir de lo que Spotify realmente aplicó.
- */
+/** Sin estado local: tras pulsar no cambia nada hasta que Spotify confirma. */
 export function ModeToggles({
   shuffle,
   repeat,

@@ -21,7 +21,7 @@ const DRAG_THRESHOLD_PX = 10;
  * datos es un bug difícil de atribuir. */
 const PANEL_KEY = "amnis-pet-panel";
 const LAST_PANEL_KEY = "amnis-pet-last-panel";
-/** Clave de cuando solo había un panel (#42): "1" = desplegado. */
+/** Preferencia anterior a #57: "1" = cuota desplegada. */
 const LEGACY_EXPANDED_KEY = "amnis-pet-quota-panel-expanded";
 
 type OpenPanel = PanelId;
@@ -30,8 +30,7 @@ type Panel = OpenPanel | "none";
 const isOpenPanel = (v: string | null): v is OpenPanel =>
   v === "quota" || v === "media";
 
-/** Con la clave nueva ausente, la antigua conserva la preferencia de quien
- * ya tenía el panel de cuota desplegado. */
+/** Sin la clave nueva, la antigua conserva el panel de cuota desplegado. */
 function readPanel(): Panel {
   const stored = localStorage.getItem(PANEL_KEY);
   if (stored === "none" || isOpenPanel(stored)) return stored;
@@ -57,10 +56,8 @@ export function PetWindow() {
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
   const dragStarted = useRef(false);
   const windowRef = useRef<HTMLDivElement>(null);
-  // Un panel u otro, nunca los dos (#57): mostrar la cuota y el reproductor
-  // a la vez haría de la mascota un dashboard flotante.
+  // Un panel u otro: los dos a la vez harían de la mascota un dashboard.
   const [panel, setPanel] = useState<Panel>(readPanel);
-  // El panel que abre un clic en el bicho plegado: el último que se usó.
   const [lastPanel, setLastPanel] = useState<OpenPanel>(readLastPanel);
   const expanded = panel !== "none";
 

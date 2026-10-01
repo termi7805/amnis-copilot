@@ -3,8 +3,6 @@ import styles from "./PanelHeader.module.css";
 
 export type PanelId = "quota" | "media";
 
-/** Mismos tonos que llevaba el `statusDot` que se quitó de `PetWindow.tsx`:
- * vive dentro del panel desplegado, no flotando sobre la mascota. */
 const STATUS_COLOR: Record<ConnectionStatus, string> = {
   connected: "#1FB98C",
   reconnecting: "#e0b84a",
@@ -19,15 +17,10 @@ const TABS: { id: PanelId; label: string }[] = [
 export interface PanelHeaderProps {
   status: ConnectionStatus;
   active: PanelId;
-  /** Sin esto no hay pestañas: el panel se puede usar suelto. */
   onSelect?: (panel: PanelId) => void;
 }
 
-/**
- * Cabecera común de los paneles de la ventana flotante (#57). Las pestañas
- * cambian de panel sin pasar por el plegado: abrir uno cierra el otro, nunca
- * hay dos a la vez.
- */
+/** Abrir una pestaña cierra el otro panel: nunca hay dos a la vez. */
 export function PanelHeader({ status, active, onSelect }: PanelHeaderProps) {
   return (
     <div className={styles.header}>

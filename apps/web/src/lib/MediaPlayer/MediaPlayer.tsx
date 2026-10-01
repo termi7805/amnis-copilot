@@ -19,7 +19,6 @@ export interface MediaPlayerProps {
   /** `null` = sin datos del daemon (caído, o aún sin el primer `hello`). */
   media: MediaSnapshot | null;
   onCommand: (command: MediaCommand) => Promise<MediaCommandResult>;
-  /** Lista de dispositivos Connect; se pide al abrir el selector (#55). */
   loadDevices: () => Promise<MediaDevicesResult>;
 }
 
@@ -87,7 +86,6 @@ export function MediaPlayer({
     setAuthorizingAt(null);
   }
 
-  /** `true` si el daemon aceptó la orden. */
   async function run(command: MediaCommand): Promise<boolean> {
     if (inFlight.current) return false;
     inFlight.current = true;

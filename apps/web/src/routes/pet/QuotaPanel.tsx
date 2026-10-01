@@ -27,7 +27,6 @@ export interface QuotaPanelProps {
   status: ConnectionStatus;
   quotas: QuotaSnapshot[];
   now: Date;
-  /** Pestañas de la cabecera (#57); sin esto no se pintan. */
   onSelectPanel?: (panel: PanelId) => void;
 }
 

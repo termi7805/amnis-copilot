@@ -11,7 +11,6 @@ export type DeviceKind =
   | "tv"
   | "other";
 
-/** `type` es el de Spotify (`Computer`, `Smartphone`, `CastAudio`…). */
 export function deviceKind(type: string): DeviceKind {
   switch (type) {
     case "Computer":
@@ -92,19 +91,15 @@ type Load =
   | { status: "ready"; devices: MediaDeviceOption[] };
 
 export interface DeviceSelectorProps {
-  /** Dónde suena ahora según el último `media`; `null` si en ningún sitio. */
   current: MediaDevice | null;
   loadDevices: () => Promise<MediaDevicesResult>;
-  /** `true` si el daemon aceptó el transfer. */
   onTransfer: (deviceId: string) => Promise<boolean>;
   disabled?: boolean;
 }
 
 /**
- * Mueve la reproducción a otro dispositivo Spotify Connect. La lista se pide
- * al abrir, no antes. Tras elegir, el activo lo marca el siguiente `media`
- * (vía `current`), no esta lista: darlo por hecho en local mostraría un
- * dispositivo que Spotify aún no ha confirmado.
+ * La lista se pide al abrir. Tras elegir, el activo lo marca el siguiente
+ * `media` (vía `current`), no esta lista: Spotify aún no lo ha confirmado.
  */
 export function DeviceSelector({
   current,

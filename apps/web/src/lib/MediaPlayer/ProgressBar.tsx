@@ -10,7 +10,6 @@ import {
 
 const KEY_STEP_MS = 5_000;
 
-/** `m:ss`, y `h:mm:ss` pasada la hora (podcasts). */
 export function formatTrackTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(total / 3600);
@@ -20,10 +19,9 @@ export function formatTrackTime(ms: number): string {
 }
 
 /**
- * Un seek ya pedido: se pinta su destino hasta que llegue un snapshot medido
- * después de que el daemon lo confirmara. Sin esto, entre soltar el pulgar y
- * el siguiente `media` la barra volvería a la posición vieja y luego saltaría.
- * `settledAt` es `Infinity` mientras la orden sigue en vuelo.
+ * Un seek pedido: se pinta su destino hasta que llegue un snapshot medido
+ * después de que el daemon lo confirmara, o la barra volvería atrás y
+ * luego saltaría. `settledAt` es `Infinity` mientras sigue en vuelo.
  */
 interface PendingSeek {
   progressMs: number;
@@ -36,7 +34,6 @@ export interface ProgressBarProps {
   /** `true` si el daemon aceptó el seek. */
   onSeek: (positionMs: number) => Promise<boolean>;
   disabled?: boolean;
-  /** Reloj inyectable para tests. */
   clock?: InterpolationOptions["now"];
 }
 

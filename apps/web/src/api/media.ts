@@ -47,7 +47,6 @@ export type SimpleMediaCommand =
   | "previous"
   | "connect";
 
-/** Órdenes con body: cada una añade su variante a esta unión. */
 export type MediaCommand =
   | SimpleMediaCommand
   | { kind: "seek"; positionMs: number }
@@ -120,7 +119,6 @@ const UNREACHABLE: MediaFailure = {
   message: "No se pudo contactar con Amnis.",
 };
 
-/** `POST` de una orden al daemon. */
 export async function sendMediaCommand(
   command: MediaCommand,
 ): Promise<MediaCommandResult> {
