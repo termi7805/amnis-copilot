@@ -4,8 +4,15 @@ import type { TrackVibe } from "./trackVibe.ts";
 
 /** Sonando: la canción cambia y la UI se mira. */
 export const MEDIA_PLAYING_MS = 3_000;
-/** En pausa o sin dispositivo: nada que ver cambia rápido. */
+/** En pausa o sin dispositivo, sin actividad reciente: nada cambia rápido. */
 export const MEDIA_IDLE_MS = 30_000;
+/**
+ * Tras actividad (algo sonó, cambió, se mandó una orden o alguien miró) se
+ * sigue sondeando rápido este tiempo, aunque esté en pausa: pausar y retomar
+ * poco después es lo habitual, y a 30 s un cambio hecho desde Spotify tardaba
+ * medio minuto en verse.
+ */
+export const MEDIA_ACTIVE_WINDOW_MS = 2 * 60_000;
 /** Si el progreso se desvía más de esto del avance natural, fue un seek. */
 const SEEK_TOLERANCE_MS = 2_000;
 
@@ -24,6 +31,7 @@ export interface MediaPollerDeps {
   };
   playingMs?: number;
   idleMs?: number;
+  activeWindowMs?: number;
 }
 
 export interface MediaPoller {
@@ -31,6 +39,13 @@ export interface MediaPoller {
   wake(): void;
   /** Leer ya (p. ej. justo tras el login), sin esperar al intervalo. */
   pollNow(): void;
+  /**
+   * Alguien acaba de mirar (la ventana recuperó el foco): lectura ya, salvo
+   * que la última sea reciente, y ritmo rápido durante el margen de
+   * actividad — si miras con la música en pausa y la reanudas desde
+   * Spotify, se ve en segundos, no en 30. Sin clientes SSE no hace nada.
+   */
+  refresh(): void;
   /**
    * Leer dentro de `delayMs` (500 por defecto): tras una orden de control,
    * Spotify tarda unos cientos de ms en reflejarla en `/me/player`. Sin
@@ -54,6 +69,7 @@ export interface MediaPoller {
 export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
   const playingMs = deps.playingMs ?? MEDIA_PLAYING_MS;
   const idleMs = deps.idleMs ?? MEDIA_IDLE_MS;
+  const activeWindowMs = deps.activeWindowMs ?? MEDIA_ACTIVE_WINDOW_MS;
 
   let timer: NodeJS.Timeout | null = null;
   let inFlight: Promise<MediaSnapshot> | null = null;
@@ -67,6 +83,13 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
   // cada 3 s y, con ReccoBeats caído, reintentar en cada lectura lo
   // martillearía.
   let attemptedId: string | null = null;
+  // Hasta cuándo se sondea rápido aunque esté en pausa.
+  let activeUntil = 0;
+
+  const touch = () => {
+    activeUntil = Date.now() + activeWindowMs;
+  };
+  const isActive = () => Date.now() < activeUntil;
 
   const isFresh = () => last !== null && Date.now() - lastReadAt < playingMs;
 
@@ -140,7 +163,11 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
         const snap = withVibe(reading.snapshot);
         last = snap;
         lastReadAt = Date.now();
-        if (changed(prev, snap)) deps.onChange(snap);
+        const didChange = changed(prev, snap);
+        if (didChange) deps.onChange(snap);
+        // Sonando, o con un cambio real, hay actividad: no bajar a 30 s
+        // hasta que pase el margen sin nada nuevo.
+        if (snap.isPlaying || didChange) touch();
         const wanted = soonMs;
         soonMs = null;
         schedule(
@@ -148,7 +175,7 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
             ? Math.max(idleMs, reading.retryAfterMs)
             : wanted !== null
               ? wanted
-              : snap.isPlaying
+              : snap.isPlaying || isActive()
                 ? playingMs
                 : idleMs,
         );
@@ -174,8 +201,24 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
       if (isFresh()) schedule(playingMs);
       else void read();
     },
+    refresh() {
+      if (stopped || !deps.hasClients()) return;
+      touch();
+      if (inFlight) return;
+      if (isFresh()) {
+        // Ya hay datos de hace nada: solo asegurar que el ciclo sigue vivo.
+        schedule(playingMs);
+        return;
+      }
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      void read();
+    },
     pollNow() {
       if (stopped || !deps.hasClients()) return;
+      touch();
       if (timer) {
         clearTimeout(timer);
         timer = null;
@@ -184,6 +227,7 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
     },
     pollSoon(delayMs = 500) {
       if (stopped || !deps.hasClients()) return;
+      touch();
       if (inFlight) {
         soonMs = delayMs;
         return;

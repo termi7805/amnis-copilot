@@ -109,6 +109,7 @@ El daemon sirve dos cosas por el mismo puerto, así que se separan por prefijo:
 | `POST /api/media/{play,pause,next,previous}` | Transporte de la reproducción de Spotify (escritura) |
 | `POST /api/media/{seek,shuffle,repeat,transfer}` | Ajustes y transferencia entre dispositivos, con body JSON (escritura) |
 | `GET /api/media/devices` | Dispositivos Spotify Connect, bajo demanda (no entra en el polling) |
+| `POST /api/media/refresh` | La UI avisa de que alguien mira (foco de la ventana): lectura ya y sondeo rápido ~2 min |
 
 Sin auth: escucha en loopback y no hay dato de otra persona en juego. El día del túnel, el auth
 se añade en una sola capa delante de `/api`.

@@ -49,16 +49,19 @@ async function withMedia(
   control: MediaControl,
   fn: (ctx: {
     base: string;
-    after: { count: number };
+    after: { count: number; refreshes: number };
     hit: (a: Action) => Promise<Response>;
   }) => Promise<void>,
 ): Promise<void> {
-  const after = { count: 0 };
+  const after = { count: 0, refreshes: 0 };
   const server = createHttpServer({
     routes: createMediaRoutes({
       control,
       afterAction: () => {
         after.count++;
+      },
+      refresh: () => {
+        after.refreshes++;
       },
     }),
   });
@@ -218,6 +221,21 @@ test("GET /api/media/devices devuelve la lista", async () => {
       assert.equal(res.status, 200);
       assert.deepEqual(await res.json(), { devices });
       // Leer dispositivos no es una orden: no fuerza una lectura del poller.
+      assert.equal(after.count, 0);
+    },
+  );
+});
+
+test("POST /api/media/refresh avisa al poller y no toca Spotify", async () => {
+  const calls: string[] = [];
+  await withMedia(
+    controlReturning({ ok: true, devices: [] }, calls),
+    async ({ base, after }) => {
+      const res = await fetch(`${base}/api/media/refresh`, { method: "POST" });
+      assert.equal(res.status, 200);
+      assert.equal(after.refreshes, 1);
+      assert.deepEqual(calls, []);
+      // No es una orden: no fuerza la lectura de "tras una acción".
       assert.equal(after.count, 0);
     },
   );

@@ -38,7 +38,7 @@ function playing(
 
 function setup(
   next: () => MediaReading,
-  opts: { playingMs?: number; idleMs?: number } = {},
+  opts: { playingMs?: number; idleMs?: number; activeWindowMs?: number } = {},
 ) {
   const state = { clients: 0, reads: 0, changes: [] as MediaSnapshot[] };
   const poller = startMediaPoller({
@@ -50,6 +50,9 @@ function setup(
     onChange: (s) => state.changes.push(s),
     playingMs: opts.playingMs ?? 15,
     idleMs: opts.idleMs ?? 15,
+    // Por defecto sin margen de actividad: así los tests de cadencia miden
+    // el intervalo base; el margen se prueba aparte.
+    activeWindowMs: opts.activeWindowMs ?? 0,
   });
   return { state, poller };
 }
@@ -239,6 +242,79 @@ test("pollSoon con una lectura en vuelo: la siguiente es pronto, no al intervalo
   await sleep(80);
   poller.stop();
   assert.equal(state.reads, 2);
+});
+
+// ── Margen de actividad y refresco al mirar ──────────────────────────────
+
+test("tras pasar a pausa se sigue sondeando rápido un rato, y luego despacio", async () => {
+  let step = 0;
+  const { state, poller } = setup(
+    () => {
+      step++;
+      return { snapshot: playing({ isPlaying: step === 1 }) };
+    },
+    { playingMs: 10, idleMs: 400, activeWindowMs: 80 },
+  );
+  state.clients = 1;
+  poller.wake();
+  await sleep(130); // el margen (80 ms) ya ha vencido
+  const readsAfterWindow = state.reads;
+  assert.ok(
+    readsAfterWindow >= 5,
+    `ritmo rápido en el margen: ${readsAfterWindow}`,
+  );
+  await sleep(150);
+  poller.stop();
+  assert.equal(
+    state.reads,
+    readsAfterWindow,
+    "pasado el margen, al ritmo lento",
+  );
+});
+
+test("refresh con la música en pausa: lectura ya y ritmo rápido durante el margen", async () => {
+  const { state, poller } = setup(
+    () => ({ snapshot: playing({ isPlaying: false }) }),
+    { playingMs: 10, idleMs: 400, activeWindowMs: 60 },
+  );
+  state.clients = 1;
+  poller.wake();
+  await sleep(120); // vence el margen del arranque; ahora va lento
+  const before = state.reads;
+  poller.refresh();
+  await sleep(50);
+  assert.ok(
+    state.reads - before >= 3,
+    `lecturas tras refresh: ${state.reads - before}`,
+  );
+  await sleep(120); // vence el margen del refresh
+  const settled = state.reads;
+  await sleep(150);
+  poller.stop();
+  assert.equal(state.reads, settled);
+});
+
+test("refresh sin clientes no lee", async () => {
+  const { state, poller } = setup(() => ({ snapshot: playing() }));
+  poller.refresh();
+  await sleep(40);
+  poller.stop();
+  assert.equal(state.reads, 0);
+});
+
+test("refresh con datos recientes no duplica la lectura", async () => {
+  const { state, poller } = setup(() => ({ snapshot: playing() }), {
+    playingMs: 200,
+    idleMs: 400,
+  });
+  state.clients = 1;
+  poller.wake();
+  await sleep(20);
+  poller.refresh();
+  poller.refresh();
+  await sleep(30);
+  poller.stop();
+  assert.equal(state.reads, 1);
 });
 
 // ── Vibe de ReccoBeats (#63) ─────────────────────────────────────────────

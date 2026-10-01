@@ -172,6 +172,7 @@ export function runServeCli(args: readonly string[] = []): void {
         control: createMediaControl(),
         // Spotify tarda unos cientos de ms en reflejar la orden.
         afterAction: () => mediaPoller.pollSoon(),
+        refresh: () => mediaPoller.refresh(),
       }),
     },
     fallback: createStaticRoute(RESOURCES.webDist),

@@ -18,6 +18,9 @@ export interface MediaRoutesDeps {
   /** Tras una orden con éxito: forzar una lectura del poller (Spotify tarda
    * unos cientos de ms en reflejarla en `/me/player`). */
   afterAction: () => void;
+  /** Alguien acaba de mirar (la ventana recuperó el foco): lectura ya y
+   * ritmo rápido un rato, para que lo que se ve esté al día. */
+  refresh: () => void;
 }
 
 /** El mapeo vive aquí y no en el provider: es contrato HTTP, no de Spotify. */
@@ -168,6 +171,11 @@ export function createMediaRoutes(
       "{ deviceId: string no vacío }",
       (deviceId) => control.transfer(deviceId),
     ),
+    // No es una orden a Spotify (no cambia nada ahí): solo avisa al poller.
+    "POST /api/media/refresh": ({ res }) => {
+      deps.refresh();
+      sendJson(res, 200, {});
+    },
     "GET /api/media/devices": async ({ res }) => {
       const result = await safely(() => control.devices());
       if (!result.ok) {
