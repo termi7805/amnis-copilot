@@ -19,6 +19,7 @@ import { createEventBroadcaster } from "../http/events.ts";
 import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
+import { createMediaRoutes } from "../http/routes/media.ts";
 import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
 import { createSpotifyRoutes } from "../http/routes/spotify.ts";
 import { createStateRoute } from "../http/routes/state.ts";
@@ -43,6 +44,7 @@ import { startPetStateWatcher } from "../petStateWatcher.ts";
 import { startQuotaPoller } from "../poller.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { providers } from "../providers/index.ts";
+import { createMediaControl } from "../providers/spotify/control.ts";
 import { exchangeCode } from "../providers/spotify/oauth.ts";
 import { readMedia } from "../providers/spotify/player.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
@@ -162,6 +164,11 @@ export function runServeCli(args: readonly string[] = []): void {
           // Recién conectado: que la UI vea qué suena ya, no en 30 s.
           mediaPoller.pollNow();
         },
+      }),
+      ...createMediaRoutes({
+        control: createMediaControl(),
+        // Spotify tarda unos cientos de ms en reflejar la orden.
+        afterAction: () => mediaPoller.pollSoon(),
       }),
     },
     fallback: createStaticRoute(RESOURCES.webDist),

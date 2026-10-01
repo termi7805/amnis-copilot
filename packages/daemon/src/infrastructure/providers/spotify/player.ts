@@ -6,6 +6,14 @@ const PLAYER_URL =
 /** Spotify no publica sus límites; sin `Retry-After`, esperar un minuto. */
 const DEFAULT_RETRY_AFTER_MS = 60_000;
 
+/** `Retry-After` de un 429 en ms; sin cabecera válida, un minuto. */
+export function retryAfterMsFrom(response: Response): number {
+  const seconds = Number(response.headers.get("Retry-After"));
+  return Number.isFinite(seconds) && seconds > 0
+    ? seconds * 1000
+    : DEFAULT_RETRY_AFTER_MS;
+}
+
 export interface MediaReading {
   snapshot: MediaSnapshot;
   /** Solo en un 429: lo que Spotify pidió esperar. */
@@ -118,13 +126,9 @@ export async function fetchPlayer(
     return { snapshot: emptyMedia("no-device", measuredAt) };
   }
   if (response.status === 429) {
-    const seconds = Number(response.headers.get("Retry-After"));
     return {
       snapshot: emptyMedia("unavailable", measuredAt),
-      retryAfterMs:
-        Number.isFinite(seconds) && seconds > 0
-          ? seconds * 1000
-          : DEFAULT_RETRY_AFTER_MS,
+      retryAfterMs: retryAfterMsFrom(response),
     };
   }
   if (!response.ok) {

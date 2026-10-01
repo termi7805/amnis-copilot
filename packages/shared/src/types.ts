@@ -93,6 +93,11 @@ export interface MediaDevice {
   type: string;
 }
 
+/** Un dispositivo Spotify Connect de `GET /api/media/devices`. */
+export interface MediaDeviceOption extends MediaDevice {
+  isActive: boolean;
+}
+
 /**
  * Qué suena. Vive en memoria y viaja por SSE: nada de Spotify se persiste.
  * `progressMs` se midió en `measuredAt`; el cliente interpola el avance.

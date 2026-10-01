@@ -168,3 +168,71 @@ test("snapshot() reutiliza el reciente y no duplica la lectura en vuelo", async 
   assert.equal(a, b);
   assert.equal(a, c);
 });
+
+test("pollSoon lee pronto, aunque el intervalo normal sea lento", async () => {
+  const { state, poller } = setup(
+    () => ({ snapshot: playing({ isPlaying: false }) }),
+    { playingMs: 10_000, idleMs: 10_000 },
+  );
+  state.clients = 1;
+  poller.wake();
+  await sleep(20);
+  assert.equal(state.reads, 1);
+  poller.pollSoon(15);
+  await sleep(60);
+  poller.stop();
+  assert.equal(state.reads, 2);
+});
+
+test("pollSoon sin clientes no lee", async () => {
+  const { state, poller } = setup(() => ({ snapshot: playing() }));
+  poller.pollSoon(5);
+  await sleep(40);
+  poller.stop();
+  assert.equal(state.reads, 0);
+});
+
+test("varios pollSoon seguidos no apilan lecturas", async () => {
+  const { state, poller } = setup(
+    () => ({ snapshot: playing({ isPlaying: false }) }),
+    { playingMs: 10_000, idleMs: 10_000 },
+  );
+  state.clients = 1;
+  poller.wake();
+  await sleep(20);
+  poller.pollSoon(20);
+  poller.pollSoon(20);
+  poller.pollSoon(20);
+  await sleep(80);
+  poller.stop();
+  assert.equal(state.reads, 2);
+});
+
+test("pollSoon con una lectura en vuelo: la siguiente es pronto, no al intervalo", async () => {
+  let release: () => void = () => {};
+  let first = true;
+  const state = { reads: 0 };
+  const poller = startMediaPoller({
+    read: async () => {
+      state.reads++;
+      if (first) {
+        first = false;
+        await new Promise<void>((r) => {
+          release = r;
+        });
+      }
+      return { snapshot: playing({ isPlaying: false }) };
+    },
+    hasClients: () => true,
+    onChange: () => {},
+    playingMs: 10_000,
+    idleMs: 10_000,
+  });
+  poller.wake(); // lectura 1, queda en vuelo
+  await sleep(10);
+  poller.pollSoon(15); // llega una orden: esa lectura es anterior a ella
+  release();
+  await sleep(80);
+  poller.stop();
+  assert.equal(state.reads, 2);
+});

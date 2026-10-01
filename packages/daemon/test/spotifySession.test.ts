@@ -165,3 +165,25 @@ test("el token se escribe con permisos 0600", {
     s.cleanup();
   }
 });
+
+test("force refresca aunque el token siga vigente", async () => {
+  const s = setup({ expiresAt: NOW.getTime() + 3_600_000 });
+  try {
+    let calls = 0;
+    const result = await loadSpotifyToken({
+      now: NOW,
+      force: true,
+      configPath: s.configPath,
+      tokenPath: s.tokenPath,
+      refreshFn: async () => {
+        calls++;
+        return refreshed;
+      },
+    });
+    assert.deepEqual(result, { ok: true, accessToken: "new-access" });
+    assert.equal(calls, 1);
+    assert.equal(readSpotifyToken(s.tokenPath)?.accessToken, "new-access");
+  } finally {
+    s.cleanup();
+  }
+});

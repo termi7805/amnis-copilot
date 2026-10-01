@@ -20,6 +20,9 @@ export type LoadSpotifyTokenResult =
 
 export interface LoadSpotifyTokenOptions {
   now?: Date;
+  /** Refrescar aunque el token parezca vigente: un 401 con token "vigente"
+   * significa que Spotify lo invalidó (revocado, rotado). */
+  force?: boolean;
   tokenPath?: string;
   configPath?: string;
   refreshFn?: (
@@ -71,7 +74,7 @@ async function doLoad(
   }
 
   const now = (opts.now ?? new Date()).getTime();
-  if (now + EXPIRY_MARGIN_MS < token.expiresAt) {
+  if (!opts.force && now + EXPIRY_MARGIN_MS < token.expiresAt) {
     return { ok: true, accessToken: token.accessToken };
   }
 

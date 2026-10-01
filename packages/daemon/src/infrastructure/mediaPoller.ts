@@ -21,6 +21,12 @@ export interface MediaPoller {
   wake(): void;
   /** Leer ya (p. ej. justo tras el login), sin esperar al intervalo. */
   pollNow(): void;
+  /**
+   * Leer dentro de `delayMs` (500 por defecto): tras una orden de control,
+   * Spotify tarda unos cientos de ms en reflejarla en `/me/player`. Sin
+   * clientes SSE no hace nada, como el resto del poller.
+   */
+  pollSoon(delayMs?: number): void;
   /** Último snapshot si es reciente; si no, hace una lectura. */
   snapshot(): Promise<MediaSnapshot>;
   stop(): void;
@@ -44,6 +50,9 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
   let last: MediaSnapshot | null = null;
   let lastReadAt = 0;
   let stopped = false;
+  // Si llega una orden con una lectura en vuelo, esa lectura es anterior a
+  // la orden: la siguiente debe ser pronto, no al intervalo normal.
+  let soonMs: number | null = null;
 
   const isFresh = () => last !== null && Date.now() - lastReadAt < playingMs;
 
@@ -82,12 +91,16 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
         last = reading.snapshot;
         lastReadAt = Date.now();
         if (changed(prev, reading.snapshot)) deps.onChange(reading.snapshot);
+        const wanted = soonMs;
+        soonMs = null;
         schedule(
           reading.retryAfterMs !== undefined
             ? Math.max(idleMs, reading.retryAfterMs)
-            : reading.snapshot.isPlaying
-              ? playingMs
-              : idleMs,
+            : wanted !== null
+              ? wanted
+              : reading.snapshot.isPlaying
+                ? playingMs
+                : idleMs,
         );
         return reading.snapshot;
       })
@@ -118,6 +131,18 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
         timer = null;
       }
       void read();
+    },
+    pollSoon(delayMs = 500) {
+      if (stopped || !deps.hasClients()) return;
+      if (inFlight) {
+        soonMs = delayMs;
+        return;
+      }
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      schedule(delayMs);
     },
     snapshot() {
       if (last && isFresh()) return Promise.resolve(last);
