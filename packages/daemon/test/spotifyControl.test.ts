@@ -63,8 +63,6 @@ test("cada acción llama al método, URL, query y body exactos", async () => {
     string,
     string?,
   ][] = [
-    ["play", (c) => c.play(), "PUT", `${API}/play`],
-    ["pause", (c) => c.pause(), "PUT", `${API}/pause`],
     ["next", (c) => c.next(), "POST", `${API}/next`],
     ["previous", (c) => c.previous(), "POST", `${API}/previous`],
     ["seek", (c) => c.seek(42_000), "PUT", `${API}/seek?position_ms=42000`],
@@ -98,11 +96,11 @@ test("cada acción llama al método, URL, query y body exactos", async () => {
 test("404 NO_ACTIVE_DEVICE es no-device; otro 404 es unavailable", async () => {
   const noDevice = await setup(
     spotifyError(404, "NO_ACTIVE_DEVICE"),
-  ).control.pause();
+  ).control.next();
   assert.equal(!noDevice.ok && noDevice.kind, "no-device");
   assert.match(!noDevice.ok ? noDevice.message : "", /Abre Spotify/);
 
-  const other = await setup(spotifyError(404, "OTRA_COSA")).control.pause();
+  const other = await setup(spotifyError(404, "OTRA_COSA")).control.next();
   assert.equal(!other.ok && other.kind, "unavailable");
 });
 
@@ -124,7 +122,7 @@ test("403 PREMIUM_REQUIRED se explica; otro 403 es forbidden genérico", async (
 test("429 respeta Retry-After y sin cabecera espera un minuto", async () => {
   const withHeader = await setup(
     new Response(null, { status: 429, headers: { "Retry-After": "7" } }),
-  ).control.play();
+  ).control.next();
   assert.deepEqual(
     [
       !withHeader.ok && withHeader.kind,
@@ -135,7 +133,7 @@ test("429 respeta Retry-After y sin cabecera espera un minuto", async () => {
 
   const without = await setup(
     new Response(null, { status: 429 }),
-  ).control.play();
+  ).control.next();
   assert.equal(!without.ok && without.retryAfterMs, 60_000);
 });
 
@@ -144,7 +142,7 @@ test("401 hace un refresco forzado y un solo reintento que tiene éxito", async 
     new Response(null, { status: 401 }),
     new Response(null, { status: 204 }),
   );
-  const result = await s.control.pause();
+  const result = await s.control.next();
   assert.deepEqual(result, { ok: true });
   assert.equal(s.calls.length, 2);
   assert.deepEqual(s.forces, [false, true]);
@@ -155,7 +153,7 @@ test("dos 401 seguidos acaban en not-logged-in, sin bucle", async () => {
     new Response(null, { status: 401 }),
     new Response(null, { status: 401 }),
   );
-  const result = await s.control.pause();
+  const result = await s.control.next();
   assert.equal(!result.ok && result.kind, "not-logged-in");
   assert.equal(s.calls.length, 2);
 });
@@ -184,16 +182,16 @@ test("un fallo al refrescar el token es unavailable, no not-logged-in", async ()
       message: "red",
     }).impl,
   });
-  const result = await control.play();
+  const result = await control.next();
   assert.equal(!result.ok && result.kind, "unavailable");
 });
 
 test("fallo de red y 5xx son unavailable", async () => {
-  const net = await setup(new Error("sin red")).control.play();
+  const net = await setup(new Error("sin red")).control.next();
   assert.equal(!net.ok && net.kind, "unavailable");
   const server = await setup(
     new Response(null, { status: 503 }),
-  ).control.play();
+  ).control.next();
   assert.equal(!server.ok && server.kind, "unavailable");
 });
 
@@ -222,5 +220,84 @@ test("devices() traduce los errores igual que las órdenes", async () => {
   const result = await setup(
     spotifyError(403, "PREMIUM_REQUIRED"),
   ).control.devices();
+  assert.equal(!result.ok && result.kind, "forbidden");
+});
+
+// ── play / pause miran antes el estado real ──────────────────────────────
+
+const playingNow = () => Response.json({ is_playing: true });
+const pausedNow = () => Response.json({ is_playing: false });
+const accepted = () => new Response(null, { status: 204 });
+const sequence = (calls: { method: string; url: string }[]) =>
+  calls.map((c) => `${c.method} ${c.url}`);
+
+test("pause con la música sonando: consulta el estado real y luego pausa", async () => {
+  const s = setup(playingNow(), accepted());
+  assert.deepEqual(await s.control.pause(), { ok: true });
+  assert.deepEqual(sequence(s.calls), [`GET ${API}`, `PUT ${API}/pause`]);
+});
+
+test("pause estando ya pausado: éxito sin enviar nada (no hay 403)", async () => {
+  const s = setup(pausedNow());
+  assert.deepEqual(await s.control.pause(), { ok: true });
+  assert.deepEqual(sequence(s.calls), [`GET ${API}`]);
+});
+
+test("play estando ya sonando: éxito sin enviar nada; en pausa, envía play", async () => {
+  const already = setup(playingNow());
+  assert.deepEqual(await already.control.play(), { ok: true });
+  assert.deepEqual(sequence(already.calls), [`GET ${API}`]);
+
+  const paused = setup(pausedNow(), accepted());
+  assert.deepEqual(await paused.control.play(), { ok: true });
+  assert.deepEqual(sequence(paused.calls), [`GET ${API}`, `PUT ${API}/play`]);
+});
+
+test("sin dispositivo (204 en la consulta): no-device y no se envía la orden", async () => {
+  const s = setup(new Response(null, { status: 204 }));
+  const result = await s.control.pause();
+  assert.equal(!result.ok && result.kind, "no-device");
+  assert.equal(s.calls.length, 1);
+});
+
+test("un 429 en la consulta se respeta y no se envía la orden", async () => {
+  const s = setup(
+    new Response(null, { status: 429, headers: { "Retry-After": "5" } }),
+  );
+  const result = await s.control.play();
+  assert.deepEqual(
+    [!result.ok && result.kind, !result.ok && result.retryAfterMs],
+    ["rate-limited", 5000],
+  );
+  assert.equal(s.calls.length, 1);
+});
+
+test("un 401 en la consulta refresca el token y sigue con la orden", async () => {
+  const s = setup(new Response(null, { status: 401 }), pausedNow(), accepted());
+  assert.deepEqual(await s.control.play(), { ok: true });
+  assert.equal(s.calls.length, 3);
+  assert.deepEqual(s.forces, [false, true, false]);
+});
+
+test("si la consulta no se puede leer, se envía la orden igualmente", async () => {
+  const unreadable: (Response | Error)[] = [
+    new Response(null, { status: 500 }),
+    new Response("no es json", { status: 200 }),
+    new Error("sin red"),
+  ];
+  for (const first of unreadable) {
+    const s = setup(first, accepted());
+    assert.deepEqual(await s.control.pause(), { ok: true });
+    assert.equal(s.calls.at(-1)?.method, "PUT");
+    assert.match(s.calls.at(-1)?.url ?? "", /\/pause$/);
+  }
+});
+
+test("un 403 de verdad al pausar (p. ej. un anuncio) sigue siendo error", async () => {
+  const s = setup(
+    playingNow(),
+    spotifyError(403, "UNKNOWN", "Restriction violated"),
+  );
+  const result = await s.control.pause();
   assert.equal(!result.ok && result.kind, "forbidden");
 });

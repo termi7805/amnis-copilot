@@ -157,6 +157,57 @@ async function control(
   return sent.response.ok ? { ok: true } : toControlFailure(sent.response);
 }
 
+/** Lo que dice Spotify *ahora* (no el último snapshot del poller, que puede
+ * ir varios segundos por detrás). `unknown` = no se pudo saber. */
+type Playback = { state: "playing" | "paused" | "unknown" } | ControlFailure;
+
+async function realPlayback(deps: ControlDeps): Promise<Playback> {
+  const sent = await sendControl({ method: "GET", path: "" }, deps);
+  if (!sent.ok) {
+    // Sin sesión no hay nada que intentar; un fallo de red lo dirá el propio
+    // comando, así que no se inventa un error aquí.
+    return sent.kind === "not-logged-in" ? sent : { state: "unknown" };
+  }
+  const { response } = sent;
+  if (response.status === 204) {
+    return failure("no-device", "Abre Spotify en algún dispositivo.");
+  }
+  if (response.status === 429) return toControlFailure(response);
+  if (!response.ok) return { state: "unknown" };
+  try {
+    const body = (await response.json()) as { is_playing?: boolean };
+    return { state: body.is_playing === true ? "playing" : "paused" };
+  } catch {
+    return { state: "unknown" };
+  }
+}
+
+/**
+ * `play` y `pause` miran antes el estado real: pausar lo ya pausado (o
+ * reanudar lo que ya suena) daba un 403 "Restriction violated" cada vez que
+ * la UI iba por detrás de lo que pasa en Spotify (#52). Si ya está como se
+ * pide, es un éxito sin enviar nada — y el refresco que sigue a toda orden
+ * corrige la UI. Si no, se envía la orden, y un 403 de verdad (un anuncio
+ * que no deja pausar) sigue saliendo como error.
+ */
+async function setPlayback(
+  want: "play" | "pause",
+  deps: ControlDeps,
+): Promise<ControlResult> {
+  const real = await realPlayback(deps);
+  if ("ok" in real) return real;
+  if (
+    (want === "play" && real.state === "playing") ||
+    (want === "pause" && real.state === "paused")
+  ) {
+    return { ok: true };
+  }
+  return control(
+    { method: "PUT", path: want === "play" ? "/play" : "/pause" },
+    deps,
+  );
+}
+
 interface SpotifyDevicesBody {
   devices?: {
     id?: string | null;
@@ -168,8 +219,8 @@ interface SpotifyDevicesBody {
 
 export function createMediaControl(deps: ControlDeps = {}): MediaControl {
   return {
-    play: () => control({ method: "PUT", path: "/play" }, deps),
-    pause: () => control({ method: "PUT", path: "/pause" }, deps),
+    play: () => setPlayback("play", deps),
+    pause: () => setPlayback("pause", deps),
     next: () => control({ method: "POST", path: "/next" }, deps),
     previous: () => control({ method: "POST", path: "/previous" }, deps),
     seek: (positionMs) =>
