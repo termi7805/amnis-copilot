@@ -8,6 +8,12 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PetWindow } from "./PetWindow.tsx";
+import { EXPANDED_WIDTH, resizeWindow } from "./useTauriWindow.ts";
+
+vi.mock("./useTauriWindow.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./useTauriWindow.ts")>()),
+  resizeWindow: vi.fn(),
+}));
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
@@ -340,6 +346,47 @@ describe("PetWindow", () => {
       localStorage.setItem(PANEL_KEY, "none");
       mount();
       expect(panelOf()).toBe("none");
+    });
+
+    it("la ventana nativa sigue el alto del contenido, no el de la raíz: crece y encoge con él", () => {
+      let notify: () => void = () => {};
+      const observed: Element[] = [];
+      vi.stubGlobal(
+        "ResizeObserver",
+        class {
+          constructor(callback: () => void) {
+            notify = callback;
+          }
+          observe(el: Element) {
+            observed.push(el);
+          }
+          disconnect() {}
+        },
+      );
+      let height = 300;
+      const rect = vi
+        .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+        .mockImplementation(() => ({ height }) as DOMRect);
+      vi.mocked(resizeWindow).mockClear();
+
+      localStorage.setItem(PANEL_KEY, "media");
+      mount();
+
+      const root = document.querySelector("[data-panel]");
+      expect(observed).toHaveLength(1);
+      expect(observed[0]).not.toBe(root);
+      expect(observed[0]?.contains(player())).toBe(true);
+      expect(resizeWindow).toHaveBeenLastCalledWith(EXPANDED_WIDTH, 300);
+
+      height = 460;
+      act(() => notify());
+      expect(resizeWindow).toHaveBeenLastCalledWith(EXPANDED_WIDTH, 460);
+
+      height = 330;
+      act(() => notify());
+      expect(resizeWindow).toHaveBeenLastCalledWith(EXPANDED_WIDTH, 330);
+
+      rect.mockRestore();
     });
 
     it("el reproductor se ve aunque aún no haya llegado el primer hello", () => {

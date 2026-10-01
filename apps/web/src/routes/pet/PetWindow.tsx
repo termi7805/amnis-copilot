@@ -55,7 +55,7 @@ export function PetWindow() {
   const now = useNow();
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
   const dragStarted = useRef(false);
-  const windowRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   // Un panel u otro: los dos a la vez harían de la mascota un dashboard.
   const [panel, setPanel] = useState<Panel>(readPanel);
   const [lastPanel, setLastPanel] = useState<OpenPanel>(readLastPanel);
@@ -77,12 +77,17 @@ export function PetWindow() {
   // el contenido real es más alto que la adivinanza. `ResizeObserver`
   // remide cada vez que el contenido cambia de tamaño por cualquier
   // motivo (proveedores, texto, fuentes), en vez de adivinar qué
-  // dependencias de React lo disparan.
+  // dependencias de React lo disparan. Se observa el contenido y no la
+  // raíz: esta mide siempre lo que la ventana nativa, así que no avisaría
+  // al crecer (la lista de dispositivos) ni dejaría encoger.
   useLayoutEffect(() => {
-    if (!expanded || !windowRef.current) return;
-    const el = windowRef.current;
+    if (!expanded || !contentRef.current) return;
+    const el = contentRef.current;
 
-    const measure = () => resizeWindow(EXPANDED_WIDTH, el.scrollHeight);
+    const measure = () => {
+      const height = Math.ceil(el.getBoundingClientRect().height);
+      if (height > 0) resizeWindow(EXPANDED_WIDTH, height);
+    };
     measure();
 
     if (typeof ResizeObserver === "undefined") return;
@@ -122,7 +127,6 @@ export function PetWindow() {
 
   return (
     <div
-      ref={windowRef}
       className={styles.petWindow}
       data-status={status}
       data-expanded={expanded}
@@ -150,24 +154,30 @@ export function PetWindow() {
           )}
         </div>
       )}
-      {panel === "quota" && state && (
-        <QuotaPanel
-          pet={state.pet}
-          status={status}
-          quotas={state.quotas}
-          now={now}
-          onSelectPanel={setPanel}
-        />
-      )}
-      {panel === "media" && (
-        <MediaPanel
-          pet={state?.pet ?? null}
-          resetsAt={state?.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
-          now={now}
-          media={state?.media ?? null}
-          status={status}
-          onSelectPanel={setPanel}
-        />
+      {expanded && (
+        <div ref={contentRef}>
+          {panel === "quota" && state && (
+            <QuotaPanel
+              pet={state.pet}
+              status={status}
+              quotas={state.quotas}
+              now={now}
+              onSelectPanel={setPanel}
+            />
+          )}
+          {panel === "media" && (
+            <MediaPanel
+              pet={state?.pet ?? null}
+              resetsAt={
+                state?.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null
+              }
+              now={now}
+              media={state?.media ?? null}
+              status={status}
+              onSelectPanel={setPanel}
+            />
+          )}
+        </div>
       )}
     </div>
   );
