@@ -8,7 +8,10 @@ separadas: **la mascota es la visualización ambiental de tu cuota**.
 
 ## 1. Arquitectura
 
-Local-first puro. Sin nube, sin cuentas de usuario, sin auth. Nada sale de la máquina.
+Local-first puro. Sin nube propia, sin cuentas de usuario, sin auth propia. Lo único que sale de
+la máquina son las llamadas a las APIs de los servicios que integras, con tus propias credenciales,
+y nunca tus transcripts: la cuota a Anthropic y, desde E8, la reproducción a Spotify y el ID de
+la canción que suena a ReccoBeats (§6).
 
 ```
    Claude Code ──hook──┐
@@ -19,6 +22,8 @@ Local-first puro. Sin nube, sin cuentas de usuario, sin auth. Nada sale de la m�
               │  · recibe hooks     │
               │  · parsea JSONL     │
               │  · poll cuota 180s  │──► api.anthropic.com/api/oauth/usage
+              │  · poll reproducción│──► api.spotify.com (E8)
+              │  · vibe por canción │──► ReccoBeats (E8)
               │  · SQLite           │
               │  · sirve API + SSE  │
               └──────────┬──────────┘
@@ -173,6 +178,12 @@ y cualquier pregunta nueva se puede responder hacia atrás.
 **La BD es reconstruible.** Se guarda por fichero el offset procesado. Si cambia el parseo:
 borrar la BD y reingerir. Nada se pierde porque el dato original no es nuestro.
 
+**Por eso lo que no se puede reconstruir no va en la BD.** Las preferencias del usuario viven en
+`~/.amnis/settings.json` y los tokens en sus propios ficheros 0600 (`token.json`,
+`spotify-token.json`): `amnis ingest --rebuild` borra la BD, y perder un ajuste al reconstruir
+datos es un bug difícil de atribuir. Tampoco va nada de Spotify: el estado de reproducción vive en
+memoria y viaja por SSE (§6).
+
 ### Esquema
 
 - `accounts(id, provider, label, plan)` — multi-cuenta desde el día uno aunque hoy haya una fila.
@@ -191,6 +202,11 @@ Un único eje persistente: **fatiga = consumo de la ventana de 5h**. Fresca al 1
 85%, revive en el reset. Ese es el enganche: la mascota y el dashboard son el mismo producto.
 No hay simulación que balancear ni que pueda tener bugs — es un mapeo directo de un número
 que ya calculas.
+
+**La fatiga cambia cuánto y a qué ritmo se mueve la mascota, nunca su forma ni su color.** Marca
+el tempo del cuerpo (ciclo de ~1 s fresca a ~2,6 s agotada) y la luz de la antena. Con música
+(abajo), también amortigua la amplitud del cabeceo. Una mascota que se deforma o se apaga al
+cansarse sería un Tamagotchi que castiga, no un espejo.
 
 ### Panel de cuota en la ventana flotante
 
@@ -226,10 +242,37 @@ renderiza lo que recibe por SSE, lo que la mantiene tonta y ligera.
 
 ### Renderizado
 
-El componente `<Pet>` recibe `{ state, level, fatigue }` y **no sabe nada de sprites**.
+El componente `<Pet>` recibe `{ state, level, fatigue }` (y desde E8, `listening` y las
+preferencias de música) y **no sabe nada de sprites**.
 CSS/SVG procedural en el MVP; sprites o Lottie después cambiando solo ese componente.
 La máquina de estados nunca sabe de gráficos. El arte es lo que más tarda y no depende de tu
 habilidad como desarrollador: que la versión fea funcione primero.
+
+### Música (fase 2, E8)
+
+Cuando suena Spotify, la mascota lleva cascos. **`listening` es un segundo eje, ortogonal al
+estado**: lo suma, nunca lo sustituye. `coding` con música es "teclea con auriculares". El estado
+lo siguen decidiendo solo los agentes, y por eso **un evento de Spotify no es actividad**: no
+reinicia el temporizador de `sleeping`. Si lo hiciera, poner música mantendría despierta a la
+mascota sin agentes trabajando.
+
+Cada entrada controla una sola cosa, así que no se pisan:
+
+| Entrada | Controla |
+|---|---|
+| Vibe (energía × valencia de la canción) | el estilo: fiesta rebota, intensa sacude, chill flota, melancólica cae; podcast emite ondas |
+| BPM | la velocidad de cascos, notas y cabeceo de la cabeza |
+| Fatiga | la amplitud: agotada sigue el ritmo, con menos ganas |
+
+**En `waiting` y `limited` la capa de música entera se apaga**, sin opción para cambiarlo: son
+los estados que piden tu atención, y un permiso pendiente tiene que leerse sin nada encima.
+
+Al cambiar de canción, la pantalla de la mascota (su cara) muestra unos segundos la portada y el
+título. Todo lo visual de la capa es configurable desde el dashboard, con un interruptor general
+para apagarla; los valores por defecto y su porqué están en la épica E8.
+
+`<Pet>` sigue sin saber de dónde salen los datos: recibe `listening` y las preferencias como
+props, igual que el estado y la fatiga.
 
 ### XP (fase 2)
 
@@ -277,6 +320,7 @@ esquema desde la primera línea, para que lo demás sea aditivo, no una refactor
 | Mascota Tauri (estado + fatiga) | Sprites / arte definitivo |
 | Dashboard (5h/7d en vivo, tokens y coste por día/proyecto/modelo) | Instaladores y empaquetado |
 | `amnis doctor` | Túnel remoto |
+| | Integración con Spotify (E8) |
 
 ### Por qué solo Claude en el MVP
 
@@ -288,6 +332,21 @@ Y sus hooks (`PreInvocation`/`PostInvocation`/`Stop`) no dicen qué herramienta 
 aun haciendo el trabajo la mascota se comportaría **peor** con Antigravity que con Claude.
 
 Interfaz `Provider`: `ingestHistorical()`, `pollQuota()`, `normalizeHookEvent()`.
+
+### Spotify (E8)
+
+**Primera ampliación más allá de "espejo de tus agentes"**: ver y controlar la música desde la
+mascota y el dashboard. Se rige por tres decisiones:
+
+- **Web API, no MPRIS.** MPRIS sería local y sin OAuth, pero solo alcanza al cliente de escritorio
+  de este PC; el valor está en controlar móvil y altavoces vía Spotify Connect. El precio, asumido:
+  Premium obligatorio para el dueño de la app en modo desarrollo, **un Client ID por usuario**
+  (cada uno registra su app; Amnis no puede distribuir uno compartido), OAuth con PKCE y polling,
+  porque la Web API no tiene push.
+- **Nada de Spotify se persiste.** El estado vive en memoria y viaja por SSE.
+- **La vibe y el BPM vienen de ReccoBeats**, porque Spotify retiró `audio-features` en noviembre
+  de 2024. Es un servicio de terceros no oficial y recibe el ID de cada canción que suena: si cae,
+  la mascota usa su animación neutra, y nada más se rompe.
 
 ### Multi-cuenta
 
@@ -305,6 +364,8 @@ es multi-cuenta porque es barato en el esquema y caro en el auth.
 | Wayland no soporta bien la ventana flotante | Modo degradado (ventana normal / bandeja) |
 | Fallo silencioso del daemon | La mascota muestra "desconectada"; `amnis doctor` |
 | Compilar Tauri en Linux | Requiere el paquete de desarrollo `webkit2gtk-4.1` |
+| Spotify endurece otra vez el modo desarrollo de su API | Toda la integración aislada en E8; sin Spotify, Amnis sigue entero |
+| ReccoBeats cambia o desaparece | Vibe `neutral` y animación neutra; la caché es solo en memoria |
 
 ## 8. Orden de construcción
 

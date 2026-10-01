@@ -28,8 +28,9 @@ comprobarlas: sin `pnpm typecheck` el proyecto tiene autocompletado, no validaci
 ## Arquitectura
 
 Amnis Copilot es una mascota de escritorio que refleja el estado de agentes de IA (Claude Code
-hoy, Antigravity en fase 2) más un dashboard local de consumo de cuota. Local-first puro: nada
-sale de la máquina, sin nube ni auth propia. Diseño completo en
+hoy, Antigravity en fase 2) más un dashboard local de consumo de cuota. Local-first puro: sin
+nube ni auth propia; solo salen llamadas a las APIs que integras (Anthropic; Spotify y
+ReccoBeats desde E8), nunca transcripts. Diseño completo en
 [`docs/DESIGN.md`](docs/DESIGN.md); decisiones de stack y su porqué en
 [`docs/STACK.md`](docs/STACK.md).
 
