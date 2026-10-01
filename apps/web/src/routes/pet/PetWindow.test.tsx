@@ -225,11 +225,11 @@ describe("PetWindow", () => {
     vi.useRealTimers();
   });
   describe("paneles (#57)", () => {
-    function mount() {
+    function mount(state: StateResponse = fakeState) {
       render(<PetWindow />);
       const [source] = FakeEventSource.instances;
       act(() => source?.open());
-      act(() => source?.emit("hello", fakeState));
+      act(() => source?.emit("hello", state));
       // Por `data-panel`, no por el bicho: con un panel abierto al arrancar
       // el bicho grande no está en el DOM.
       return (
@@ -251,13 +251,33 @@ describe("PetWindow", () => {
       expect(screen.getByTestId("activity-label")).toBeInTheDocument();
     });
 
-    it("la pestaña Música cierra la cuota y abre el reproductor: solo uno a la vez", () => {
-      clickWindow(mount());
-      fireEvent.click(screen.getByRole("tab", { name: "Música" }));
+    it("la pestaña Música cierra la cuota y abre el reproductor, sin perder al bicho", () => {
+      const withQuota: StateResponse = {
+        ...fakeState,
+        quotas: [
+          {
+            provider: "anthropic",
+            authoritative: null,
+            local: {
+              fiveHourTokens: 0,
+              fiveHourUtilization: 10,
+              windowStartedAt: "2026-01-01T00:00:00Z",
+            },
+            divergence: null,
+            sampledAt: "2026-01-01T00:00:00Z",
+            error: null,
+          },
+        ],
+      };
+      clickWindow(mount(withQuota));
+      expect(screen.getAllByTestId("quota-value").length).toBeGreaterThan(0);
 
+      fireEvent.click(screen.getByRole("tab", { name: "Música" }));
       expect(panelOf()).toBe("media");
       expect(player()).toBeInTheDocument();
-      expect(screen.queryByTestId("activity-label")).toBeNull();
+      expect(screen.queryByTestId("quota-value")).toBeNull();
+      expect(screen.getByTestId("pet")).toBeInTheDocument();
+      expect(screen.getByTestId("activity-label")).toBeInTheDocument();
       expect(screen.getByRole("tab", { name: "Música" })).toHaveAttribute(
         "aria-selected",
         "true",
@@ -266,6 +286,7 @@ describe("PetWindow", () => {
       fireEvent.click(screen.getByRole("tab", { name: "Cuota" }));
       expect(panelOf()).toBe("quota");
       expect(player()).toBeNull();
+      expect(screen.getByTestId("pet")).toBeInTheDocument();
     });
 
     it("pulsar una pestaña no pliega la ventana", () => {

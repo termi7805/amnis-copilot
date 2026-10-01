@@ -44,58 +44,6 @@
   }
 }
 
-.activity {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: #edf1f5;
-  border-bottom: 2px solid #201e1d;
-}
-
-/* 196px de ancho, alto derivado del viewBox de BIT (150×110) para no
-   deformar la escena — 196 * 110 / 150. */
-.activityPet {
-  flex: none;
-  width: 196px;
-  height: 143.73px;
-}
-
-.activityText {
-  flex: 1;
-  padding: 0 12px 0 0;
-  min-width: 0;
-}
-
-.cap {
-  display: block;
-  font:
-    600 9px / 1 ui-monospace,
-    Menlo,
-    monospace;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #9a948a;
-  margin-bottom: 5px;
-}
-
-.activityLabel {
-  display: block;
-  font:
-    600 13px / 1.25 Archivo,
-    sans-serif;
-  color: #201e1d;
-}
-
-.activityDuration {
-  display: block;
-  margin-top: 6px;
-  font:
-    400 10px / 1 ui-monospace,
-    Menlo,
-    monospace;
-  color: #6b6660;
-}
-
 .provider + .provider {
   border-top: 1px solid #c9c6c2;
 }

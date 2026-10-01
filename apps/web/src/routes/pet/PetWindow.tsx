@@ -161,6 +161,9 @@ export function PetWindow() {
       )}
       {panel === "media" && (
         <MediaPanel
+          pet={state?.pet ?? null}
+          resetsAt={state?.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
+          now={now}
           media={state?.media ?? null}
           status={status}
           onSelectPanel={setPanel}

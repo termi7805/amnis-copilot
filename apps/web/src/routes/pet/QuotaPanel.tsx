@@ -2,9 +2,8 @@ import type { PetSnapshot, ProviderId, QuotaSnapshot } from "@amnis/shared";
 import { useEffect, useRef, useState } from "react";
 import { daemonUrl } from "../../api/config.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
-import { formatElapsed } from "../../lib/countdown.ts";
-import { Pet, PetOffline, STATE_TITLE } from "../../lib/Pet/Pet.tsx";
 import { QuotaRing } from "../dashboard/QuotaRing.tsx";
+import { ActivityRow } from "./ActivityRow.tsx";
 import { PanelHeader, type PanelId } from "./PanelHeader.tsx";
 import styles from "./QuotaPanel.module.css";
 
@@ -81,33 +80,12 @@ export function QuotaPanel({
     <div className={styles.panel}>
       <PanelHeader status={status} active="quota" onSelect={onSelectPanel} />
 
-      <div className={styles.activity}>
-        <div className={styles.activityPet}>
-          {status === "offline" ? (
-            <PetOffline />
-          ) : (
-            <Pet
-              state={pet.state}
-              level={pet.level}
-              fatigue={pet.fatigue}
-              resetsAt={quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
-              commitHash={pet.commitHash}
-            />
-          )}
-        </div>
-        <div className={styles.activityText}>
-          <span className={styles.cap}>Ahora</span>
-          <span className={styles.activityLabel} data-testid="activity-label">
-            {STATE_TITLE[pet.state]}
-          </span>
-          <span
-            className={styles.activityDuration}
-            data-testid="activity-duration"
-          >
-            {formatElapsed(pet.since, now)}
-          </span>
-        </div>
-      </div>
+      <ActivityRow
+        pet={pet}
+        status={status}
+        resetsAt={quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
+        now={now}
+      />
 
       {quotas.map((quota, i) => (
         <section key={quota.provider} className={styles.provider}>
