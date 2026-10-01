@@ -5,29 +5,6 @@
   box-sizing: border-box;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 8px 10px;
-  border-bottom: 2px solid #201e1d;
-}
-
-.statusDot {
-  width: 7px;
-  height: 7px;
-  flex-shrink: 0;
-}
-
-.wordmark {
-  font:
-    600 9px / 1 ui-monospace,
-    Menlo,
-    monospace;
-  letter-spacing: 0.12em;
-  color: #201e1d;
-}
-
 .refreshButton {
   margin-left: auto;
   display: flex;

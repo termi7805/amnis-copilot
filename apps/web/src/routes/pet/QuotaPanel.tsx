@@ -5,6 +5,7 @@ import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { formatElapsed } from "../../lib/countdown.ts";
 import { Pet, PetOffline, STATE_TITLE } from "../../lib/Pet/Pet.tsx";
 import { QuotaRing } from "../dashboard/QuotaRing.tsx";
+import { PanelHeader, type PanelId } from "./PanelHeader.tsx";
 import styles from "./QuotaPanel.module.css";
 
 /** Lista indexada por proveedor aunque hoy solo exista Claude — mismo
@@ -16,15 +17,6 @@ const PROVIDER_LABEL: Record<ProviderId, string> = {
 
 const RING_SIZE = 54;
 
-/** Mismos tonos que llevaba el `statusDot` que se quitó de
- * `PetWindow.tsx`: aquí vive dentro del panel desplegado, no flotando
- * siempre visible encima de la mascota. */
-const STATUS_COLOR: Record<ConnectionStatus, string> = {
-  connected: "#1FB98C",
-  reconnecting: "#e0b84a",
-  offline: "#b0b0b0",
-};
-
 /** Si no llega un `quota` fresco por SSE en este tiempo (endpoint caído,
  * 429, offline), el icono deja de girar solo — un fallo de red no debe
  * dejarlo animando para siempre. */
@@ -35,6 +27,8 @@ export interface QuotaPanelProps {
   status: ConnectionStatus;
   quotas: QuotaSnapshot[];
   now: Date;
+  /** Pestañas de la cabecera (#57); sin esto no se pintan. */
+  onSelectPanel?: (panel: PanelId) => void;
 }
 
 /**
@@ -43,7 +37,13 @@ export interface QuotaPanelProps {
  * arriba, y los anillos 5h/7d en fila con el 7d atenuado — la
  * jerarquía (qué manda, qué acompaña) se lee sin leer.
  */
-export function QuotaPanel({ pet, status, quotas, now }: QuotaPanelProps) {
+export function QuotaPanel({
+  pet,
+  status,
+  quotas,
+  now,
+  onSelectPanel,
+}: QuotaPanelProps) {
   const [refreshing, setRefreshing] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
@@ -80,13 +80,7 @@ export function QuotaPanel({ pet, status, quotas, now }: QuotaPanelProps) {
 
   return (
     <div className={styles.panel}>
-      <div className={styles.header}>
-        <div
-          className={styles.statusDot}
-          style={{ background: STATUS_COLOR[status] }}
-        />
-        <span className={styles.wordmark}>AMNIS</span>
-      </div>
+      <PanelHeader status={status} active="quota" onSelect={onSelectPanel} />
 
       <div className={styles.activity}>
         <div className={styles.activityPet}>

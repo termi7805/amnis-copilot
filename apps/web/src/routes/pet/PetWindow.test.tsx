@@ -66,7 +66,9 @@ const fakeState: StateResponse = {
   },
 };
 
-const EXPANDED_KEY = "amnis-pet-quota-panel-expanded";
+const PANEL_KEY = "amnis-pet-panel";
+const LAST_PANEL_KEY = "amnis-pet-last-panel";
+const LEGACY_KEY = "amnis-pet-quota-panel-expanded";
 
 describe("PetWindow", () => {
   beforeEach(() => {
@@ -105,7 +107,7 @@ describe("PetWindow", () => {
     fireEvent.pointerDown(window_, { clientX: 10, clientY: 10 });
     fireEvent.pointerUp(window_, { clientX: 10, clientY: 10 });
 
-    expect(localStorage.getItem(EXPANDED_KEY)).toBe("1");
+    expect(localStorage.getItem(PANEL_KEY)).toBe("quota");
   });
 
   it("dentro de Tauri, un pointerdown + movimiento por encima del umbral arrastra y no despliega el panel", async () => {
@@ -139,14 +141,14 @@ describe("PetWindow", () => {
     fireEvent.pointerMove(window_, { clientX: 40, clientY: 40 });
     fireEvent.pointerUp(window_, { clientX: 40, clientY: 40 });
 
-    expect(localStorage.getItem(EXPANDED_KEY)).toBe("0");
+    expect(localStorage.getItem(PANEL_KEY)).toBe("none");
 
     delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
     vi.doUnmock("@tauri-apps/api/window");
   });
 
   it("el estado desplegado sobrevive a un remontaje vía localStorage", () => {
-    localStorage.setItem(EXPANDED_KEY, "1");
+    localStorage.setItem(PANEL_KEY, "quota");
     render(<PetWindow />);
     const [source] = FakeEventSource.instances;
     act(() => source?.open());
@@ -174,7 +176,7 @@ describe("PetWindow", () => {
   });
 
   it("pulsar el botón de recarga no pliega el panel — no debe burbujear al toggle de la ventana", () => {
-    localStorage.setItem(EXPANDED_KEY, "1");
+    localStorage.setItem(PANEL_KEY, "quota");
     render(<PetWindow />);
     const [source] = FakeEventSource.instances;
     act(() => source?.open());
@@ -202,7 +204,7 @@ describe("PetWindow", () => {
     fireEvent.pointerDown(button);
     fireEvent.pointerUp(button);
 
-    expect(localStorage.getItem(EXPANDED_KEY)).toBe("1");
+    expect(localStorage.getItem(PANEL_KEY)).toBe("quota");
   });
 
   it("al pasar a offline cambia a la escena de 'sin conexión', no solo a gris", () => {
@@ -221,5 +223,108 @@ describe("PetWindow", () => {
     expect(scene?.getAttribute("data-look")).toBe("offline");
 
     vi.useRealTimers();
+  });
+  describe("paneles (#57)", () => {
+    function mount() {
+      render(<PetWindow />);
+      const [source] = FakeEventSource.instances;
+      act(() => source?.open());
+      act(() => source?.emit("hello", fakeState));
+      // Por `data-panel`, no por el bicho: con un panel abierto al arrancar
+      // el bicho grande no está en el DOM.
+      return (
+        document.querySelector<HTMLElement>("[data-panel]") ?? document.body
+      );
+    }
+    const clickWindow = (el: HTMLElement) => {
+      fireEvent.pointerDown(el, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(el, { clientX: 10, clientY: 10 });
+    };
+    const panelOf = () =>
+      document.querySelector("[data-panel]")?.getAttribute("data-panel");
+    const player = () =>
+      screen.queryByRole("region", { name: "Reproductor de Spotify" });
+
+    it("la primera vez, un clic abre la cuota", () => {
+      clickWindow(mount());
+      expect(panelOf()).toBe("quota");
+      expect(screen.getByTestId("activity-label")).toBeInTheDocument();
+    });
+
+    it("la pestaña Música cierra la cuota y abre el reproductor: solo uno a la vez", () => {
+      clickWindow(mount());
+      fireEvent.click(screen.getByRole("tab", { name: "Música" }));
+
+      expect(panelOf()).toBe("media");
+      expect(player()).toBeInTheDocument();
+      expect(screen.queryByTestId("activity-label")).toBeNull();
+      expect(screen.getByRole("tab", { name: "Música" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+
+      fireEvent.click(screen.getByRole("tab", { name: "Cuota" }));
+      expect(panelOf()).toBe("quota");
+      expect(player()).toBeNull();
+    });
+
+    it("pulsar una pestaña no pliega la ventana", () => {
+      clickWindow(mount());
+      const tab = screen.getByRole("tab", { name: "Música" });
+      fireEvent.pointerDown(tab);
+      fireEvent.pointerUp(tab);
+      expect(panelOf()).toBe("quota");
+    });
+
+    it("plegar y volver a abrir recupera el último panel usado", () => {
+      const window_ = mount();
+      clickWindow(window_);
+      fireEvent.click(screen.getByRole("tab", { name: "Música" }));
+      clickWindow(window_); // pliega
+      expect(panelOf()).toBe("none");
+      expect(localStorage.getItem(LAST_PANEL_KEY)).toBe("media");
+
+      clickWindow(window_); // abre: el último, no la cuota
+      expect(panelOf()).toBe("media");
+    });
+
+    it("la elección de música sobrevive a un remontaje", () => {
+      localStorage.setItem(PANEL_KEY, "media");
+      mount();
+      expect(panelOf()).toBe("media");
+      expect(player()).toBeInTheDocument();
+    });
+
+    it("plegado y reiniciado, el siguiente clic abre el último panel", () => {
+      localStorage.setItem(PANEL_KEY, "none");
+      localStorage.setItem(LAST_PANEL_KEY, "media");
+      clickWindow(mount());
+      expect(panelOf()).toBe("media");
+    });
+
+    it("migra la preferencia antigua: 1 abre la cuota, 0 queda plegado", () => {
+      localStorage.setItem(LEGACY_KEY, "1");
+      mount();
+      expect(panelOf()).toBe("quota");
+      cleanup();
+
+      localStorage.clear();
+      localStorage.setItem(LEGACY_KEY, "0");
+      mount();
+      expect(panelOf()).toBe("none");
+    });
+
+    it("la clave nueva manda sobre la antigua", () => {
+      localStorage.setItem(LEGACY_KEY, "1");
+      localStorage.setItem(PANEL_KEY, "none");
+      mount();
+      expect(panelOf()).toBe("none");
+    });
+
+    it("el reproductor se ve aunque aún no haya llegado el primer hello", () => {
+      localStorage.setItem(PANEL_KEY, "media");
+      render(<PetWindow />);
+      expect(screen.getByText("Amnis no responde")).toBeInTheDocument();
+    });
   });
 });

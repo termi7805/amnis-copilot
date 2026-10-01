@@ -1,0 +1,52 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border-bottom: 2px solid #201e1d;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+}
+
+.wordmark {
+  font:
+    600 9px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.12em;
+  color: #201e1d;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.tab {
+  padding: 3px 7px;
+  border: 2px solid #201e1d;
+  background: none;
+  color: #201e1d;
+  font:
+    600 9px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tab:hover:not([aria-selected="true"]) {
+  background: #edf1f5;
+}
+
+.tab[aria-selected="true"] {
+  background: #201e1d;
+  color: #fff;
+  cursor: default;
+}
