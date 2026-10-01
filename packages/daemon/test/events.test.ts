@@ -82,3 +82,22 @@ test("heartbeat escribe un comentario SSE a cada cliente en cada intervalo", asy
   );
   assert.ok(chunks.every((c) => c === ": heartbeat\n\n"));
 });
+
+test("clientCount y onClientsChange siguen registros y bajas", () => {
+  const broadcaster = createEventBroadcaster(3_600_000);
+  const counts: number[] = [];
+  broadcaster.onClientsChange((n) => counts.push(n));
+  const a = fakeClient().res;
+  const b = fakeClient().res;
+
+  broadcaster.register(a);
+  broadcaster.register(b);
+  broadcaster.unregister(a);
+  // Una baja de alguien no registrado no es un cambio.
+  broadcaster.unregister(fakeClient().res);
+  broadcaster.unregister(b);
+  broadcaster.stop();
+
+  assert.deepEqual(counts, [1, 2, 1, 0]);
+  assert.equal(broadcaster.clientCount(), 0);
+});

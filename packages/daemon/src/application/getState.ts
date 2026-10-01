@@ -1,4 +1,9 @@
-import type { PetState, QuotaSnapshot, StateResponse } from "@amnis/shared";
+import type {
+  MediaSnapshot,
+  PetState,
+  QuotaSnapshot,
+  StateResponse,
+} from "@amnis/shared";
 import { sleepAfter } from "../domain/petState.ts";
 
 export interface LastKnownStateEvent {
@@ -28,6 +33,8 @@ export interface GetStateDeps {
   countUsageEvents(): number;
   /** Uno por proveedor, ya con `.provider` puesto (quotaSampler.ts). */
   sampleQuotas(): Promise<QuotaSnapshot[]>;
+  /** Qué suena ahora; nunca rechaza (degrada a `status: "unavailable"`). */
+  media(): Promise<MediaSnapshot>;
   /** `HEAD` corto del repo en `project` — solo se llama en `pushing`
    * (infrastructure/git.ts). */
   readCommitHash(project: string): string | null;
@@ -130,7 +137,10 @@ export async function getState(
   deps: GetStateDeps,
   now: Date,
 ): Promise<StateResponse> {
-  const quotas = await deps.sampleQuotas();
+  const [quotas, media] = await Promise.all([
+    deps.sampleQuotas(),
+    deps.media(),
+  ]);
   const lastEvent = deps.lastKnownStateEvent();
   const phase = petPhaseFrom(
     lastEvent,
@@ -147,6 +157,7 @@ export async function getState(
       commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
     },
     quotas,
+    media,
     daemon: {
       version: deps.version,
       startedAt: deps.startedAt,

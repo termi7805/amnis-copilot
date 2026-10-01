@@ -4,6 +4,7 @@ import type { AmnisEvent, StateResponse } from "@amnis/shared";
 import { createEventBroadcaster } from "../src/infrastructure/http/events.ts";
 import { createEventsRoute } from "../src/infrastructure/http/routes/events.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
+import { emptyMedia } from "../src/infrastructure/providers/spotify/player.ts";
 
 const HELLO_STATE: StateResponse = {
   pet: {
@@ -15,6 +16,7 @@ const HELLO_STATE: StateResponse = {
     commitHash: null,
   },
   quotas: [],
+  media: emptyMedia("not-configured", "2026-01-01T00:00:00.000Z"),
   daemon: {
     version: "0.0.1",
     startedAt: "2026-01-01T00:00:00.000Z",

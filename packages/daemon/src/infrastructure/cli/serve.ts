@@ -25,6 +25,7 @@ import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
 import { createHttpServer } from "../http/server.ts";
 import { createStaticRoute } from "../http/static.ts";
+import { startMediaPoller } from "../mediaPoller.ts";
 import { openBrowser } from "../openBrowser.ts";
 import { ensureAccount } from "../persistence/accounts.ts";
 import { openDb } from "../persistence/db.ts";
@@ -43,6 +44,7 @@ import { startQuotaPoller } from "../poller.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { providers } from "../providers/index.ts";
 import { exchangeCode } from "../providers/spotify/oauth.ts";
+import { readMedia } from "../providers/spotify/player.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
 
 function makeHookDeps(
@@ -64,6 +66,7 @@ function makeStateDeps(
   db: DatabaseSync,
   accountId: number,
   startedAt: string,
+  media: GetStateDeps["media"],
 ): GetStateDeps {
   const quotaSamplers = providers.map((provider) =>
     createQuotaSampler(db, accountId, provider),
@@ -75,6 +78,7 @@ function makeStateDeps(
     countHookEvents: () => countHookEvents(db, accountId),
     countUsageEvents: () => countUsageEvents(db, accountId),
     sampleQuotas: () => Promise.all(quotaSamplers.map((sample) => sample())),
+    media,
     readCommitHash,
   };
 }
@@ -91,7 +95,20 @@ export function runServeCli(args: readonly string[] = []): void {
   const startedAt = new Date().toISOString();
 
   const broadcaster = createEventBroadcaster();
-  const stateDeps = makeStateDeps(db, accountId, startedAt);
+  // Sin clientes SSE no se consulta Spotify: el ciclo lo arranca el primer
+  // cliente y se apaga solo al irse el último (mediaPoller.ts).
+  const mediaPoller = startMediaPoller({
+    read: readMedia,
+    hasClients: () => broadcaster.clientCount() > 0,
+    onChange: (snapshot) =>
+      broadcaster.broadcast({ event: "media", data: snapshot }),
+  });
+  broadcaster.onClientsChange((count) => {
+    if (count > 0) mediaPoller.wake();
+  });
+  const stateDeps = makeStateDeps(db, accountId, startedAt, () =>
+    mediaPoller.snapshot(),
+  );
 
   // Cacheadas del último poll de cuota: un `state` disparado por hooks no
   // debe pagar un poll en vivo (PreToolUse dispara muchísimo).
@@ -140,7 +157,11 @@ export function runServeCli(args: readonly string[] = []): void {
         redirectUri: SPOTIFY_REDIRECT_URI,
         openBrowser,
         exchangeCode,
-        saveToken: (token) => writeSpotifyToken(token),
+        saveToken: (token) => {
+          writeSpotifyToken(token);
+          // Recién conectado: que la UI vea qué suena ya, no en 30 s.
+          mediaPoller.pollNow();
+        },
       }),
     },
     fallback: createStaticRoute(RESOURCES.webDist),
@@ -152,6 +173,7 @@ export function runServeCli(args: readonly string[] = []): void {
     shuttingDown = true;
     poller.stop();
     watcher.stop();
+    mediaPoller.stop();
     broadcaster.stop();
     server
       .close()

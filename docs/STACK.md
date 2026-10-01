@@ -120,6 +120,7 @@ cliente.
 |---|---|---|
 | `state` | `PetSnapshot` | Cambia el estado de la mascota |
 | `quota` | `QuotaSnapshot[]` | Nueva muestra (cada 180 s, o al degradar) |
+| `media` | `MediaSnapshot` | Cambia lo que suena (polling adaptativo de Spotify, solo con clientes conectados) |
 | `hello` | `StateResponse` | Primer mensaje tras conectar |
 
 `hello` existe para que **un cliente que acaba de conectar no tenga que hacer también un `GET

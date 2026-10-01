@@ -4,6 +4,7 @@ import type { StateResponse } from "@amnis/shared";
 import type { GetStateDeps } from "../src/application/getState.ts";
 import { createStateRoute } from "../src/infrastructure/http/routes/state.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
+import { emptyMedia } from "../src/infrastructure/providers/spotify/player.ts";
 
 function makeDeps(): GetStateDeps {
   return {
@@ -13,6 +14,8 @@ function makeDeps(): GetStateDeps {
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
     readCommitHash: () => null,
+    media: () =>
+      Promise.resolve(emptyMedia("not-configured", "2026-01-01T00:00:00.000Z")),
     sampleQuotas: () =>
       Promise.resolve([
         {

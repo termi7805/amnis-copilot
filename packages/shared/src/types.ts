@@ -66,9 +66,54 @@ export interface QuotaSnapshot {
   error: string | null;
 }
 
+/**
+ * `not-configured` (sin Client ID) y `not-logged-in` (con Client ID, sin
+ * sesión) se distinguen porque la UI pide cosas distintas: copiar un comando
+ * o pulsar "Conectar". Solo el daemon sabe cuál de las dos es.
+ */
+export type MediaStatus =
+  | "ok"
+  | "no-device"
+  | "not-logged-in"
+  | "not-configured"
+  | "unavailable";
+
+export interface MediaTrack {
+  id: string;
+  title: string;
+  artists: string[];
+  album: string;
+  imageUrl: string | null;
+  durationMs: number;
+}
+
+export interface MediaDevice {
+  id: string | null;
+  name: string;
+  type: string;
+}
+
+/**
+ * Qué suena. Vive en memoria y viaja por SSE: nada de Spotify se persiste.
+ * `progressMs` se midió en `measuredAt`; el cliente interpola el avance.
+ */
+export interface MediaSnapshot {
+  status: MediaStatus;
+  isPlaying: boolean;
+  /** `null` salvo con `status: "ok"`, y aun así en un anuncio. */
+  track: MediaTrack | null;
+  progressMs: number;
+  /** ISO8601. */
+  measuredAt: string;
+  shuffle: boolean;
+  repeat: "off" | "context" | "track";
+  device: MediaDevice | null;
+}
+
 export interface StateResponse {
   pet: PetSnapshot;
   quotas: QuotaSnapshot[];
+  media: MediaSnapshot;
   daemon: {
     version: string;
     startedAt: string;
@@ -85,7 +130,8 @@ export interface StateResponse {
 export type AmnisEvent =
   | { event: "hello"; data: StateResponse }
   | { event: "state"; data: PetSnapshot }
-  | { event: "quota"; data: QuotaSnapshot[] };
+  | { event: "quota"; data: QuotaSnapshot[] }
+  | { event: "media"; data: MediaSnapshot };
 
 /** Evento de hook ya normalizado por el `Provider`. */
 export interface NormalizedHookEvent {

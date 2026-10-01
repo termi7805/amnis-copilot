@@ -45,6 +45,16 @@ const fakeState: StateResponse = {
     reason: "test",
     commitHash: null,
   },
+  media: {
+    status: "not-configured",
+    isPlaying: false,
+    track: null,
+    progressMs: 0,
+    measuredAt: "2026-01-01T00:00:00Z",
+    shuffle: false,
+    repeat: "off",
+    device: null,
+  },
   quotas: [],
   daemon: {
     version: "0.0.1",

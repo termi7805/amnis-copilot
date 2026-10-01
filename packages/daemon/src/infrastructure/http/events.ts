@@ -6,6 +6,9 @@ export interface EventBroadcaster {
   register(res: ServerResponse): void;
   unregister(res: ServerResponse): void;
   broadcast(event: AmnisEvent): void;
+  clientCount(): number;
+  /** Se dispara con el nuevo total en cada `register`/`unregister`. */
+  onClientsChange(listener: (count: number) => void): void;
   stop(): void;
 }
 
@@ -33,15 +36,27 @@ export function createEventBroadcaster(heartbeatMs = 30_000): EventBroadcaster {
   }, heartbeatMs);
   heartbeat.unref();
 
+  const listeners: Array<(count: number) => void> = [];
+  const notify = () => {
+    for (const listener of listeners) listener(clients.size);
+  };
+
   return {
     register(res) {
       clients.add(res);
+      notify();
     },
     unregister(res) {
-      clients.delete(res);
+      // `unregister` también llega para clientes que nunca se registraron
+      // (cierran antes del `hello`): no es un cambio, no se notifica.
+      if (clients.delete(res)) notify();
     },
     broadcast(event) {
       for (const res of clients) write(res, event);
+    },
+    clientCount: () => clients.size,
+    onClientsChange(listener) {
+      listeners.push(listener);
     },
     stop() {
       clearInterval(heartbeat);

@@ -8,6 +8,7 @@ import {
   type LastKnownStateEvent,
   quotaExhausted,
 } from "../src/application/getState.ts";
+import { emptyMedia } from "../src/infrastructure/providers/spotify/player.ts";
 
 const STARTED_AT = "2026-01-01T00:00:00.000Z";
 const NOW = new Date("2026-01-01T01:00:00.000Z");
@@ -36,6 +37,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
     sampleQuotas: () => Promise.resolve([makeQuota()]),
+    media: () => Promise.resolve(emptyMedia("not-configured", STARTED_AT)),
     readCommitHash: () => {
       throw new Error("readCommitHash no debería llamarse en este test");
     },
