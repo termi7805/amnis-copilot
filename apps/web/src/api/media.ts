@@ -1,4 +1,4 @@
-import type { MediaDeviceOption } from "@amnis/shared";
+import type { MediaDeviceOption, MediaSnapshot } from "@amnis/shared";
 import { useEffect } from "react";
 import { daemonUrl } from "./config.ts";
 
@@ -51,7 +51,9 @@ export type SimpleMediaCommand =
 export type MediaCommand =
   | SimpleMediaCommand
   | { kind: "seek"; positionMs: number }
-  | { kind: "transfer"; deviceId: string };
+  | { kind: "transfer"; deviceId: string }
+  | { kind: "shuffle"; state: boolean }
+  | { kind: "repeat"; mode: MediaSnapshot["repeat"] };
 
 export type MediaCommandResult =
   | { ok: true }
@@ -82,6 +84,10 @@ function bodyRequest(command: Exclude<MediaCommand, string>): {
         path: "/api/media/transfer",
         body: { deviceId: command.deviceId },
       };
+    case "shuffle":
+      return { path: "/api/media/shuffle", body: { state: command.state } };
+    case "repeat":
+      return { path: "/api/media/repeat", body: { mode: command.mode } };
   }
 }
 

@@ -84,6 +84,20 @@
   background: #3a3735;
 }
 
+.controlGap {
+  flex: 1;
+}
+
+/* Conmutador encendido: mismo relleno que el botón primario. */
+.control[data-toggle="true"][aria-pressed="true"] {
+  background: #201e1d;
+  color: #fff;
+}
+
+.control[data-toggle="true"][aria-pressed="true"]:hover:not(:disabled) {
+  background: #3a3735;
+}
+
 .control:disabled {
   cursor: default;
   opacity: 0.45;

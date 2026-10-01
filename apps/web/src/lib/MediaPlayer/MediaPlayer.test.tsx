@@ -200,6 +200,34 @@ describe("MediaPlayer — seek", () => {
   });
 });
 
+describe("MediaPlayer — shuffle y repeat", () => {
+  it("llegan a onCommand con el estado contrario / siguiente", async () => {
+    const { onCommand } = setup({
+      ...playing,
+      shuffle: true,
+      repeat: "context",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Aleatorio" }));
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: "Repetir: lista" }));
+    await act(async () => {});
+    expect(onCommand.mock.calls.map(([c]) => c)).toEqual([
+      { kind: "shuffle", state: false },
+      { kind: "repeat", mode: "track" },
+    ]);
+  });
+
+  it("un fallo se ve en el propio componente y el estado no cambia", async () => {
+    setup(playing, { ok: false, message: "Sin Premium." });
+    fireEvent.click(screen.getByRole("button", { name: "Aleatorio" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sin Premium.");
+    expect(screen.getByRole("button", { name: "Aleatorio" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+});
+
 describe("MediaPlayer — dispositivo", () => {
   it("elegir un dispositivo manda transfer por onCommand", async () => {
     const onCommand = vi.fn(() => Promise.resolve(ok));

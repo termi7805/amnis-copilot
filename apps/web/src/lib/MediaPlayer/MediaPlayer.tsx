@@ -7,6 +7,7 @@ import type {
 } from "../../api/media.ts";
 import { DeviceSelector } from "./DeviceSelector.tsx";
 import styles from "./MediaPlayer.module.css";
+import { ModeToggles } from "./ModeToggles.tsx";
 import { ProgressBar } from "./ProgressBar.tsx";
 
 /** Un error de una orden se ve unos segundos y se va solo. */
@@ -290,6 +291,13 @@ function Player({
                 <path d="M16 5h2v14h-2zM4 5v14l11-7z" fill="currentColor" />
               </svg>
             </button>
+            <span className={styles.controlGap} aria-hidden="true" />
+            <ModeToggles
+              shuffle={media.shuffle}
+              repeat={media.repeat}
+              disabled={busy}
+              onCommand={run}
+            />
           </div>
         </div>
       </div>

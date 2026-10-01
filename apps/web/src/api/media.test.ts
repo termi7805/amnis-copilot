@@ -63,6 +63,19 @@ describe("sendMediaCommand", () => {
     );
   });
 
+  it.each<[MediaCommand, string, unknown]>([
+    [{ kind: "shuffle", state: true }, "/api/media/shuffle", { state: true }],
+    [{ kind: "repeat", mode: "track" }, "/api/media/repeat", { mode: "track" }],
+  ])("%j hace POST a %s con su body", async (command, path, body) => {
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    await expect(sendMediaCommand(command)).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining(path), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  });
+
   it("un 409 con el texto del daemon lo devuelve tal cual", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
