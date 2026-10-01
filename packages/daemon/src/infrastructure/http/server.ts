@@ -39,7 +39,11 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 }
 
 function dispatch(handler: RouteHandler, ctx: RouteContext): void {
-  Promise.resolve(handler(ctx)).catch((err) => {
+  // El executor de `new Promise` corre síncronamente y convierte un
+  // `throw` en rechazo: con `Promise.resolve(handler(ctx))` el throw
+  // síncrono se evaluaba antes de existir la promesa y escapaba del
+  // catch (#48). Así síncrono y asíncrono acaban en el mismo sitio.
+  new Promise<void>((resolve) => resolve(handler(ctx))).catch((err) => {
     // Un handler que revienta no puede tumbar el daemon entero: una
     // promesa rechazada sin catch es fatal en Node 24. /api/events ya
     // ha escrito cabeceras SSE antes de fallar, así que un writeHead
