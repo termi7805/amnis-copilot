@@ -39,13 +39,23 @@ export function useRefreshMediaOnFocus(): void {
  * Spotify, pero comparte camino y errores con el resto: así `<MediaPlayer>`
  * tiene una sola vía por la que le llega "algo salió mal" (#53).
  */
-export type MediaCommand = "play" | "pause" | "next" | "previous" | "connect";
+export type SimpleMediaCommand =
+  | "play"
+  | "pause"
+  | "next"
+  | "previous"
+  | "connect";
+
+/** Órdenes con body: cada una añade su variante a esta unión. */
+export type MediaCommand =
+  | SimpleMediaCommand
+  | { kind: "seek"; positionMs: number };
 
 export type MediaCommandResult =
   | { ok: true }
   | { ok: false; message: string; remedy?: string };
 
-const ROUTE: Record<MediaCommand, string> = {
+const ROUTE: Record<SimpleMediaCommand, string> = {
   play: "/api/media/play",
   pause: "/api/media/pause",
   next: "/api/media/next",
@@ -63,9 +73,16 @@ export async function sendMediaCommand(
 ): Promise<MediaCommandResult> {
   let response: Response;
   try {
-    response = await fetch(`${daemonUrl()}${ROUTE[command]}`, {
-      method: "POST",
-    });
+    response =
+      typeof command === "string"
+        ? await fetch(`${daemonUrl()}${ROUTE[command]}`, { method: "POST" })
+        : await fetch(`${daemonUrl()}/api/media/seek`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              positionMs: Math.max(0, Math.round(command.positionMs)),
+            }),
+          });
   } catch {
     return { ok: false, message: "No se pudo contactar con Amnis." };
   }

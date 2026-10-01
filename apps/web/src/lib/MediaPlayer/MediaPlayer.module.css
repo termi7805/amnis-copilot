@@ -89,6 +89,57 @@
   opacity: 0.45;
 }
 
+.progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 10px;
+}
+
+.time {
+  flex: none;
+  min-width: 34px;
+  font:
+    400 10px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  color: #6b6660;
+  font-variant-numeric: tabular-nums;
+}
+
+.time:last-child {
+  text-align: right;
+}
+
+/* Zona de clic más alta que la barra visible (10px): con 6px es difícil de
+   acertar y de arrastrar. Sin `transition` en el relleno: el avance continuo
+   lo da la interpolación, y con reduced-motion debe verse a saltos de 1 s. */
+.progressTrack {
+  position: relative;
+  flex: 1;
+  height: 10px;
+  border: 2px solid #201e1d;
+  box-sizing: border-box;
+  background: #edf1f5;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.progressTrack[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.progressTrack:focus-visible {
+  outline: 2px solid #201e1d;
+  outline-offset: 2px;
+}
+
+.progressFill {
+  height: 100%;
+  background: #201e1d;
+}
+
 .empty {
   display: flex;
   flex-direction: column;

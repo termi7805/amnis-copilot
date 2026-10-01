@@ -172,6 +172,31 @@ describe("MediaPlayer — reproduciendo", () => {
   });
 });
 
+describe("MediaPlayer — seek", () => {
+  function pressBar(x: number) {
+    const bar = screen.getByRole("slider");
+    bar.getBoundingClientRect = () => ({ left: 0, width: 100 }) as DOMRect;
+    fireEvent.pointerDown(bar, { clientX: x });
+    fireEvent.pointerUp(bar, { clientX: x });
+  }
+
+  it("el seek llega a onCommand con la posición en ms", async () => {
+    const { onCommand } = setup(playing);
+    pressBar(50);
+    await act(async () => {});
+    expect(onCommand).toHaveBeenCalledWith({
+      kind: "seek",
+      positionMs: 100_000,
+    });
+  });
+
+  it("un seek que falla se ve en el propio componente", async () => {
+    setup(playing, { ok: false, message: "Sin Premium." });
+    pressBar(50);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Sin Premium.");
+  });
+});
+
 describe("MediaPlayer — órdenes en vuelo y errores", () => {
   it("mientras una orden no vuelve, los botones están deshabilitados y un segundo clic no lanza otra", async () => {
     let finish: (r: MediaCommandResult) => void = () => {};

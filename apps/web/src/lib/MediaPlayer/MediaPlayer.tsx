@@ -2,6 +2,7 @@ import type { MediaSnapshot } from "@amnis/shared";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { MediaCommand, MediaCommandResult } from "../../api/media.ts";
 import styles from "./MediaPlayer.module.css";
+import { ProgressBar } from "./ProgressBar.tsx";
 
 /** Un error de una orden se ve unos segundos y se va solo. */
 const ERROR_MS = 6_000;
@@ -74,8 +75,9 @@ export function MediaPlayer({ media, onCommand }: MediaPlayerProps) {
     setAuthorizingAt(null);
   }
 
-  async function run(command: MediaCommand) {
-    if (inFlight.current) return;
+  /** `true` si el daemon aceptó la orden. */
+  async function run(command: MediaCommand): Promise<boolean> {
+    if (inFlight.current) return false;
     inFlight.current = true;
     setBusy(true);
     setError(null);
@@ -92,13 +94,14 @@ export function MediaPlayer({ media, onCommand }: MediaPlayerProps) {
     setBusy(false);
     if (result.ok) {
       if (command === "connect") setAuthorizingAt(status);
-      return;
+      return true;
     }
     setError({
       message: result.message,
       ...(result.remedy !== undefined && { remedy: result.remedy }),
     });
     errorTimer.current = setTimeout(() => setError(null), ERROR_MS);
+    return false;
   }
 
   return (
@@ -183,76 +186,98 @@ function Player({
 }: {
   media: MediaSnapshot;
   busy: boolean;
-  run: (command: MediaCommand) => void;
+  run: (command: MediaCommand) => Promise<boolean>;
 }) {
   const { track, isPlaying } = media;
   return (
-    <div className={styles.player}>
-      {track?.imageUrl ? (
-        // Portada directa del CDN de Spotify (`i.scdn.co`). Hoy el CSP de
-        // Tauri es `null` y funciona; si algún día se endurece, hay que
-        // permitir ese origen en `img-src`.
-        <img
-          className={styles.cover}
-          src={track.imageUrl}
-          alt={track.album ? `Portada de ${track.album}` : "Portada"}
-        />
-      ) : (
-        <div className={styles.cover} data-empty="true" aria-hidden="true" />
-      )}
-
-      <div className={styles.info}>
-        {track ? (
-          <>
-            <span className={styles.title} title={track.title}>
-              {track.title}
-            </span>
-            <span className={styles.artists}>{track.artists.join(", ")}</span>
-          </>
+    <>
+      <div className={styles.player}>
+        {track?.imageUrl ? (
+          // Portada directa del CDN de Spotify (`i.scdn.co`). Hoy el CSP de
+          // Tauri es `null` y funciona; si algún día se endurece, hay que
+          // permitir ese origen en `img-src`.
+          <img
+            className={styles.cover}
+            src={track.imageUrl}
+            alt={track.album ? `Portada de ${track.album}` : "Portada"}
+          />
         ) : (
-          <span className={styles.title}>Sin información de la pista</span>
+          <div className={styles.cover} data-empty="true" aria-hidden="true" />
         )}
 
-        <div className={styles.controls}>
-          <button
-            type="button"
-            className={styles.control}
-            onClick={() => run("previous")}
-            disabled={busy}
-            aria-label="Anterior"
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <path d="M6 5h2v14H6zM20 5v14L9 12z" fill="currentColor" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className={styles.control}
-            data-primary="true"
-            onClick={() => run(isPlaying ? "pause" : "play")}
-            disabled={busy}
-            aria-label={isPlaying ? "Pausar" : "Reproducir"}
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <path
-                d={isPlaying ? "M6 4h4v16H6zM14 4h4v16h-4z" : "M7 4v16l13-8z"}
-                fill="currentColor"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            className={styles.control}
-            onClick={() => run("next")}
-            disabled={busy}
-            aria-label="Siguiente"
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
-              <path d="M16 5h2v14h-2zM4 5v14l11-7z" fill="currentColor" />
-            </svg>
-          </button>
+        <div className={styles.info}>
+          {track ? (
+            <>
+              <span className={styles.title} title={track.title}>
+                {track.title}
+              </span>
+              <span className={styles.artists}>{track.artists.join(", ")}</span>
+            </>
+          ) : (
+            <span className={styles.title}>Sin información de la pista</span>
+          )}
+
+          <div className={styles.controls}>
+            <button
+              type="button"
+              className={styles.control}
+              onClick={() => run("previous")}
+              disabled={busy}
+              aria-label="Anterior"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                aria-hidden="true"
+              >
+                <path d="M6 5h2v14H6zM20 5v14L9 12z" fill="currentColor" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={styles.control}
+              data-primary="true"
+              onClick={() => run(isPlaying ? "pause" : "play")}
+              disabled={busy}
+              aria-label={isPlaying ? "Pausar" : "Reproducir"}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                aria-hidden="true"
+              >
+                <path
+                  d={isPlaying ? "M6 4h4v16H6zM14 4h4v16h-4z" : "M7 4v16l13-8z"}
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+            <button
+              type="button"
+              className={styles.control}
+              onClick={() => run("next")}
+              disabled={busy}
+              aria-label="Siguiente"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                aria-hidden="true"
+              >
+                <path d="M16 5h2v14h-2zM4 5v14l11-7z" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+      <ProgressBar
+        media={media}
+        disabled={busy}
+        onSeek={(positionMs) => run({ kind: "seek", positionMs })}
+      />
+    </>
   );
 }

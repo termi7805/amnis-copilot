@@ -32,6 +32,21 @@ describe("sendMediaCommand", () => {
     });
   });
 
+  it("seek hace POST a /api/media/seek con positionMs entero en el body", async () => {
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+    await expect(
+      sendMediaCommand({ kind: "seek", positionMs: 42_000.6 }),
+    ).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/api/media/seek"),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positionMs: 42_001 }),
+      },
+    );
+  });
+
   it("un 409 con el texto del daemon lo devuelve tal cual", async () => {
     fetchMock.mockResolvedValue(
       Response.json(
