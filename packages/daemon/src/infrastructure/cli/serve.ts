@@ -44,10 +44,12 @@ import { startPetStateWatcher } from "../petStateWatcher.ts";
 import { startQuotaPoller } from "../poller.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { providers } from "../providers/index.ts";
+import { fetchFeatures } from "../providers/reccobeats/features.ts";
 import { createMediaControl } from "../providers/spotify/control.ts";
 import { exchangeCode } from "../providers/spotify/oauth.ts";
 import { readMedia } from "../providers/spotify/player.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
+import { createTrackVibes } from "../trackVibe.ts";
 
 function makeHookDeps(
   db: DatabaseSync,
@@ -101,6 +103,7 @@ export function runServeCli(args: readonly string[] = []): void {
   // cliente y se apaga solo al irse el último (mediaPoller.ts).
   const mediaPoller = startMediaPoller({
     read: readMedia,
+    vibes: createTrackVibes({ fetchFeatures }),
     hasClients: () => broadcaster.clientCount() > 0,
     onChange: (snapshot) =>
       broadcaster.broadcast({ event: "media", data: snapshot }),

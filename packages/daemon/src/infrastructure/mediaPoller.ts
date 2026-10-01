@@ -1,5 +1,6 @@
 import type { MediaSnapshot } from "@amnis/shared";
 import type { MediaReading } from "./providers/spotify/player.ts";
+import type { TrackVibe } from "./trackVibe.ts";
 
 /** Sonando: la canción cambia y la UI se mira. */
 export const MEDIA_PLAYING_MS = 3_000;
@@ -12,6 +13,15 @@ export interface MediaPollerDeps {
   read(now: Date): Promise<MediaReading>;
   hasClients(): boolean;
   onChange(snapshot: MediaSnapshot): void;
+  /**
+   * Vibe y BPM de la pista (ReccoBeats). Opcional: sin esto el poller se
+   * comporta como antes. Nunca bloquea el `media`: este sale con `neutral` y
+   * la vibe llega después en un segundo `media`.
+   */
+  vibes?: {
+    peek(id: string): TrackVibe | undefined;
+    resolve(id: string): Promise<TrackVibe>;
+  };
   playingMs?: number;
   idleMs?: number;
 }
@@ -53,8 +63,47 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
   // Si llega una orden con una lectura en vuelo, esa lectura es anterior a
   // la orden: la siguiente debe ser pronto, no al intervalo normal.
   let soonMs: number | null = null;
+  // Una consulta de vibe por cambio de pista: el poller lee la misma canción
+  // cada 3 s y, con ReccoBeats caído, reintentar en cada lectura lo
+  // martillearía.
+  let attemptedId: string | null = null;
 
   const isFresh = () => last !== null && Date.now() - lastReadAt < playingMs;
+
+  /**
+   * Pone la vibe cacheada de la pista (así la segunda escucha de una canción
+   * sale con vibe desde el primer `media`, sin consulta, y no parpadea entre
+   * `neutral` y la vibe en cada lectura). Si no hay caché, lanza la consulta
+   * sin esperarla. Un episodio ya viene `podcast` y no entra aquí.
+   */
+  function withVibe(snap: MediaSnapshot): MediaSnapshot {
+    const id = snap.track?.id;
+    if (!id) {
+      attemptedId = null;
+      return snap;
+    }
+    if (!deps.vibes || snap.vibe !== "neutral") return snap;
+    const cached = deps.vibes.peek(id);
+    if (cached) return { ...snap, ...cached };
+    if (id !== attemptedId) {
+      attemptedId = id;
+      enrich(id);
+    }
+    return snap;
+  }
+
+  function enrich(id: string): void {
+    deps.vibes
+      ?.resolve(id)
+      .then((found) => {
+        // Si ya cambió de pista, este resultado es de la anterior.
+        if (stopped || !last || last.track?.id !== id) return;
+        if (found.vibe === "neutral" && found.bpm === null) return;
+        last = { ...last, vibe: found.vibe, bpm: found.bpm };
+        deps.onChange(last);
+      })
+      .catch(() => {});
+  }
 
   function changed(prev: MediaSnapshot | null, next: MediaSnapshot): boolean {
     if (!prev) return true;
@@ -88,9 +137,10 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
       .read(new Date())
       .then((reading) => {
         const prev = last;
-        last = reading.snapshot;
+        const snap = withVibe(reading.snapshot);
+        last = snap;
         lastReadAt = Date.now();
-        if (changed(prev, reading.snapshot)) deps.onChange(reading.snapshot);
+        if (changed(prev, snap)) deps.onChange(snap);
         const wanted = soonMs;
         soonMs = null;
         schedule(
@@ -98,11 +148,11 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
             ? Math.max(idleMs, reading.retryAfterMs)
             : wanted !== null
               ? wanted
-              : reading.snapshot.isPlaying
+              : snap.isPlaying
                 ? playingMs
                 : idleMs,
         );
-        return reading.snapshot;
+        return snap;
       })
       .catch((err) => {
         // `read` degrada solo; esto es la red de seguridad para que un

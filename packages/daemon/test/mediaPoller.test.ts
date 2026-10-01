@@ -3,10 +3,12 @@ import { test } from "node:test";
 import { setTimeout as sleep } from "node:timers/promises";
 import type { MediaSnapshot, MediaTrack } from "@amnis/shared";
 import { startMediaPoller } from "../src/infrastructure/mediaPoller.ts";
+import type { FeaturesResult } from "../src/infrastructure/providers/reccobeats/features.ts";
 import {
   emptyMedia,
   type MediaReading,
 } from "../src/infrastructure/providers/spotify/player.ts";
+import { createTrackVibes } from "../src/infrastructure/trackVibe.ts";
 
 function playing(
   overrides: Partial<MediaSnapshot> = {},
@@ -28,6 +30,8 @@ function playing(
     shuffle: false,
     repeat: "off",
     device: { id: "d", name: "Móvil", type: "Smartphone" },
+    vibe: "neutral",
+    bpm: null,
     ...overrides,
   };
 }
@@ -235,4 +239,152 @@ test("pollSoon con una lectura en vuelo: la siguiente es pronto, no al intervalo
   await sleep(80);
   poller.stop();
   assert.equal(state.reads, 2);
+});
+
+// ── Vibe de ReccoBeats (#63) ─────────────────────────────────────────────
+
+function setupVibes(
+  next: () => MediaReading,
+  fetchFeatures: (id: string) => Promise<FeaturesResult>,
+) {
+  const state = {
+    reads: 0,
+    fetches: [] as string[],
+    changes: [] as MediaSnapshot[],
+  };
+  const vibes = createTrackVibes({
+    fetchFeatures: (id) => {
+      state.fetches.push(id);
+      return fetchFeatures(id);
+    },
+  });
+  const poller = startMediaPoller({
+    read: async () => {
+      state.reads++;
+      return next();
+    },
+    hasClients: () => true,
+    onChange: (s) => state.changes.push(s),
+    vibes,
+    playingMs: 15,
+    idleMs: 15,
+  });
+  return { state, poller, vibes };
+}
+
+const partyFeatures: FeaturesResult = {
+  ok: true,
+  features: { bpm: 128, energy: 0.9, valence: 0.9 },
+};
+
+test("ReccoBeats colgado: el media sale igual y a tiempo, con vibe neutral", async () => {
+  const { state, poller } = setupVibes(
+    () => ({ snapshot: playing() }),
+    () => new Promise(() => {}), // no resuelve nunca
+  );
+  poller.wake();
+  await sleep(40);
+  poller.stop();
+  assert.equal(state.changes.length, 1);
+  assert.equal(state.changes[0]?.vibe, "neutral");
+  assert.equal(state.changes[0]?.bpm, null);
+});
+
+test("cuando llegan los datos sale un segundo media con la vibe y el bpm, sin parpadeo después", async () => {
+  const { state, poller } = setupVibes(
+    () => ({ snapshot: playing() }),
+    async () => {
+      await sleep(20);
+      return partyFeatures;
+    },
+  );
+  poller.wake();
+  await sleep(120);
+  poller.stop();
+  assert.ok(state.reads >= 4, `lecturas: ${state.reads}`);
+  assert.deepEqual(
+    state.changes.map((c) => [c.vibe, c.bpm]),
+    [
+      ["neutral", null],
+      ["fiesta", 128],
+    ],
+  );
+  assert.equal(state.fetches.length, 1);
+});
+
+test("ReccoBeats caído: una sola consulta por pista aunque se lea varias veces", async () => {
+  let id = "t1";
+  const { state, poller } = setupVibes(
+    () => ({
+      snapshot: playing({
+        track: { ...(playing().track as MediaTrack), id },
+      }),
+    }),
+    async () => ({ ok: false, message: "caído" }),
+  );
+  poller.wake();
+  await sleep(70);
+  assert.ok(state.reads >= 3, `lecturas: ${state.reads}`);
+  assert.deepEqual(state.fetches, ["t1"]);
+  id = "t2"; // cambia de pista: vuelve a intentarlo, una vez
+  await sleep(70);
+  poller.stop();
+  assert.deepEqual(state.fetches, ["t1", "t2"]);
+  assert.ok(state.changes.every((c) => c.vibe === "neutral"));
+});
+
+test("con la vibe en caché, el primer media ya la lleva y no hay consulta", async () => {
+  const { state, poller, vibes } = setupVibes(
+    () => ({ snapshot: playing() }),
+    async () => partyFeatures,
+  );
+  await vibes.resolve("t1"); // ya oída antes
+  state.fetches.length = 0;
+  poller.wake();
+  await sleep(50);
+  poller.stop();
+  assert.equal(state.changes.length, 1);
+  assert.deepEqual(
+    [state.changes[0]?.vibe, state.changes[0]?.bpm],
+    ["fiesta", 128],
+  );
+  assert.equal(state.fetches.length, 0);
+});
+
+test("un resultado que llega cuando ya cambió la pista se descarta", async () => {
+  let id = "t1";
+  const { state, poller } = setupVibes(
+    () => ({
+      snapshot: playing({ track: { ...(playing().track as MediaTrack), id } }),
+    }),
+    async (requested) => {
+      if (requested === "t1") {
+        await sleep(60);
+        return partyFeatures;
+      }
+      return new Promise(() => {}); // la nueva pista nunca resuelve
+    },
+  );
+  poller.wake();
+  await sleep(20);
+  id = "t2";
+  await sleep(100); // el resultado de t1 llega aquí, con t2 sonando
+  poller.stop();
+  assert.ok(state.changes.length >= 2);
+  assert.ok(
+    state.changes.every((c) => c.vibe === "neutral"),
+    "no debe pintarse la vibe de la pista anterior",
+  );
+});
+
+test("un episodio (podcast) no consulta a ReccoBeats", async () => {
+  const { state, poller } = setupVibes(
+    () => ({ snapshot: playing({ vibe: "podcast" }) }),
+    async () => partyFeatures,
+  );
+  poller.wake();
+  await sleep(50);
+  poller.stop();
+  assert.equal(state.fetches.length, 0);
+  assert.equal(state.changes[0]?.vibe, "podcast");
 });

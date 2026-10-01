@@ -93,6 +93,18 @@ export interface MediaDevice {
   type: string;
 }
 
+/**
+ * Cómo suena lo que suena: energía × valencia con corte en 0,5. `podcast`
+ * para episodios; `neutral` mientras no hay datos (o si ReccoBeats falla).
+ */
+export type Vibe =
+  | "fiesta"
+  | "intensa"
+  | "chill"
+  | "melancolica"
+  | "podcast"
+  | "neutral";
+
 /** Un dispositivo Spotify Connect de `GET /api/media/devices`. */
 export interface MediaDeviceOption extends MediaDevice {
   isActive: boolean;
@@ -113,6 +125,10 @@ export interface MediaSnapshot {
   shuffle: boolean;
   repeat: "off" | "context" | "track";
   device: MediaDevice | null;
+  /** `neutral` hasta que llegan los datos: sale en un segundo `media`. */
+  vibe: Vibe;
+  /** `null` en podcast y sin datos. */
+  bpm: number | null;
 }
 
 export interface StateResponse {

@@ -1,4 +1,5 @@
 import type { MediaSnapshot, MediaStatus } from "@amnis/shared";
+import { deriveVibe } from "../../../domain/vibe.ts";
 import { loadSpotifyToken } from "./session.ts";
 
 const PLAYER_URL =
@@ -34,6 +35,8 @@ export function emptyMedia(
     shuffle: false,
     repeat: "off",
     device: null,
+    vibe: "neutral",
+    bpm: null,
   };
 }
 
@@ -99,6 +102,10 @@ export function toMediaSnapshot(
           type: body.device.type ?? "",
         }
       : null,
+    // Un episodio es `podcast` sin consultar a nadie; una pista queda
+    // `neutral` hasta que el poller le pone la de ReccoBeats.
+    vibe: deriveVibe(null, isEpisode ? "episode" : "track"),
+    bpm: null,
   };
 }
 

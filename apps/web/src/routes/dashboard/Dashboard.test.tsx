@@ -52,6 +52,8 @@ const fakeState: StateResponse = {
     shuffle: false,
     repeat: "off",
     device: null,
+    vibe: "neutral",
+    bpm: null,
   },
   quotas: [],
   daemon: {

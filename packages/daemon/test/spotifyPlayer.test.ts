@@ -56,6 +56,8 @@ test("toMediaSnapshot mapea una canción", () => {
     shuffle: true,
     repeat: "context",
     device: { id: "d1", name: "Móvil", type: "Smartphone" },
+    vibe: "neutral",
+    bpm: null,
   });
 });
 
@@ -75,6 +77,21 @@ test("toMediaSnapshot usa el programa como artista en un episodio", () => {
   );
   assert.deepEqual(snapshot.track?.artists, ["Podcast"]);
   assert.equal(snapshot.track?.imageUrl, "http://img/ep");
+});
+
+test("un episodio es podcast sin bpm; una pista, neutral hasta que llegue ReccoBeats", () => {
+  const episode = toMediaSnapshot(
+    {
+      ...trackBody,
+      item: { id: "e1", name: "Ep", duration_ms: 1, show: { name: "P" } },
+    },
+    AT,
+  );
+  assert.equal(episode.vibe, "podcast");
+  assert.equal(episode.bpm, null);
+  const track = toMediaSnapshot(trackBody, AT);
+  assert.equal(track.vibe, "neutral");
+  assert.equal(track.bpm, null);
 });
 
 test("toMediaSnapshot con item null (anuncio): ok sin pista", () => {
