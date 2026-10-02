@@ -5,13 +5,19 @@
 // URL configurable, nunca localhost hardcodeado").
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod anchor;
+
+use anchor::Anchor;
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tauri::{App, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
+use tauri::{
+    App, AppHandle, LogicalSize, Manager, PhysicalPosition, RunEvent, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder, WindowEvent,
+};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
-use tauri_plugin_window_state::StateFlags;
 use url::Url;
 
 /// Tamaño de arranque plegado (#42): antes de que cargue el JS que decide
@@ -93,21 +99,171 @@ fn wait_for_daemon(url: &Url, timeout: Duration) -> bool {
     false
 }
 
+/// Ancla de la ventana `pet` (#71), compartida por el comando de resize y
+/// el listener de `Moved`. Dos mutex: `resizing` se retiene mientras se
+/// espera al gestor de ventanas, y esa espera necesita que el listener de
+/// `Moved` (hilo principal) pueda tomar `anchor` mientras tanto.
+struct PetAnchor {
+    anchor: Mutex<Anchor>,
+    resizing: Mutex<()>,
+}
+
+/// Fichero propio y no `tauri-plugin-window-state`: el plugin solo guarda al
+/// cerrar la ventana, y una ventana sin decoraciones se cierra matando el
+/// proceso — nunca llegó a escribir nada. Aquí se escribe en cada arrastre.
+fn anchor_file(app: &AppHandle) -> Option<PathBuf> {
+    app.path()
+        .app_config_dir()
+        .ok()
+        .map(|dir| dir.join("pet-position.json"))
+}
+
+fn load_anchor(app: &AppHandle) -> Option<PhysicalPosition<i32>> {
+    let raw = std::fs::read_to_string(anchor_file(app)?).ok()?;
+    let json: serde_json::Value = serde_json::from_str(&raw).ok()?;
+    let x = i32::try_from(json.get("x")?.as_i64()?).ok()?;
+    let y = i32::try_from(json.get("y")?.as_i64()?).ok()?;
+    Some(PhysicalPosition::new(x, y))
+}
+
+fn save_anchor(app: &AppHandle, pos: PhysicalPosition<i32>) {
+    let Some(path) = anchor_file(app) else { return };
+    let json = serde_json::json!({ "x": pos.x, "y": pos.y }).to_string();
+    let result = path
+        .parent()
+        .map_or(Ok(()), std::fs::create_dir_all)
+        .and_then(|_| std::fs::write(&path, json));
+    if let Err(e) = result {
+        log::warn!("no se pudo guardar la posición de la mascota en {path:?}: {e}");
+    }
+}
+
+/// Coloca la ventana en el ancla guardada antes de mostrarla. Si ya no cae
+/// en ningún monitor (uno desconectado, otra resolución), se reencaja en
+/// el principal en vez de abrir la ventana fuera de la vista.
+fn restore_anchor(app: &AppHandle, window: &WebviewWindow) {
+    let Some(saved) = load_anchor(app) else { return };
+    let on_screen = window
+        .available_monitors()
+        .unwrap_or_default()
+        .iter()
+        .any(|m| anchor::contains(m.work_area(), saved));
+    let pos = if on_screen {
+        saved
+    } else {
+        match window.primary_monitor() {
+            Ok(Some(monitor)) => {
+                let size = LogicalSize::new(COLLAPSED_SIZE.0, COLLAPSED_SIZE.1)
+                    .to_physical(monitor.scale_factor());
+                anchor::clamp(saved, size, monitor.work_area())
+            }
+            _ => return,
+        }
+    };
+
+    *app.state::<PetAnchor>().anchor.lock().unwrap() = Anchor::new(Some(pos));
+    if let Err(e) = window.set_position(pos) {
+        log::warn!("no se pudo restaurar la posición de la mascota: {e}");
+    }
+}
+
+// Lo que tarda el gestor de ventanas en aplicar un resize (medido en X11:
+// decenas de ms). Si no llega, se mueve igualmente: mejor un reencaje
+// imperfecto que no recolocar.
+const RESIZE_SETTLE: Duration = Duration::from_millis(300);
+const RESIZE_POLL: Duration = Duration::from_millis(10);
+
+/// Redimensiona la ventana al plegar/desplegar (#42) y la coloca respecto
+/// al ancla (#71): desplegada junto a un borde se mete hacia dentro, y al
+/// plegar vuelve al punto donde el usuario soltó a BIT. Best-effort como
+/// `set_always_on_top`: en Wayland el posicionamiento puede no existir.
+///
+/// `async` para no correr en el hilo principal: tiene que esperar a que el
+/// gestor de ventanas aplique el tamaño antes de mover, y eso pasa por el
+/// bucle de eventos. Mover antes falla al plegar: el gestor encaja la
+/// ventana en pantalla con el tamaño desplegado aún vigente y la deja en
+/// (ancho_pantalla − 320, alto − alto_panel), no en el ancla (medido).
+#[tauri::command(async)]
+fn resize_pet(window: WebviewWindow, state: tauri::State<PetAnchor>, width: f64, height: f64) {
+    // Un despliegue lanza varios resizes seguidos (el alto real se mide
+    // después); intercalados, el movimiento de uno usaría el tamaño de otro.
+    let _serial = state.resizing.lock().unwrap();
+    state.anchor.lock().unwrap().end_drag();
+    let size = LogicalSize::new(width, height);
+    // GTK recalcula su propio "tamaño natural" a partir del contenido en
+    // cada resize, no solo al arrancar — fijar el mínimo una vez alcanzaba
+    // para plegar (110px, coincide con el contenido mínimo), pero no para
+    // desplegar: sin repetir aquí el mínimo al tamaño exacto que se pide,
+    // GTK deshace el `set_size()` por su cuenta (medido con xwininfo:
+    // pedía 210×alto y se quedaba en ~174px de ancho).
+    let resized = window
+        .set_resizable(true)
+        .and_then(|_| window.set_min_size(Some(size)))
+        .and_then(|_| window.set_size(size));
+    if let Err(e) = resized {
+        log::warn!("no se pudo redimensionar la ventana: {e}");
+        return;
+    }
+
+    let (Ok(Some(monitor)), Ok(scale)) = (window.current_monitor(), window.scale_factor()) else {
+        return;
+    };
+    let physical = size.to_physical::<u32>(scale);
+    let deadline = Instant::now() + RESIZE_SETTLE;
+    while Instant::now() < deadline {
+        match window.inner_size() {
+            Ok(s) if s.width.abs_diff(physical.width) <= 1 && s.height.abs_diff(physical.height) <= 1 => {
+                break
+            }
+            _ => std::thread::sleep(RESIZE_POLL),
+        }
+    }
+
+    let Ok(current) = window.outer_position() else { return };
+    let target = state
+        .anchor
+        .lock()
+        .unwrap()
+        .target(current, physical, monitor.work_area());
+    // Sin comparar con `current`: justo después de un resize puede venir
+    // desfasada, y mover al mismo sitio no cuesta nada.
+    if let Err(e) = window.set_position(target) {
+        log::warn!("no se pudo recolocar la ventana: {e}");
+    }
+}
+
+/// Arrastre nativo de la ventana (#32) marcando antes el ancla (#71): solo
+/// los `Moved` que siguen a esta llamada son del usuario.
+#[tauri::command]
+fn start_drag(window: WebviewWindow, state: tauri::State<PetAnchor>) {
+    state.anchor.lock().unwrap().begin_drag();
+    if let Err(e) = window.start_dragging() {
+        log::warn!("no se pudo arrastrar la ventana: {e}");
+    }
+}
+
 fn main() {
     env_logger::init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .manage(Sidecar(Mutex::new(None)))
-        .plugin(
-            // Solo posición: el tamaño ahora lo decide el JS según
-            // `expanded` en localStorage (#42). Restaurar SIZE aquí
-            // pelearía con el setSize() que dispara PetWindow.tsx en
-            // cada arranque.
-            tauri_plugin_window_state::Builder::default()
-                .with_state_flags(StateFlags::POSITION | StateFlags::VISIBLE)
-                .build(),
-        )
+        .manage(PetAnchor {
+            anchor: Mutex::new(Anchor::default()),
+            resizing: Mutex::new(()),
+        })
+        .invoke_handler(tauri::generate_handler![resize_pet, start_drag])
+        .on_window_event(|window, event| {
+            // Cada paso del arrastre se persiste al momento: no hay un "fin
+            // de arrastre" fiable ni un cierre limpio en el que guardar.
+            if let WindowEvent::Moved(pos) = event {
+                let app = window.app_handle();
+                let changed = app.state::<PetAnchor>().anchor.lock().unwrap().on_moved(*pos);
+                if changed {
+                    save_anchor(app, *pos);
+                }
+            }
+        })
         .setup(|app| {
             let url_str = std::env::var("AMNIS_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:4747/pet".to_string());
@@ -141,9 +297,14 @@ fn main() {
                 .transparent(true)
                 .resizable(true)
                 .skip_taskbar(true)
-                .inner_size(COLLAPSED_SIZE.0, COLLAPSED_SIZE.1);
+                .inner_size(COLLAPSED_SIZE.0, COLLAPSED_SIZE.1)
+                // Oculta hasta colocarla en el ancla (#71): sin esto se ve
+                // un salto desde la posición por defecto del gestor.
+                .visible(false);
 
             let window = builder.build()?;
+            restore_anchor(app.handle(), &window);
+            window.show()?;
 
             // Wayland no tiene protocolo estándar de always-on-top ni de
             // posicionamiento: si el compositor lo rechaza, se queda como

@@ -11,6 +11,7 @@ import {
   EXPANDED_WIDTH,
   isTauri,
   resizeWindow,
+  startDrag,
 } from "./useTauriWindow.ts";
 
 /** Antes de esto, un pointerdown es un futuro clic, no un arrastre. */
@@ -47,7 +48,7 @@ function readLastPanel(): OpenPanel {
  * (docs/STACK.md §2). Arrastrar y hacer clic compiten por el mismo
  * gesto (issue #32): por debajo del umbral es un clic que pliega o
  * despliega el último panel usado (#42, #57); por encima, arrastre. El umbral se mide en
- * cualquier entorno — solo `startDragging()` queda condicionado a
+ * cualquier entorno — solo `startDrag()` queda condicionado a
  * Tauri, vía `useTauriWindow.ts` (docs/STACK.md §3).
  */
 export function PetWindow() {
@@ -110,11 +111,7 @@ export function PetWindow() {
     if (Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
 
     dragStarted.current = true;
-    import("@tauri-apps/api/window")
-      .then(({ getCurrentWindow }) => {
-        getCurrentWindow().startDragging();
-      })
-      .catch(() => {});
+    startDrag();
   }
 
   function handlePointerUp() {

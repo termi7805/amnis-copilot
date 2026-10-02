@@ -8,11 +8,12 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PetWindow } from "./PetWindow.tsx";
-import { EXPANDED_WIDTH, resizeWindow } from "./useTauriWindow.ts";
+import { EXPANDED_WIDTH, resizeWindow, startDrag } from "./useTauriWindow.ts";
 
 vi.mock("./useTauriWindow.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./useTauriWindow.ts")>()),
   resizeWindow: vi.fn(),
+  startDrag: vi.fn(),
 }));
 
 class FakeEventSource {
@@ -120,22 +121,9 @@ describe("PetWindow", () => {
 
   it("dentro de Tauri, un pointerdown + movimiento por encima del umbral arrastra y no despliega el panel", async () => {
     // El umbral de arrastre solo importa donde se puede arrastrar de
-    // verdad: fuera de Tauri no hay startDragging(), así que ahí un
+    // verdad: fuera de Tauri no hay arrastre nativo, así que ahí un
     // movimiento no cambia nada (ver el test de "un click" de arriba).
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
-    vi.doMock("@tauri-apps/api/window", () => ({
-      getCurrentWindow: () => ({
-        startDragging: vi.fn(),
-        setSize: vi.fn(),
-        setResizable: vi.fn(),
-        setMinSize: vi.fn(),
-        outerPosition: () => Promise.resolve({ x: 0, y: 0 }),
-        setPosition: vi.fn(),
-      }),
-      LogicalSize: class {},
-      LogicalPosition: class {},
-      currentMonitor: () => Promise.resolve(null),
-    }));
 
     render(<PetWindow />);
     const [source] = FakeEventSource.instances;
@@ -150,9 +138,9 @@ describe("PetWindow", () => {
     fireEvent.pointerUp(window_, { clientX: 40, clientY: 40 });
 
     expect(localStorage.getItem(PANEL_KEY)).toBe("none");
+    expect(startDrag).toHaveBeenCalledOnce();
 
     delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
-    vi.doUnmock("@tauri-apps/api/window");
   });
 
   it("el estado desplegado sobrevive a un remontaje vía localStorage", () => {

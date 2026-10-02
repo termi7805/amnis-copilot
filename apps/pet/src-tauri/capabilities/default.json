@@ -7,13 +7,5 @@
   "remote": {
     "urls": ["http://127.0.0.1:*"]
   },
-  "permissions": [
-    "core:window:allow-start-dragging",
-    "core:window:allow-set-size",
-    "core:window:allow-set-resizable",
-    "core:window:allow-set-min-size",
-    "core:window:allow-current-monitor",
-    "core:window:allow-outer-position",
-    "core:window:allow-set-position"
-  ]
+  "permissions": ["allow-resize-pet", "allow-start-drag"]
 }
