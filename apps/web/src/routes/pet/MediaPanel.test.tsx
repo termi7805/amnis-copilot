@@ -15,6 +15,7 @@ const pet: PetSnapshot = {
   level: 1,
   reason: "test",
   commitHash: null,
+  project: null,
   listening: null,
 };
 

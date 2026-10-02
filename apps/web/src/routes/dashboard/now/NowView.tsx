@@ -1,50 +1,72 @@
 import type { StateResponse } from "@amnis/shared";
 import { fetchMediaDevices, sendMediaCommand } from "../../../api/media.ts";
+import { useQuotaHistory } from "../../../api/quotaHistory.ts";
 import { useNow } from "../../../lib/countdown.ts";
+import { fiveHourWindow, paceHeadline } from "../../../lib/fiveHour.ts";
 import { MediaPlayer } from "../../../lib/MediaPlayer/MediaPlayer.tsx";
-import { Pet } from "../../../lib/Pet/Pet.tsx";
 import { extraLimits } from "../../../lib/quotaLimits.ts";
 import { QuotaRing } from "../QuotaRing.tsx";
+import { FiveHourCard } from "./FiveHourCard.tsx";
 import styles from "./NowView.module.css";
+import { PetHero } from "./PetHero.tsx";
 
-/** Interino: lo que ya había en la portada, hasta que #91 y #92 lo sustituyan. */
+const EYEBROW = new Intl.DateTimeFormat("es-ES", {
+  weekday: "long",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/**
+ * Primera mitad de la portada (#91): Amnis y la ventana de 5 h. La segunda
+ * mitad (#92) sustituirá el resto, que aquí es el interino de #81.
+ */
 export function NowView({ state }: { state: StateResponse | null }) {
   const now = useNow();
+  const quota = state?.quotas[0] ?? null;
+  const window = quota ? fiveHourWindow(quota, now) : null;
+  const samples = useQuotaHistory(
+    window?.start ?? new Date(now.getTime() - 5 * 60 * 60_000),
+    quota?.sampledAt ?? "",
+  );
+  const headline =
+    quota && window
+      ? paceHeadline(window, quota.projection.fiveHourAtReset)
+      : null;
 
   return (
-    <>
-      <div className={styles.petCard}>
-        {state ? (
-          <Pet
-            state={state.pet.state}
-            level={state.pet.level}
-            fatigue={state.pet.fatigue}
-            resetsAt={state.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
-            commitHash={state.pet.commitHash}
-            listening={state.pet.listening}
-            musicPrefs={state.settings}
-          />
-        ) : (
-          <span>conectando…</span>
-        )}
-      </div>
+    <section className={styles.view}>
+      <header className={styles.pageHead}>
+        <p className={styles.eyebrow}>{EYEBROW.format(now)}</p>
+        <h1>{headline?.title ?? "Conectando con el daemon…"}</h1>
+        {headline && <p>{headline.detail}</p>}
+      </header>
+
+      {state && (
+        <div className={styles.grid}>
+          <div className={styles.hero}>
+            <PetHero state={state} now={now} />
+          </div>
+          {quota && (
+            <div className={styles.window}>
+              <FiveHourCard quota={quota} samples={samples} now={now} />
+            </div>
+          )}
+        </div>
+      )}
+
       <div className={styles.overview}>
-        {state?.quotas.map((quota) => (
-          <div key={quota.provider} className={styles.quotas}>
-            {quota.error && <p className={styles.quotaError}>{quota.error}</p>}
-            <QuotaRing
-              label="5h"
-              authoritative={quota.authoritative?.fiveHour ?? null}
-              estimated={quota.local.fiveHourUtilization}
-              now={now}
-            />
+        {state?.quotas.map((q) => (
+          <div key={q.provider} className={styles.quotas}>
+            {q.error && <p className={styles.quotaError}>{q.error}</p>}
             <QuotaRing
               label="7d"
-              authoritative={quota.authoritative?.sevenDay ?? null}
+              authoritative={q.authoritative?.sevenDay ?? null}
               estimated={null}
               now={now}
             />
-            {extraLimits(quota.authoritative?.limits ?? []).map((limit) => (
+            {extraLimits(q.authoritative?.limits ?? []).map((limit) => (
               <QuotaRing
                 key={`${limit.kind}:${limit.scope ?? ""}`}
                 label={limit.label}
@@ -64,6 +86,6 @@ export function NowView({ state }: { state: StateResponse | null }) {
           />
         </div>
       </div>
-    </>
+    </section>
   );
 }

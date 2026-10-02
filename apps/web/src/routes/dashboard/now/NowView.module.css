@@ -1,12 +1,51 @@
-/* Apaisado (200×150) porque la escena de BIT lo es — viewBox 150×110
-   (#47) — y un contenedor cuadrado la letterboxea. */
-.petCard {
-  width: 200px;
-  height: 150px;
-  max-width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--stage);
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.pageHead h1 {
+  margin: 0;
+  font: 600 1.5rem / 1.2 var(--f-body);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.pageHead p {
+  margin: 0.25rem 0 0;
+  color: var(--ink-2);
+}
+
+.pageHead .eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--ink-3);
+  font: 500 0.7rem / 1 var(--f-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* 5/7 como el mockup; por debajo de 1100 px se apila. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+
+.hero {
+  grid-column: span 5;
+  min-width: 0;
+}
+
+.window {
+  grid-column: span 7;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .hero,
+  .window {
+    grid-column: span 12;
+  }
 }
 
 .overview {
@@ -14,7 +53,6 @@
   flex-wrap: wrap;
   align-items: flex-start;
   gap: 1.5rem;
-  margin-top: 1rem;
 }
 
 .quotas {

@@ -6,6 +6,7 @@ import {
   type GetStateDeps,
   getState,
   type LastKnownStateEvent,
+  projectName,
   quotaExhausted,
 } from "../src/application/getState.ts";
 import { emptyMedia } from "../src/infrastructure/providers/spotify/player.ts";
@@ -48,6 +49,14 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     ...overrides,
   };
 }
+
+test("projectName: último tramo de la ruta, null sin cwd", () => {
+  assert.equal(projectName("/home/termi/amnis-copilot"), "amnis-copilot");
+  assert.equal(projectName("/home/termi/amnis-copilot/"), "amnis-copilot");
+  assert.equal(projectName("C:\\src\\amnis"), "amnis");
+  assert.equal(projectName(null), null);
+  assert.equal(projectName("/"), null);
+});
 
 test("sin eventos nunca: sleeping, since = startedAt", async () => {
   const state = await getState(makeDeps(), NOW);
@@ -294,7 +303,12 @@ test("commitHashFrom: null si readCommitHash no encuentra un repo", () => {
 
   assert.equal(
     commitHashFrom(
-      { state: "pushing", since: NOW.toISOString(), reason: "x" },
+      {
+        state: "pushing",
+        since: NOW.toISOString(),
+        reason: "x",
+        project: null,
+      },
       event,
       () => null,
     ),

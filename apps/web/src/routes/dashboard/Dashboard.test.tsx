@@ -46,6 +46,7 @@ const fakeState: StateResponse = {
     level: 1,
     reason: "test",
     commitHash: null,
+    project: null,
     listening: null,
   },
   media: {
@@ -87,12 +88,14 @@ describe("Dashboard", () => {
             Promise.resolve(
               url.includes("/api/media/devices")
                 ? { devices: [] }
-                : {
-                    groupBy: "day",
-                    pricesUpdatedAt: "",
-                    unpricedModels: [],
-                    rows: [],
-                  },
+                : url.includes("/api/quota/history")
+                  ? { samples: [] }
+                  : {
+                      groupBy: "day",
+                      pricesUpdatedAt: "",
+                      unpricedModels: [],
+                      rows: [],
+                    },
             ),
         }),
       ),
@@ -151,9 +154,8 @@ describe("Dashboard", () => {
     act(() => source?.open());
     act(() => source?.emit("hello", { ...fakeState, quotas: [quota] }));
 
-    const values = screen.getAllByTestId("quota-value");
-    expect(values[0]).toHaveTextContent("~30%");
-    expect(values[1]).toHaveTextContent("sin dato");
+    expect(screen.getByTestId("five-hour-value")).toHaveTextContent("~30%");
+    expect(screen.getByTestId("quota-value")).toHaveTextContent("sin dato");
     expect(screen.getByText("endpoint caído")).toBeInTheDocument();
   });
 
@@ -186,7 +188,7 @@ describe("Dashboard", () => {
     await act(async () => {});
 
     expect(screen.getByText("Spotify desconectado")).toBeInTheDocument();
-    expect(screen.getAllByTestId("quota-value")[0]).toHaveTextContent("~30%");
+    expect(screen.getByTestId("five-hour-value")).toHaveTextContent("~30%");
     // <Usage/> ya no vive en la portada: pide /api/usage al abrir Histórico.
     goTo("#historico");
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/usage"));

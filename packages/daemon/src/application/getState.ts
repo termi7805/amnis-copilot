@@ -53,6 +53,14 @@ export interface PetPhase {
   state: PetState;
   since: string;
   reason: string;
+  /** Nombre del proyecto del último evento (`projectName`). */
+  project: string | null;
+}
+
+/** Último tramo de la ruta: a la UI le basta el nombre, no el directorio. */
+export function projectName(cwd: string | null): string | null {
+  if (!cwd) return null;
+  return cwd.split(/[\\/]/).filter(Boolean).at(-1) ?? null;
 }
 
 /**
@@ -85,6 +93,7 @@ export function petPhaseFrom(
       state: "limited",
       since: lastEvent?.stateEnteredAt ?? startedAt,
       reason: "cuota de 5 h agotada",
+      project: projectName(lastEvent?.project ?? null),
     };
   }
 
@@ -99,7 +108,12 @@ export function petPhaseFrom(
     ? `${lastEvent.hook}${lastEvent.toolName ? ` ${lastEvent.toolName}` : ""}`
     : "sin eventos";
 
-  return { state, since, reason };
+  return {
+    state,
+    since,
+    reason,
+    project: projectName(lastEvent?.project ?? null),
+  };
 }
 
 export function fatigueFrom(quotas: readonly QuotaSnapshot[]): number {

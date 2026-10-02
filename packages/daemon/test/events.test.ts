@@ -25,6 +25,7 @@ const EVENT: AmnisEvent = {
     level: 1,
     reason: "x",
     commitHash: null,
+    project: null,
     listening: null,
   },
 };

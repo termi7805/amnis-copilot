@@ -18,6 +18,7 @@ const HELLO_STATE: StateResponse = {
     level: 1,
     reason: "sin eventos",
     commitHash: null,
+    project: null,
     listening: null,
   },
   quotas: [],
@@ -97,6 +98,7 @@ test("GET /api/events: un broadcast posterior llega al cliente conectado", async
         level: 1,
         reason: "PreToolUse Edit",
         commitHash: null,
+        project: null,
         listening: null,
       },
     };

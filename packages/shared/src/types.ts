@@ -33,6 +33,9 @@ export interface PetSnapshot {
   /** Short hash de `HEAD` en el momento de `pushing` — `null` en
    * cualquier otro estado, o si no se pudo leer (fuera de un repo git). */
   commitHash: string | null;
+  /** Nombre (no la ruta) del proyecto del último evento de hook; `null` si
+   * aún no ha habido ninguno o el hook no traía `cwd`. */
+  project: string | null;
   /** Eje ortogonal al estado: qué suena. Lo deciden Spotify y ReccoBeats, no
    * los agentes; `null` tras ~15 s sin sonar. */
   listening: Listening | null;

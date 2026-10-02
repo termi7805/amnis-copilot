@@ -55,6 +55,7 @@ export function startPetStateWatcher(
 ): PetStateWatcher {
   let lastBroadcastState: PetState | null = null;
   let lastBroadcastListening: string | null = null;
+  let lastBroadcastProject: string | null = null;
   let memory: ListeningMemory = NO_LISTENING;
   // El apagado de `listening` no lo dispara ningún evento: sin esto llegaría
   // con el intervalo de 30 s, no a los ~15 s de la pausa.
@@ -73,12 +74,14 @@ export function startPetStateWatcher(
     const listeningKey = JSON.stringify(memory.listening);
     if (
       phase.state === lastBroadcastState &&
+      phase.project === lastBroadcastProject &&
       listeningKey === lastBroadcastListening
     ) {
       return;
     }
     lastBroadcastState = phase.state;
     lastBroadcastListening = listeningKey;
+    lastBroadcastProject = phase.project;
     deps.broadcast({
       ...phase,
       fatigue: deps.getCachedFatigue(),

@@ -48,6 +48,7 @@ const hello: StateResponse = {
     level: 1,
     reason: "test",
     commitHash: null,
+    project: null,
     listening: null,
   },
   media: {
