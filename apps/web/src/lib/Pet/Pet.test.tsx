@@ -1,6 +1,6 @@
 import type { Listening, PetSnapshot } from "@amnis/shared";
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fatigueLevel, Pet, PetOffline } from "./Pet.tsx";
 
 // Cada `it` renderiza sobre el mismo `document`; sin esto, los `it`
@@ -257,6 +257,215 @@ describe("capa de música", () => {
     withPhones?.querySelector("[data-testid='headphones']")?.remove();
     const bare = render(<Pet state="coding" level={1} fatigue={0} />);
     expect(withPhones?.innerHTML).toBe(
+      bare.container.querySelector("[data-look]")?.innerHTML,
+    );
+  });
+});
+
+describe("animación de la capa (#62)", () => {
+  const vars = (el: HTMLElement) => ({
+    beat: el.style.getPropertyValue("--beat"),
+    amp: Number(el.style.getPropertyValue("--amp")),
+    color: el.style.getPropertyValue("--mx-color"),
+  });
+  const withBpm = (
+    bpm: number | null,
+    vibe: Listening["vibe"] = "fiesta",
+  ): Listening => ({
+    ...LISTENING,
+    vibe,
+    bpm,
+  });
+
+  it("a igual BPM, más fatiga reduce la amplitud sin cambiar la velocidad", () => {
+    const read = (fatigue: number) => {
+      const { unmount } = render(
+        <Pet
+          state="coding"
+          level={1}
+          fatigue={fatigue}
+          listening={withBpm(120)}
+        />,
+      );
+      const v = vars(screen.getByTestId("pet") as unknown as HTMLElement);
+      unmount();
+      return v;
+    };
+    const [fresh, mid, tired] = [0.1, 0.5, 0.95].map(read);
+    expect(fresh?.beat).toBe("0.5s");
+    expect(mid?.beat).toBe("0.5s");
+    expect(tired?.beat).toBe("0.5s");
+    expect(fresh?.amp).toBe(1);
+    expect((mid?.amp ?? 0) < 1 && (mid?.amp ?? 0) > (tired?.amp ?? 0)).toBe(
+      true,
+    );
+    expect(tired?.amp).toBeCloseTo(0.3, 5);
+  });
+
+  it("con amortiguación 0 la fatiga no toca la amplitud", () => {
+    render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={1}
+        listening={withBpm(120)}
+        musicPrefs={{ damping: 0 }}
+      />,
+    );
+    expect(vars(screen.getByTestId("pet") as unknown as HTMLElement).amp).toBe(
+      1,
+    );
+  });
+
+  it("la velocidad sigue al BPM; sin BPM no hay NaN", () => {
+    render(
+      <Pet state="coding" level={1} fatigue={0} listening={withBpm(60)} />,
+    );
+    expect(vars(screen.getByTestId("pet") as unknown as HTMLElement).beat).toBe(
+      "1s",
+    );
+    cleanup();
+    render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={0}
+        listening={withBpm(null, "podcast")}
+      />,
+    );
+    expect(
+      vars(screen.getByTestId("pet") as unknown as HTMLElement).beat,
+    ).not.toMatch(/NaN/);
+  });
+
+  it("la vibe, el movimiento y el color salen en el <svg>; sin capa no hay nada", () => {
+    const { unmount } = render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={0}
+        listening={withBpm(120, "intensa")}
+      />,
+    );
+    const pet = screen.getByTestId("pet") as unknown as HTMLElement;
+    expect(pet.dataset.vibe).toBe("intensa");
+    expect(pet.dataset.motion).toBe("head");
+    expect(vars(pet).color).toBe("#F2A23A");
+    unmount();
+
+    render(<Pet state="coding" level={1} fatigue={0} />);
+    const bare = screen.getByTestId("pet") as unknown as HTMLElement;
+    expect(bare.dataset.vibe).toBeUndefined();
+    expect(bare.style.getPropertyValue("--beat")).toBe("");
+  });
+
+  it("'solo el accesorio' no mueve la cabeza", () => {
+    render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={0}
+        listening={withBpm(120)}
+        musicPrefs={{ motion: "accessory" }}
+      />,
+    );
+    expect(
+      (screen.getByTestId("pet") as unknown as HTMLElement).dataset.motion,
+    ).toBe("accessory");
+  });
+
+  it("el color 'teal' ignora la vibe", () => {
+    render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={0}
+        listening={withBpm(120, "intensa")}
+        musicPrefs={{ color: "teal" }}
+      />,
+    );
+    expect(
+      vars(screen.getByTestId("pet") as unknown as HTMLElement).color,
+    ).toBe("#39E0C8");
+  });
+
+  it("notas y ondas están con la capa, y con fallback 'quiet' sin datos solo quedan los cascos", () => {
+    const { container, unmount } = render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={0}
+        listening={withBpm(null, "neutral")}
+      />,
+    );
+    expect(container.querySelector("[data-music='fx']")).not.toBeNull();
+    unmount();
+
+    const quiet = render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={0}
+        listening={withBpm(null, "neutral")}
+        musicPrefs={{ fallback: "quiet" }}
+      />,
+    );
+    expect(quiet.container.querySelector("[data-music='fx']")).toBeNull();
+    expect(quiet.queryAllByTestId("headphones")).toHaveLength(1);
+  });
+
+  it("al parar la música los cascos se funden y se desmontan después", () => {
+    vi.useFakeTimers();
+    const { rerender, container } = render(
+      <Pet state="coding" level={1} fatigue={0} listening={LISTENING} />,
+    );
+    act(() => vi.advanceTimersByTime(50));
+    expect(screen.getByTestId("headphones").dataset.visible).toBe("true");
+
+    rerender(<Pet state="coding" level={1} fatigue={0} listening={null} />);
+    // Sigue montado, ya fundiéndose, con la última vibe.
+    expect(screen.getByTestId("headphones").dataset.visible).toBe("false");
+    expect(screen.getByTestId("headphones").dataset.vibe).toBe("fiesta");
+
+    act(() => vi.advanceTimersByTime(400));
+    expect(container.querySelector("[data-music]")).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("en waiting y limited, o con el interruptor apagado, la capa se va ya, sin fundido", () => {
+    for (const [state, prefs] of [
+      ["waiting", {}],
+      ["limited", {}],
+      ["coding", { enabled: false }],
+    ] as const) {
+      const { rerender, container, unmount } = render(
+        <Pet state="coding" level={1} fatigue={0} listening={LISTENING} />,
+      );
+      rerender(
+        <Pet
+          state={state}
+          level={1}
+          fatigue={0}
+          listening={LISTENING}
+          musicPrefs={prefs}
+        />,
+      );
+      expect(
+        container.querySelector("[data-music]"),
+        `${state} ${JSON.stringify(prefs)}`,
+      ).toBeNull();
+      unmount();
+    }
+  });
+
+  it("el cuerpo no cambia con la capa animada: solo se suman cascos y notas", () => {
+    const { container } = render(
+      <Pet state="coding" level={1} fatigue={0.5} listening={withBpm(120)} />,
+    );
+    const scene = container.querySelector("[data-look]");
+    scene?.querySelector("[data-testid='headphones']")?.remove();
+    const bare = render(<Pet state="coding" level={1} fatigue={0.5} />);
+    expect(scene?.innerHTML).toBe(
       bare.container.querySelector("[data-look]")?.innerHTML,
     );
   });

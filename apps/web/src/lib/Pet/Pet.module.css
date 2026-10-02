@@ -6,9 +6,10 @@
   display: block;
   --pet-fresh: #39e0c8;
   --pet-tired: #d88f6a;
-  /* Único punto donde la fatiga entra en la escena: gobierna el tempo
-     de todas las animaciones (1s fresca → 2.6s agotada), nunca la
-     forma ni el color del cuerpo (docs/DESIGN.md §4). */
+  /* Donde la fatiga entra en la escena: gobierna el tempo del cuerpo
+     (1s fresca → 2.6s agotada); con música, además, amortigua la amplitud
+     del cabeceo (--amp, más abajo). Cambia cuánto y a qué ritmo se mueve,
+     nunca la forma ni el color (docs/DESIGN.md §4). */
   --t: calc(1s + var(--pet-fatigue) * 1.6s);
 }
 
@@ -739,7 +740,11 @@
    así que la clase es el hook que permite apagarlo con `!important`
    sin tocar cada `calc(var(--t)*N)` uno a uno. */
 @media (prefers-reduced-motion: reduce) {
-  .animated {
+  .animated,
+  .phonesIn,
+  .note,
+  .wave,
+  .head {
     /* biome-ignore lint/complexity/noImportantStyles: la animación vive
        en el atributo `style` inline de cada elemento (calc(var(--t)*N)
        por escena); solo !important gana esa especificidad sin reescribir
@@ -752,6 +757,24 @@
        transición del color de la antena vive en la regla de arriba. */
     transition: none !important;
   }
+
+  .phones,
+  .fx {
+    /* biome-ignore lint/complexity/noImportantStyles: mismo motivo — la
+       entrada y la salida de la capa de música (#62). */
+    transition: none !important;
+  }
+
+  /* Sin movimiento cada vibe conserva una pose propia: una nota (dos ondas en
+     podcast). Las demás notas y ondas siguen ocultas. */
+  .pet:not([data-vibe="podcast"]) .n2 {
+    opacity: 0.85;
+  }
+
+  .pet[data-vibe="podcast"] .w1,
+  .pet[data-vibe="podcast"] .w2 {
+    opacity: 0.8;
+  }
 }
 
 /* Grupo de la cabeza de cada escena (#61): antena, marco, pantalla, cara y
@@ -759,4 +782,285 @@
 .head {
   transform-box: view-box;
   transform-origin: 55px 70px;
+}
+
+/* ── Capa de música (#62) ─────────────────────────────────────────────
+   Valores de #60. La vibe pone el estilo, el BPM la velocidad (--beat =
+   60/BPM s) y la fatiga la amplitud (--amp). El color va solo en LED,
+   notas y ondas (--mx-color); el cuerpo y el objeto no cambian. */
+
+.phones {
+  transform-box: view-box;
+  transform-origin: 55px 46px;
+  transition:
+    transform 0.32s cubic-bezier(0.2, 0.8, 0.3, 1.2),
+    opacity 0.2s ease;
+}
+
+.phones[data-visible="false"] {
+  opacity: 0;
+  transform: translateY(-7px) scale(0.96);
+}
+
+.phonesIn {
+  transform-box: view-box;
+  transform-origin: 55px 28px;
+}
+
+.fx {
+  transition: opacity 0.2s ease;
+}
+
+.fx[data-visible="false"] {
+  opacity: 0;
+}
+
+.note,
+.wave {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.note path,
+.wave {
+  stroke: var(--mx-color);
+}
+
+.note ellipse {
+  fill: var(--mx-color);
+}
+
+/* Fiesta: rebote al pulso, notas en zigzag */
+.pet[data-vibe="fiesta"] .phonesIn {
+  animation: mx-bounce var(--beat) cubic-bezier(0.3, 0, 0.3, 1) infinite;
+}
+.pet[data-vibe="fiesta"] .note {
+  animation: mx-zig calc(var(--beat) * 2) ease-out infinite;
+}
+.pet[data-vibe="fiesta"] .n2 {
+  animation-delay: calc(var(--beat) * 0.66);
+}
+.pet[data-vibe="fiesta"] .n3 {
+  animation-delay: calc(var(--beat) * 1.33);
+}
+
+/* Intensa: sacudida seca, notas que estallan */
+.pet[data-vibe="intensa"] .phonesIn {
+  animation: mx-shake var(--beat) cubic-bezier(0.9, 0, 0.1, 1) infinite;
+}
+.pet[data-vibe="intensa"] .note {
+  animation: mx-burst calc(var(--beat) * 1.5) ease-out infinite;
+}
+.pet[data-vibe="intensa"] .n2 {
+  animation-delay: calc(var(--beat) * 0.5);
+}
+.pet[data-vibe="intensa"] .n3 {
+  animation-delay: var(--beat);
+}
+
+/* Chill: vaivén lento, notas que flotan */
+.pet[data-vibe="chill"] .phonesIn {
+  animation: mx-sway calc(var(--beat) * 2) ease-in-out infinite alternate;
+}
+.pet[data-vibe="chill"] .note {
+  animation: mx-drift calc(var(--beat) * 4) ease-in-out infinite;
+}
+.pet[data-vibe="chill"] .n2 {
+  animation-delay: calc(var(--beat) * 2);
+}
+.pet[data-vibe="chill"] .n3 {
+  display: none;
+}
+
+/* Melancólica: inclinación lenta, una nota que cae */
+.pet[data-vibe="melancolica"] .phonesIn {
+  animation: mx-tilt calc(var(--beat) * 4) ease-in-out infinite alternate;
+}
+.pet[data-vibe="melancolica"] .n2 {
+  animation: mx-fall calc(var(--beat) * 4) ease-in infinite;
+}
+.pet[data-vibe="melancolica"] .n1,
+.pet[data-vibe="melancolica"] .n3 {
+  display: none;
+}
+
+/* Podcast: sin notas, ondas de voz a ritmo fijo */
+.pet[data-vibe="podcast"] .wave {
+  animation: mx-wave 1.8s ease-out infinite;
+}
+.pet[data-vibe="podcast"] .w2 {
+  animation-delay: 0.3s;
+}
+.pet[data-vibe="podcast"] .w3 {
+  animation-delay: 0.6s;
+}
+
+/* Sin datos de ReccoBeats: notas neutras a ritmo fijo */
+.pet[data-vibe="neutral"] .n1,
+.pet[data-vibe="neutral"] .n2 {
+  animation: mx-float 2.4s ease-out infinite;
+}
+.pet[data-vibe="neutral"] .n2 {
+  animation-delay: 1.2s;
+}
+
+/* La cabeza también cabecea (por defecto): la fatiga baja la amplitud, no el
+   ritmo, y el cuerpo conserva su tempo (--t). */
+.pet[data-motion="head"][data-vibe="fiesta"] .head,
+.pet[data-motion="head"][data-vibe="intensa"] .head {
+  animation: mx-nod var(--beat) ease-in-out infinite;
+}
+.pet[data-motion="head"][data-vibe="chill"] .head,
+.pet[data-motion="head"][data-vibe="melancolica"] .head {
+  animation: mx-nod calc(var(--beat) * 2) ease-in-out infinite;
+}
+
+@keyframes mx-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  35% {
+    transform: translateY(calc(var(--amp) * -2.6px));
+  }
+}
+
+@keyframes mx-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(calc(var(--amp) * 1.6px), calc(var(--amp) * -1px));
+  }
+}
+
+@keyframes mx-sway {
+  from {
+    transform: rotate(calc(var(--amp) * -3deg));
+  }
+  to {
+    transform: rotate(calc(var(--amp) * 3deg));
+  }
+}
+
+@keyframes mx-tilt {
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(calc(var(--amp) * -4.5deg));
+  }
+}
+
+@keyframes mx-nod {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(calc(var(--amp) * 1.8px))
+      rotate(calc(var(--amp) * -1.6deg));
+  }
+}
+
+@keyframes mx-zig {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  15% {
+    opacity: 1;
+  }
+  40% {
+    transform: translate(calc(var(--amp) * -3px), calc(var(--amp) * -7px))
+      rotate(-12deg);
+  }
+  70% {
+    transform: translate(calc(var(--amp) * 1px), calc(var(--amp) * -12px))
+      rotate(10deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--amp) * -4px), calc(var(--amp) * -19px))
+      rotate(-6deg);
+  }
+}
+
+@keyframes mx-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(calc(1 + var(--amp) * 0.3));
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--amp) * -7px), calc(var(--amp) * -15px))
+      scale(0.9);
+  }
+}
+
+@keyframes mx-drift {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate(calc(var(--amp) * -4px), calc(var(--amp) * -8px))
+      rotate(-6deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--amp) * 2px), calc(var(--amp) * -17px))
+      rotate(4deg);
+  }
+}
+
+@keyframes mx-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -4px) rotate(0);
+  }
+  20% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--amp) * -2px), calc(var(--amp) * 15px))
+      rotate(-14deg);
+  }
+}
+
+@keyframes mx-float {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  20% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--amp) * -5px), calc(var(--amp) * -16px))
+      rotate(-12deg);
+  }
+}
+
+@keyframes mx-wave {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: calc(0.3 + var(--amp) * 0.6);
+  }
+  100% {
+    opacity: 0;
+  }
 }

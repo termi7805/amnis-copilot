@@ -231,7 +231,8 @@ describe("PetWindow", () => {
 
     vi.useRealTimers();
   });
-  it("con listening en el snapshot, la mascota lleva cascos; sin él, no (#61)", () => {
+  it("con listening en el snapshot, la mascota lleva cascos; sin él, se los quita (#61, #62)", () => {
+    vi.useFakeTimers();
     render(<PetWindow />);
     const [source] = FakeEventSource.instances;
     act(() => source?.open());
@@ -247,7 +248,11 @@ describe("PetWindow", () => {
     expect(screen.getByTestId("headphones").dataset.vibe).toBe("chill");
 
     act(() => source?.emit("state", { ...fakeState.pet, listening: null }));
+    // Se funden antes de desmontarse (#62).
+    expect(screen.getByTestId("headphones").dataset.visible).toBe("false");
+    act(() => vi.advanceTimersByTime(400));
     expect(screen.queryByTestId("headphones")).toBeNull();
+    vi.useRealTimers();
   });
 
   describe("paneles (#57)", () => {

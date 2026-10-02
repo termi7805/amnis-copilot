@@ -1,7 +1,15 @@
 import type { Listening, PetSnapshot, PetState, Vibe } from "@amnis/shared";
 import type { CSSProperties } from "react";
 import { Headphones } from "./Headphones.tsx";
-import { DEFAULT_MUSIC_PREFS, type MusicPrefs } from "./musicLayer.ts";
+import { MusicFx } from "./MusicFx.tsx";
+import {
+  amplitude,
+  beatSeconds,
+  DEFAULT_MUSIC_PREFS,
+  layerColor,
+  type MusicPrefs,
+  useLayerPresence,
+} from "./musicLayer.ts";
 import styles from "./Pet.module.css";
 
 export interface PetProps {
@@ -17,7 +25,8 @@ export interface PetProps {
   /** Qué suena (`PetSnapshot.listening`). Con valor, Amnis lleva cascos —
    * salvo en `waiting` y `limited`, que piden atención y no llevan nada. */
   listening?: Listening | null;
-  musicPrefs?: MusicPrefs;
+  /** Lo que no se indique toma el valor por defecto. */
+  musicPrefs?: Partial<MusicPrefs>;
 }
 
 /**
@@ -67,7 +76,7 @@ function Scene({
   resetsAt?: string | null;
   commitHash?: string | null;
   /** `undefined` = sin capa de música. */
-  music?: { vibe: Vibe };
+  music?: { vibe: Vibe; color: string; visible: boolean };
 }) {
   switch (state) {
     case "coding":
@@ -153,7 +162,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 stroke="#39E0C8"
                 strokeWidth="2"
@@ -358,7 +367,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 stroke="#39E0C8"
                 strokeWidth="2"
@@ -493,7 +502,7 @@ function Scene({
             <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
             <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
             <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            {music && <Headphones vibe={music.vibe} />}
+            {music && <Headphones {...music} />}
             <g
               stroke="#39E0C8"
               strokeWidth="2"
@@ -677,7 +686,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 stroke="#39E0C8"
                 strokeWidth="2"
@@ -848,7 +857,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 stroke="#FFB020"
                 strokeWidth="2"
@@ -1012,7 +1021,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <path
                 d="M39 47q5.5-6.5 11 0"
                 fill="none"
@@ -1189,7 +1198,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <line
                 x1="39"
                 y1="46"
@@ -1333,7 +1342,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 fill="none"
                 stroke="#39E0C8"
@@ -1539,7 +1548,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 stroke="#39E0C8"
                 strokeWidth="2"
@@ -1800,7 +1809,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 stroke="#39E0C8"
                 strokeWidth="2"
@@ -1992,7 +2001,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 className={styles.animated}
                 style={{
@@ -2216,7 +2225,7 @@ function Scene({
                 rx="5"
                 fill="#171D26"
               />
-              {music && <Headphones vibe={music.vibe} />}
+              {music && <Headphones {...music} />}
               <g
                 stroke="#EC3013"
                 strokeWidth="2"
@@ -2416,9 +2425,10 @@ export function PetOffline() {
  * `viewBox` + `100%` — nunca `width`/`height` fijos — es lo que permite
  * al mismo componente servir de icono y de viewport completo
  * (docs/STACK.md §2), y no lleva fondo, marco ni tamaño propio: eso
- * vive en las envolturas de routes/. La fatiga no toca la geometría
- * de la escena — solo el tempo (`--t`) y la luz de la antena, vía
- * custom properties resueltas en Pet.module.css.
+ * vive en las envolturas de routes/. La fatiga cambia cuánto y a qué
+ * ritmo se mueve la mascota, nunca su forma ni su color: el tempo (`--t`),
+ * la luz de la antena y, con música, la amplitud (`--amp`), vía custom
+ * properties resueltas en Pet.module.css.
  */
 export function Pet({
   state,
@@ -2427,20 +2437,32 @@ export function Pet({
   resetsAt = null,
   commitHash = null,
   listening = null,
-  musicPrefs = DEFAULT_MUSIC_PREFS,
+  musicPrefs: musicPrefsProp,
 }: PetProps) {
+  const musicPrefs: MusicPrefs = { ...DEFAULT_MUSIC_PREFS, ...musicPrefsProp };
   const style = {
     "--pet-fatigue": fatigueLevel(fatigue),
   } as CSSProperties;
   // `waiting` y `limited` piden atención (un permiso pendiente, el límite
   // alcanzado): nada de la capa encima, y no se puede configurar (#61).
-  const music =
-    listening !== null &&
-    musicPrefs.enabled &&
-    state !== "waiting" &&
-    state !== "limited"
-      ? { vibe: listening.vibe }
-      : undefined;
+  const allowed =
+    musicPrefs.enabled && state !== "waiting" && state !== "limited";
+  const { shown, visible } = useLayerPresence(
+    allowed ? listening : null,
+    allowed,
+  );
+  const music = shown
+    ? { vibe: shown.vibe, color: layerColor(shown.vibe, musicPrefs.color) }
+    : undefined;
+  if (shown) {
+    // La vibe pone el estilo, el BPM la velocidad y la fatiga la amplitud:
+    // cada entrada controla una cosa distinta y no se pisan (#62).
+    Object.assign(style, {
+      "--beat": `${beatSeconds(shown.bpm)}s`,
+      "--amp": amplitude(fatigueLevel(fatigue), musicPrefs.damping),
+      "--mx-color": music?.color,
+    });
+  }
 
   return (
     <svg
@@ -2452,6 +2474,9 @@ export function Pet({
       data-testid="pet"
       data-state={state}
       data-level={level}
+      data-vibe={shown?.vibe}
+      data-motion={shown ? musicPrefs.motion : undefined}
+      data-fallback={shown ? musicPrefs.fallback : undefined}
       style={style}
     >
       <title>{STATE_TITLE[state]}</title>
@@ -2459,8 +2484,12 @@ export function Pet({
         state={state}
         resetsAt={resetsAt}
         commitHash={commitHash}
-        music={music}
+        music={music && { ...music, visible }}
       />
+      {shown &&
+        !(shown.vibe === "neutral" && musicPrefs.fallback === "quiet") && (
+          <MusicFx visible={visible} />
+        )}
     </svg>
   );
 }
