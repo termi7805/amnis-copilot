@@ -1,5 +1,11 @@
 import type { MediaDevice, MediaDeviceOption } from "@amnis/shared";
-import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { MediaDevicesResult } from "../../api/media.ts";
 import styles from "./MediaPlayer.module.css";
 
@@ -95,6 +101,9 @@ export interface DeviceSelectorProps {
   loadDevices: () => Promise<MediaDevicesResult>;
   onTransfer: (deviceId: string) => Promise<boolean>;
   disabled?: boolean;
+  /** Layout ancho: la lista va siempre desplegada, sin botón. Se pide al
+   * montar y cuando cambia el dispositivo actual, no por polling. */
+  alwaysOpen?: boolean;
 }
 
 /**
@@ -106,8 +115,10 @@ export function DeviceSelector({
   loadDevices,
   onTransfer,
   disabled = false,
+  alwaysOpen = false,
 }: DeviceSelectorProps) {
-  const [open, setOpen] = useState(false);
+  const [openState, setOpen] = useState(false);
+  const open = alwaysOpen || openState;
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [transferringId, setTransferringId] = useState<string | null>(null);
   // Cerrar y reabrir deprisa no debe dejar que una respuesta vieja pise la nueva.
@@ -115,7 +126,10 @@ export function DeviceSelector({
 
   async function fetchList() {
     const mine = ++request.current;
-    setLoad({ status: "loading" });
+    // Refrescar una lista ya pintada no la parpadea a "Buscando…".
+    setLoad((prev) =>
+      alwaysOpen && prev.status === "ready" ? prev : { status: "loading" },
+    );
     const result = await loadDevices().catch(
       (): MediaDevicesResult => ({
         ok: false,
@@ -129,6 +143,12 @@ export function DeviceSelector({
         : { status: "error", message: result.message },
     );
   }
+
+  const currentId = current?.id ?? null;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: solo recarga al montar y cuando el siguiente `media` cambia el dispositivo
+  useEffect(() => {
+    if (alwaysOpen) void fetchList();
+  }, [alwaysOpen, currentId]);
 
   function toggle() {
     if (open) {
@@ -145,14 +165,14 @@ export function DeviceSelector({
     setTransferringId(id);
     const ok = await onTransfer(id);
     setTransferringId(null);
-    if (ok) {
+    if (ok && !alwaysOpen) {
       request.current++;
       setOpen(false);
     }
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === "Escape" && open) {
+    if (e.key === "Escape" && openState && !alwaysOpen) {
       request.current++;
       setOpen(false);
     }
@@ -161,19 +181,21 @@ export function DeviceSelector({
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: solo recoge Escape de los botones de dentro
     <div className={styles.devices} onKeyDown={onKeyDown}>
-      <button
-        type="button"
-        className={styles.deviceTrigger}
-        onClick={toggle}
-        disabled={disabled}
-        aria-expanded={open}
-        aria-label="Dispositivo de reproducción"
-      >
-        {current && <DeviceIcon type={current.type} />}
-        <span className={styles.deviceName}>
-          {current ? current.name : "Elegir dispositivo"}
-        </span>
-      </button>
+      {!alwaysOpen && (
+        <button
+          type="button"
+          className={styles.deviceTrigger}
+          onClick={toggle}
+          disabled={disabled}
+          aria-expanded={open}
+          aria-label="Dispositivo de reproducción"
+        >
+          {current && <DeviceIcon type={current.type} />}
+          <span className={styles.deviceName}>
+            {current ? current.name : "Elegir dispositivo"}
+          </span>
+        </button>
+      )}
 
       {open && (
         <fieldset className={styles.deviceList} aria-label="Dispositivos">

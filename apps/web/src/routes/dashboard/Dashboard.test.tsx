@@ -70,13 +70,20 @@ describe("Dashboard", () => {
     vi.stubGlobal("EventSource", FakeEventSource);
     // <Usage/> pide /api/usage al montar; sin este stub, fetch intenta
     // resolver una URL relativa y falla como unhandled rejection.
+    // y la tarjeta del reproductor, /api/media/devices.
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({ groupBy: "day", pricesUpdatedAt: "", rows: [] }),
-      }),
+      vi.fn((url: string) =>
+        Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve(
+              url.includes("/api/media/devices")
+                ? { devices: [] }
+                : { groupBy: "day", pricesUpdatedAt: "", rows: [] },
+            ),
+        }),
+      ),
     );
   });
 
@@ -134,4 +141,76 @@ describe("Dashboard", () => {
     expect(values[1]).toHaveTextContent("sin dato");
     expect(screen.getByText("endpoint caído")).toBeInTheDocument();
   });
+
+  const quota: QuotaSnapshot = {
+    provider: "anthropic",
+    authoritative: null,
+    local: {
+      fiveHourTokens: 100,
+      fiveHourUtilization: 30,
+      windowStartedAt: "2026-01-01T00:00:00Z",
+    },
+    divergence: null,
+    sampledAt: "2026-01-01T00:00:00Z",
+    error: null,
+  };
+
+  it("sin login de Spotify la tarjeta muestra su estado vacío y la cuota carga igual", async () => {
+    render(<Dashboard />);
+
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() =>
+      source?.emit("hello", {
+        ...fakeState,
+        media: { ...fakeState.media, status: "not-logged-in" },
+        quotas: [quota],
+      }),
+    );
+    await act(async () => {});
+
+    expect(screen.getByText("Spotify desconectado")).toBeInTheDocument();
+    expect(screen.getAllByTestId("quota-value")[0]).toHaveTextContent("~30%");
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/usage"));
+  });
+
+  it("muestra el reproductor en vivo: un evento media actualiza la tarjeta", async () => {
+    const track = {
+      id: "t1",
+      title: "Blinding Lights",
+      artists: ["The Weeknd"],
+      album: "After Hours",
+      imageUrl: null,
+      durationMs: 200_000,
+    };
+    render(<Dashboard />);
+
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() =>
+      source?.emit("hello", {
+        ...fakeState,
+        media: { ...fakeState.media, status: "ok", track, isPlaying: true },
+        quotas: [quota],
+      }),
+    );
+    await act(async () => {});
+
+    expect(screen.getByText("Blinding Lights")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pausar" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Dispositivos" })).toBeVisible();
+
+    act(() =>
+      source?.emit("media", {
+        ...fakeState.media,
+        status: "ok",
+        track: { ...track, title: "Save Your Tears" },
+        isPlaying: false,
+      }),
+    );
+    expect(screen.getByText("Save Your Tears")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reproducir" }),
+    ).toBeInTheDocument();
+  }, 15_000);
 });

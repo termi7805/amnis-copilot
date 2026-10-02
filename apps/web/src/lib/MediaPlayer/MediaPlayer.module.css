@@ -291,3 +291,42 @@
   font-size: 11px;
   line-height: 1.35;
 }
+
+/* Layout ancho (tarjeta del dashboard, #58): portada grande y todo a la vista. */
+.root[data-layout="wide"] .player {
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+.root[data-layout="wide"] .cover {
+  width: 140px;
+  height: 140px;
+}
+
+.root[data-layout="wide"] .title {
+  font-size: 16px;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.root[data-layout="wide"] .artists {
+  font-size: 13px;
+}
+
+.root[data-layout="wide"] .controls {
+  margin-top: 14px;
+}
+
+.root[data-layout="wide"] .progress {
+  padding: 0 16px 12px;
+}
+
+.root[data-layout="wide"] .devices {
+  padding: 0 16px 14px;
+}
+
+.root[data-layout="wide"] .deviceList {
+  margin-top: 0;
+}

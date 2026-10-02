@@ -12,10 +12,27 @@
   border-radius: 8px;
 }
 
+.overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
 .quotas {
   display: flex;
   gap: 1.5rem;
-  margin-top: 1rem;
+}
+
+/* Sin altura fija: sin login el estado vacío ocupa poco y la cuota no se
+   mueve de sitio. */
+.mediaCard {
+  flex: 1 1 340px;
+  max-width: 440px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .quotaError {

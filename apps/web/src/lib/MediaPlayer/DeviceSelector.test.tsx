@@ -213,3 +213,48 @@ describe("DeviceSelector", () => {
     expect(deviceKind("CastVideo")).toBe("tv");
   });
 });
+
+describe("DeviceSelector — alwaysOpen", () => {
+  function setupOpen(cur: MediaDevice | null = current) {
+    const loadDevices = vi.fn<() => Promise<MediaDevicesResult>>(() =>
+      Promise.resolve({ ok: true, devices: [pc, phone, restricted] }),
+    );
+    const transfer = vi.fn(async (_id: string) => true);
+    const props = { loadDevices, onTransfer: transfer, alwaysOpen: true };
+    const view = render(<DeviceSelector current={cur} {...props} />);
+    return { loadDevices, transfer, props, ...view };
+  }
+
+  it("pide la lista al montar y la muestra sin botón que desplegar", async () => {
+    const { loadDevices } = setupOpen();
+    await act(async () => {});
+    expect(loadDevices).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole("button", { name: "Dispositivo de reproducción" }),
+    ).toBeNull();
+    expect(screen.getByRole("button", { name: /Móvil/ })).toBeInTheDocument();
+  });
+
+  it("tras transferir la lista sigue abierta", async () => {
+    const { transfer } = setupOpen();
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: /Móvil/ }));
+    await act(async () => {});
+    expect(transfer).toHaveBeenCalledWith("movil");
+    expect(screen.getByRole("group", { name: "Dispositivos" })).toBeVisible();
+  });
+
+  it("vuelve a pedir la lista cuando cambia el dispositivo actual, sin parpadear", async () => {
+    const { loadDevices, props, rerender } = setupOpen();
+    await act(async () => {});
+    rerender(
+      <DeviceSelector
+        current={{ id: "movil", name: "Móvil", type: "Smartphone" }}
+        {...props}
+      />,
+    );
+    expect(screen.queryByText("Buscando dispositivos…")).toBeNull();
+    await act(async () => {});
+    expect(loadDevices).toHaveBeenCalledTimes(2);
+  });
+});

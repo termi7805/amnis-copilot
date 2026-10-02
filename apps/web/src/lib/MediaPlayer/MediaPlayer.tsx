@@ -20,6 +20,8 @@ export interface MediaPlayerProps {
   media: MediaSnapshot | null;
   onCommand: (command: MediaCommand) => Promise<MediaCommandResult>;
   loadDevices: () => Promise<MediaDevicesResult>;
+  /** `wide`: portada grande y lista de dispositivos siempre visible. */
+  layout?: "compact" | "wide";
 }
 
 /** Cada uno se ve distinto: un panel en blanco no distingue "no has hecho
@@ -58,6 +60,7 @@ export function MediaPlayer({
   media,
   onCommand,
   loadDevices,
+  layout = "compact",
 }: MediaPlayerProps) {
   const state = stateOf(media);
   const status = media?.status ?? null;
@@ -121,6 +124,7 @@ export function MediaPlayer({
     <section
       className={styles.root}
       data-state={state}
+      data-layout={layout}
       aria-label="Reproductor de Spotify"
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
@@ -174,6 +178,7 @@ export function MediaPlayer({
           loadDevices={loadDevices}
           onTransfer={(deviceId) => run({ kind: "transfer", deviceId })}
           disabled={busy}
+          alwaysOpen={layout === "wide"}
         />
       )}
 

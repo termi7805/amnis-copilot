@@ -438,3 +438,34 @@ describe("MediaPlayer — dentro de la ventana de la mascota", () => {
     expect(onUp).not.toHaveBeenCalled();
   });
 });
+
+describe("MediaPlayer — layout", () => {
+  it("compacto por defecto: el selector de dispositivo sigue plegado", async () => {
+    const { container } = setup(playing);
+    await act(async () => {});
+    expect(
+      container.querySelector("[data-layout]")?.getAttribute("data-layout"),
+    ).toBe("compact");
+    expect(
+      screen.getByRole("button", { name: "Dispositivo de reproducción" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Dispositivos" })).toBeNull();
+  });
+
+  it("ancho: lista de dispositivos y modos visibles sin desplegar", async () => {
+    const { container } = render(
+      <MediaPlayer
+        media={playing}
+        layout="wide"
+        onCommand={() => Promise.resolve(ok)}
+        loadDevices={noDevices}
+      />,
+    );
+    await act(async () => {});
+    expect(
+      container.querySelector("[data-layout]")?.getAttribute("data-layout"),
+    ).toBe("wide");
+    expect(screen.getByRole("group", { name: "Dispositivos" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Aleatorio" })).toBeVisible();
+  });
+});
