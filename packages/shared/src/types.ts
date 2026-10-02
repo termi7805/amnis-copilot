@@ -44,6 +44,24 @@ export interface QuotaWindow {
 }
 
 /**
+ * Un límite de la lista `limits[]` del endpoint: los que tiene *esa* cuenta,
+ * sin cablear modelos concretos. `kind`, `scope` y `severity` son abiertos a
+ * propósito: un valor desconocido se muestra con `label` genérica, nunca se
+ * descarta.
+ */
+export interface QuotaLimit {
+  kind: string;
+  group: string;
+  scope: string | null;
+  utilization: number;
+  resetsAt: string | null;
+  severity: "normal" | "warning" | "critical" | (string & {});
+  isActive: boolean;
+  /** Etiqueta legible calculada en el daemon (`5h`, `7d`, `<kind> · <scope>`). */
+  label: string;
+}
+
+/**
  * Las dos vías se calculan siempre en paralelo, no solo como fallback:
  * su divergencia dice cuánto se consume fuera de Claude Code.
  */
@@ -55,7 +73,7 @@ export interface QuotaSnapshot {
   authoritative: {
     fiveHour: QuotaWindow;
     sevenDay: QuotaWindow;
-    sevenDayOpus: QuotaWindow | null;
+    limits: QuotaLimit[];
   } | null;
   /** Reconstruida de los JSONL locales. Siempre presente. */
   local: {

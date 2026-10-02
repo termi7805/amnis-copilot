@@ -23,7 +23,7 @@ const baseQuota: QuotaSnapshot = {
       resetsAt: new Date(NOW.getTime() + 60 * 60_000).toISOString(),
     },
     sevenDay: { utilization: 41, resetsAt: null },
-    sevenDayOpus: null,
+    limits: [],
   },
   local: {
     fiveHourTokens: 100,
@@ -129,14 +129,25 @@ describe("QuotaPanel", () => {
     expect(screen.getByText("endpoint caído")).toBeInTheDocument();
   });
 
-  it("con 7d Opus, aparece un tercer anillo", () => {
+  it("con un límite con scope, aparece un tercer anillo", () => {
     const authoritative = baseQuota.authoritative;
     if (!authoritative) throw new Error("baseQuota.authoritative no existe");
     const quota: QuotaSnapshot = {
       ...baseQuota,
       authoritative: {
         ...authoritative,
-        sevenDayOpus: { utilization: 12, resetsAt: null },
+        limits: [
+          {
+            kind: "weekly_model",
+            group: "weekly",
+            scope: "opus",
+            utilization: 12,
+            resetsAt: null,
+            severity: "normal",
+            isActive: true,
+            label: "weekly_model · opus",
+          },
+        ],
       },
     };
     render(

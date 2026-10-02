@@ -7,6 +7,7 @@ import type {
 import { useEffect, useRef, useState } from "react";
 import { daemonUrl } from "../../api/config.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
+import { extraLimits } from "../../lib/quotaLimits.ts";
 import { QuotaRing } from "../dashboard/QuotaRing.tsx";
 import { ActivityRow } from "./ActivityRow.tsx";
 import { PanelHeader, type PanelId } from "./PanelHeader.tsx";
@@ -158,11 +159,14 @@ export function QuotaPanel({
                 tone="muted"
               />
             </div>
-            {quota.authoritative?.sevenDayOpus && (
-              <div className={styles.ringCell}>
+            {extraLimits(quota.authoritative?.limits ?? []).map((limit) => (
+              <div
+                key={`${limit.kind}:${limit.scope ?? ""}`}
+                className={styles.ringCell}
+              >
                 <QuotaRing
-                  label="7d Opus"
-                  authoritative={quota.authoritative.sevenDayOpus}
+                  label={limit.label}
+                  authoritative={limit}
                   estimated={null}
                   now={now}
                   size={RING_SIZE}
@@ -170,7 +174,7 @@ export function QuotaPanel({
                   tone="muted"
                 />
               </div>
-            )}
+            ))}
           </div>
         </section>
       ))}

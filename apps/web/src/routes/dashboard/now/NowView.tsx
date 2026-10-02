@@ -3,6 +3,7 @@ import { fetchMediaDevices, sendMediaCommand } from "../../../api/media.ts";
 import { useNow } from "../../../lib/countdown.ts";
 import { MediaPlayer } from "../../../lib/MediaPlayer/MediaPlayer.tsx";
 import { Pet } from "../../../lib/Pet/Pet.tsx";
+import { extraLimits } from "../../../lib/quotaLimits.ts";
 import { QuotaRing } from "../QuotaRing.tsx";
 import styles from "./NowView.module.css";
 
@@ -43,14 +44,15 @@ export function NowView({ state }: { state: StateResponse | null }) {
               estimated={null}
               now={now}
             />
-            {quota.authoritative?.sevenDayOpus && (
+            {extraLimits(quota.authoritative?.limits ?? []).map((limit) => (
               <QuotaRing
-                label="7d Opus"
-                authoritative={quota.authoritative.sevenDayOpus}
+                key={`${limit.kind}:${limit.scope ?? ""}`}
+                label={limit.label}
+                authoritative={limit}
                 estimated={null}
                 now={now}
               />
-            )}
+            ))}
           </div>
         ))}
         <div className={styles.mediaCard}>

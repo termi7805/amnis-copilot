@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   fetchQuota,
@@ -24,8 +25,84 @@ test("parseQuotaResponse castea la forma documentada en DESIGN.md §2", () => {
   assert.deepEqual(result, {
     fiveHour: { utilization: 42, resetsAt: "2026-01-01T00:00:00Z" },
     sevenDay: { utilization: 10, resetsAt: "2026-01-07T00:00:00Z" },
-    sevenDayOpus: null,
+    limits: [
+      {
+        kind: "session",
+        group: "session",
+        scope: null,
+        utilization: 42,
+        resetsAt: "2026-01-01T00:00:00Z",
+        severity: "normal",
+        isActive: true,
+        label: "5h",
+      },
+      {
+        kind: "weekly_all",
+        group: "weekly",
+        scope: null,
+        utilization: 10,
+        resetsAt: "2026-01-07T00:00:00Z",
+        severity: "normal",
+        isActive: true,
+        label: "7d",
+      },
+    ],
   });
+});
+
+const fixture = JSON.parse(
+  readFileSync(
+    new URL("./fixtures/oauth-usage-2026-10.json", import.meta.url),
+    "utf8",
+  ),
+);
+
+test("con la respuesta real, el snapshot trae dos límites: sesión y semanal", () => {
+  const result = parseQuotaResponse(fixture);
+
+  assert.deepEqual(
+    result?.limits.map((l) => [l.kind, l.label, l.utilization]),
+    [
+      ["session", "5h", 64],
+      ["weekly_all", "7d", 38],
+    ],
+  );
+});
+
+test("un límite con kind y scope desconocidos no se pierde", () => {
+  const result = parseQuotaResponse({
+    ...fixture,
+    limits: [
+      ...fixture.limits,
+      {
+        kind: "kind_inventado",
+        group: "weekly",
+        percent: 7,
+        severity: "raro",
+        resets_at: null,
+        scope: "scope_inventado",
+        is_active: true,
+      },
+    ],
+  });
+
+  assert.equal(result?.limits.length, 3);
+  const extra = result?.limits[2];
+  assert.equal(extra?.label, "kind_inventado · scope_inventado");
+  assert.equal(extra?.severity, "raro");
+});
+
+test("sin limits[], respalda con seven_day_<x> válidos e ignora el resto", () => {
+  const { limits: _omit, ...sinLimits } = fixture;
+  const result = parseQuotaResponse({
+    ...sinLimits,
+    seven_day_sonnet: { utilization: 5, resets_at: null },
+  });
+
+  assert.deepEqual(
+    result?.limits.map((l) => l.label),
+    ["5h", "7d", "7d · sonnet"],
+  );
 });
 
 test("parseQuotaResponse devuelve null si la forma no encaja", () => {

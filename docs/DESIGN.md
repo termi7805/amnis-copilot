@@ -92,9 +92,27 @@ User-Agent: claude-code/<version>
 { "five_hour": { "utilization": 0-100, "resets_at": "ISO8601" },
   "seven_day": { "utilization": 0-100, "resets_at": "ISO8601" },
   "seven_day_opus": null, "seven_day_sonnet": null,
+  "limits": [
+    { "kind": "session",    "group": "session", "percent": 64, "severity": "normal",
+      "resets_at": "ISO8601", "scope": null, "is_active": true },
+    { "kind": "weekly_all", "group": "weekly",  "percent": 38, "severity": "normal",
+      "resets_at": "ISO8601", "scope": null, "is_active": false }
+  ],
   "extra_usage": { "is_enabled": false, "monthly_limit": null,
                    "used_credits": null, "utilization": null } }
 ```
+
+- **`limits[]` es la fuente de los límites**: son los que tiene *esa* cuenta. Un límite propio de
+  un modelo aparece ahí con su `scope`; una cuenta sin él no ve nada. No se cablean modelos
+  (`seven_day_opus` ha sido `null` en las 881 muestras de esta cuenta).
+- `kind`, `scope` y `severity` son abiertos: un valor desconocido sale con etiqueta genérica
+  (`<kind> · <scope>`), nunca se descarta. Conocidos: `session` (5h) y `weekly_all` (7d).
+- Si `limits[]` no viene, el parser cae a `five_hour`, `seven_day` y las claves `seven_day_<x>`
+  con ventana válida (`seven_day_sonnet` incluida).
+- La respuesta trae además una docena de claves con nombre en clave (`iguana_necktie`,
+  `tangelo`…), casi todas `null`. Son internas de Anthropic y cambian sin aviso: se ignoran.
+- `quota_samples.limits_json` guarda la lista de cada muestra; `opus_util` se conserva por
+  compatibilidad y las filas nuevas la dejan en `NULL`.
 
 - El `User-Agent` es **obligatorio**: sin él, 429 instantáneo y persistente.
 - Intervalo seguro: **180 s**. El rate limit es por access token.

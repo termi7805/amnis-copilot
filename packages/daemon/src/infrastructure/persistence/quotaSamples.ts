@@ -7,7 +7,8 @@ export interface QuotaSampleRecord {
   fiveHourResetsAt: string | null;
   sevenDayUtil: number | null;
   sevenDayResetsAt: string | null;
-  opusUtil: number | null;
+  /** `QuotaLimit[]` serializado; `null` si la muestra no trae autoritativo. */
+  limitsJson: string | null;
   localTokens: number;
   localUtil: number;
   source: "both" | "local";
@@ -21,7 +22,7 @@ export function insertQuotaSample(
   db.prepare(`
     INSERT INTO quota_samples (
       account_id, ts, five_hour_util, five_hour_resets_at,
-      seven_day_util, seven_day_resets_at, opus_util,
+      seven_day_util, seven_day_resets_at, limits_json,
       local_tokens, local_util, source, error
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
@@ -31,7 +32,7 @@ export function insertQuotaSample(
     sample.fiveHourResetsAt,
     sample.sevenDayUtil,
     sample.sevenDayResetsAt,
-    sample.opusUtil,
+    sample.limitsJson,
     sample.localTokens,
     sample.localUtil,
     sample.source,

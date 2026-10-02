@@ -86,6 +86,7 @@ function migrate(db: DatabaseSync): void {
       seven_day_util        REAL,
       seven_day_resets_at   TEXT,
       opus_util             REAL,
+      limits_json           TEXT,
       local_tokens          INTEGER NOT NULL,
       local_util            REAL NOT NULL,
       source                TEXT NOT NULL,
@@ -115,5 +116,15 @@ function migrate(db: DatabaseSync): void {
   }[];
   if (!accountColumns.some((c) => c.name === "plan_window_tokens")) {
     db.exec("ALTER TABLE accounts ADD COLUMN plan_window_tokens INTEGER");
+  }
+
+  // quota_samples es la única tabla que no se reconstruye desde los JSONL:
+  // la columna se añade sobre la tabla existente, nunca se recrea. `opus_util`
+  // se queda por compatibilidad (las filas nuevas la dejan en NULL).
+  const quotaColumns = db.prepare("PRAGMA table_info(quota_samples)").all() as {
+    name: string;
+  }[];
+  if (!quotaColumns.some((c) => c.name === "limits_json")) {
+    db.exec("ALTER TABLE quota_samples ADD COLUMN limits_json TEXT");
   }
 }

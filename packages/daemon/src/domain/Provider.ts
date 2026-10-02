@@ -1,6 +1,7 @@
 import type {
   NormalizedHookEvent,
   ProviderId,
+  QuotaLimit,
   QuotaWindow,
 } from "@amnis/shared";
 
@@ -45,7 +46,7 @@ export interface QuotaReading {
   authoritative: {
     fiveHour: QuotaWindow;
     sevenDay: QuotaWindow;
-    sevenDayOpus: QuotaWindow | null;
+    limits: QuotaLimit[];
   } | null;
   error: string | null;
 }

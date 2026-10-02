@@ -21,7 +21,7 @@ export interface QuotaSampleInput {
   fiveHourResetsAt: string | null;
   sevenDayUtil: number | null;
   sevenDayResetsAt: string | null;
-  opusUtil: number | null;
+  limitsJson: string | null;
   localTokens: number;
   localUtil: number;
   source: "both" | "local";
@@ -97,7 +97,7 @@ export async function sampleQuota(
     fiveHourResetsAt: authoritative?.fiveHour.resetsAt ?? null,
     sevenDayUtil: authoritative?.sevenDay.utilization ?? null,
     sevenDayResetsAt: authoritative?.sevenDay.resetsAt ?? null,
-    opusUtil: authoritative?.sevenDayOpus?.utilization ?? null,
+    limitsJson: authoritative ? JSON.stringify(authoritative.limits) : null,
     localTokens,
     localUtil: localUtilization,
     source: authoritative ? "both" : "local",

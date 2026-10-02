@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { ensureAccount } from "../src/infrastructure/persistence/accounts.ts";
 import { openDb } from "../src/infrastructure/persistence/db.ts";
@@ -118,6 +119,46 @@ test("la migración añade plan_window_tokens y es idempotente", () => {
       const db2 = openDb(dbPath);
       db2.close();
     });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("la migración añade limits_json a quota_samples y conserva las filas", () => {
+  const dir = mkdtempSync(join(tmpdir(), "amnis-migration-"));
+  try {
+    const dbPath = join(dir, "old.sqlite");
+
+    // BD con el esquema anterior: sin limits_json y con una muestra.
+    const old = new DatabaseSync(dbPath);
+    old.exec(`
+      CREATE TABLE accounts (id INTEGER PRIMARY KEY, provider TEXT, label TEXT, plan TEXT);
+      CREATE TABLE quota_samples (
+        id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL, ts TEXT NOT NULL,
+        five_hour_util REAL, five_hour_resets_at TEXT, seven_day_util REAL,
+        seven_day_resets_at TEXT, opus_util REAL, local_tokens INTEGER NOT NULL,
+        local_util REAL NOT NULL, source TEXT NOT NULL, error TEXT
+      );
+      INSERT INTO quota_samples (account_id, ts, local_tokens, local_util, source)
+        VALUES (1, '2026-07-01T00:00:00Z', 10, 1, 'local');
+    `);
+    old.close();
+
+    for (let i = 0; i < 2; i++) {
+      const db = openDb(dbPath);
+      const columns = db.prepare("PRAGMA table_info(quota_samples)").all() as {
+        name: string;
+      }[];
+      assert.ok(columns.some((c) => c.name === "limits_json"));
+      assert.ok(columns.some((c) => c.name === "opus_util"));
+      const row = db
+        .prepare("SELECT COUNT(*) AS n FROM quota_samples")
+        .get() as {
+        n: number;
+      };
+      assert.equal(row.n, 1);
+      db.close();
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

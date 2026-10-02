@@ -142,7 +142,7 @@ test("fatiga se clampea a [0,1] aunque la utilización venga por encima de 100",
             authoritative: {
               fiveHour: { utilization: 150, resetsAt: null },
               sevenDay: { utilization: 10, resetsAt: null },
-              sevenDayOpus: null,
+              limits: [],
             },
           }),
         ]),
@@ -182,7 +182,7 @@ test("cuota autoritativa al 100%: limited gana a sleeping", async () => {
             authoritative: {
               fiveHour: { utilization: 100, resetsAt: null },
               sevenDay: { utilization: 10, resetsAt: null },
-              sevenDayOpus: null,
+              limits: [],
             },
           }),
         ]),
@@ -215,7 +215,7 @@ test("cuota autoritativa por debajo de 100%: no dispara limited", () => {
         authoritative: {
           fiveHour: { utilization: 99, resetsAt: null },
           sevenDay: { utilization: 10, resetsAt: null },
-          sevenDayOpus: null,
+          limits: [],
         },
       }),
     ]),
