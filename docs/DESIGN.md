@@ -34,7 +34,7 @@ la canción que suena a ReccoBeats (§6).
 ```
 
 **Decisión: local-first (no nube).** Todas las fuentes de datos son estrictamente locales
-(`~/.claude/projects/*.jsonl`, `~/.claude/.credentials.json`, hooks). Un backend en la nube
+(`~/.claude/projects/**/*.jsonl`, `~/.claude/.credentials.json`, hooks). Un backend en la nube
 no puede leer nada de eso; necesitaría igualmente un agente local. La nube no ahorra el
 componente local, se lo añade encima.
 
@@ -176,6 +176,14 @@ el mismo `message.id` y repiten el mismo objeto `usage`** — una línea por blo
 Campos por entrada: `uuid`, `sessionId`, `cwd`, `timestamp`, `gitBranch`, `version`,
 `requestId`, `message.model`, `message.usage.{input_tokens, output_tokens,
 cache_creation_input_tokens, cache_read_input_tokens, service_tier}`.
+
+**Los subagentes tienen su propio transcript.** Claude Code los guarda aparte, en
+`<sesión>/subagents/agent-*.jsonl` (y los de workflows en `subagents/workflows/wf_*/`), con
+llamadas que no están en el transcript padre (~15 % de los tokens, y todo el uso de Haiku). Por
+eso la búsqueda es recursiva y solo se ingieren `.jsonl`: al lado hay `wf_*.json` que no son
+transcripts. Si algún mensaje aparece en los dos sitios, la deduplicación por `message.id` lo
+absorbe. Cuando entran tokens que antes no se contaban, el techo calibrado no se recalibra a mano:
+se reajusta solo con la siguiente muestra autoritativa, porque cada una lo sobrescribe.
 
 ## 3. Almacenamiento
 

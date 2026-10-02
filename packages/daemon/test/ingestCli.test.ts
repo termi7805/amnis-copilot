@@ -82,3 +82,70 @@ test("amnis ingest incremental vs --rebuild producen los mismos totales", () => 
     rmSync(amnisDirRebuild, { recursive: true, force: true });
   }
 });
+
+function assistantLine(id: string, inputTokens: number): string {
+  return JSON.stringify({
+    type: "assistant",
+    sessionId: "sess-1",
+    cwd: "/fake/project",
+    timestamp: "2026-10-01T10:00:00.000Z",
+    message: {
+      id,
+      model: "claude-haiku-4-5-20251001",
+      usage: { input_tokens: inputTokens, output_tokens: 0 },
+    },
+  });
+}
+
+test("amnis ingest lee los transcripts de subagentes y workflows sin contar dos veces", () => {
+  const claudeDir = mkdtempSync(join(tmpdir(), "amnis-cli-claude-"));
+  const amnisDir = mkdtempSync(join(tmpdir(), "amnis-cli-sub-"));
+  const projectDir = join(claudeDir, "projects", "fake-project");
+  const subagentsDir = join(projectDir, "sess-1", "subagents");
+  const workflowDir = join(subagentsDir, "workflows", "wf_1");
+  mkdirSync(workflowDir, { recursive: true });
+
+  writeFileSync(
+    join(projectDir, "sess-1.jsonl"),
+    `${assistantLine("msg_parent", 100)}\n${assistantLine("msg_shared", 10)}\n`,
+  );
+  // msg_shared también en el subagente: el UNIQUE(dedupe_key) lo absorbe.
+  writeFileSync(
+    join(subagentsDir, "agent-a.jsonl"),
+    `${assistantLine("msg_shared", 10)}\n${assistantLine("msg_sub", 1000)}\n`,
+  );
+  writeFileSync(
+    join(workflowDir, "agent-b.jsonl"),
+    `${assistantLine("msg_wf", 10000)}\n`,
+  );
+  // No es un transcript: no se ingiere aunque tenga forma de línea de uso.
+  writeFileSync(
+    join(subagentsDir, "workflows", "wf_1.json"),
+    assistantLine("msg_not_transcript", 100000),
+  );
+
+  try {
+    const env = {
+      ...process.env,
+      CLAUDE_CONFIG_DIR: claudeDir,
+      AMNIS_DIR: amnisDir,
+    };
+    execFileSync("node", [CLI, "ingest"], { env });
+    const secondPass = execFileSync("node", [CLI, "ingest"], {
+      env,
+      encoding: "utf8",
+    });
+    assert.match(secondPass, /Eventos insertados:\s+0/);
+
+    assert.deepEqual(
+      { ...totals(join(amnisDir, "amnis.sqlite")) },
+      {
+        events: 4,
+        tokens: 100 + 10 + 1000 + 10000,
+      },
+    );
+  } finally {
+    rmSync(claudeDir, { recursive: true, force: true });
+    rmSync(amnisDir, { recursive: true, force: true });
+  }
+});

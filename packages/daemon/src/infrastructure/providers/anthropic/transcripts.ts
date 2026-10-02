@@ -3,6 +3,12 @@ import { join } from "node:path";
 import { CLAUDE_PROJECTS_DIR } from "../../../config.ts";
 import type { ProviderUsageEvent } from "../../../domain/Provider.ts";
 
+/**
+ * Recursivo: cada subagente tiene su propio transcript en
+ * `<sesión>/subagents/agent-*.jsonl` (y los de workflows, un nivel más
+ * abajo), con llamadas que no están en el padre. Solo `.jsonl`: junto a
+ * ellos hay `wf_*.json` que no son transcripts.
+ */
 export function findTranscripts(): string[] {
   let projectDirs: string[];
   try {
@@ -16,7 +22,10 @@ export function findTranscripts(): string[] {
   const files: string[] = [];
   for (const dir of projectDirs) {
     try {
-      for (const name of readdirSync(dir)) {
+      for (const name of readdirSync(dir, {
+        recursive: true,
+        encoding: "utf8",
+      })) {
         if (name.endsWith(".jsonl")) files.push(join(dir, name));
       }
     } catch {
