@@ -72,6 +72,28 @@ export interface WeeklyBreakdown {
   rows: { key: string; label: string; percent: number }[];
 }
 
+export interface QuotaProjection {
+  /** `%` al que llegará la ventana de 5 h en su reset si sigue el ritmo de la
+   * última hora. `null` con pocas muestras o sin endpoint: no se inventa. */
+  fiveHourAtReset: number | null;
+}
+
+/** `GET /api/quota/history`: la serie de `quota_samples`. */
+export interface QuotaHistoryResponse {
+  samples: {
+    at: string;
+    fiveHour: number | null;
+    sevenDay: number | null;
+    local: number;
+  }[];
+}
+
+/** `GET /api/quota/peaks`: el pico de la ventana de 5 h por día (UTC). */
+export interface QuotaPeak {
+  day: string;
+  peak: number;
+}
+
 /**
  * Las dos vías se calculan siempre en paralelo, no solo como fallback:
  * su divergencia dice cuánto se consume fuera de Claude Code.
@@ -95,6 +117,8 @@ export interface QuotaSnapshot {
   };
   /** authoritative.fiveHour - local.fiveHour. `null` si no hay endpoint. */
   divergence: number | null;
+  /** Ritmo de la ventana de 5 h (#85). */
+  projection: QuotaProjection;
   sampledAt: string;
   error: string | null;
 }

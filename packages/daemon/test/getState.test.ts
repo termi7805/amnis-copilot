@@ -23,6 +23,7 @@ function makeQuota(overrides: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
       windowStartedAt: STARTED_AT,
     },
     divergence: null,
+    projection: { fiveHourAtReset: null },
     sampledAt: NOW.toISOString(),
     error: null,
     ...overrides,

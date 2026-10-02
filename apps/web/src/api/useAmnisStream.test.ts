@@ -74,6 +74,7 @@ const hello: StateResponse = {
         windowStartedAt: "2026-01-01T00:00:00Z",
       },
       divergence: null,
+      projection: { fiveHourAtReset: null },
       sampledAt: "2026-01-01T00:00:00Z",
       error: null,
     },

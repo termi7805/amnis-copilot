@@ -158,6 +158,22 @@ ventana rodante da un número que nunca coincide con el del endpoint.
   de 5 h hasta cubrir el momento actual. Si no hay ninguno (primera ejecución sin red), se toma
   el primer `usage_event` que deje un hueco de más de 5 h sin actividad.
 
+### Serie de cuota y proyección al reset (#85)
+
+`quota_samples` guarda una muestra cada 180 s; el daemon la sirve:
+
+- `GET /api/quota/history?from&to` → `{ samples: { at, fiveHour, sevenDay, local }[] }` (24 h por
+  defecto): la sparkline de la ventana actual.
+- `GET /api/quota/peaks?from&to` → `{ day, peak }[]` (7 días por defecto): el `MAX(five_hour_util)`
+  por día (UTC, solo muestras con endpoint) de Histórico.
+- `QuotaSnapshot.projection.fiveHourAtReset`: a qué `%` llegará la ventana de 5 h en su reset si
+  sigue el ritmo de la última hora (`projectAtReset()`, `domain/pace.ts`, mínimos cuadrados). Se
+  calcula dentro de la ventana fija, desde `resets_at − 5 h`, y se para en el reset.
+- **Es `null`, no un número inventado**, con menos de 3 muestras, con menos de 10 min entre la
+  primera y la última, con la última ya en el reset, o sin endpoint (misma regla que el `~` de lo
+  estimado). Una pendiente negativa es ruido y se toma como 0. No se recorta a 100: pasarse es
+  una señal real.
+
 ### El techo del plan se calibra solo
 
 `PLAN_WINDOW_TOKENS` (pro ≈44k, max_5x ≈88k, max_20x ≈220k) son aproximaciones. **El plan sí se

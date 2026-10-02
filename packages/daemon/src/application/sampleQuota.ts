@@ -7,6 +7,7 @@ import {
   windowStart,
 } from "../domain/localQuota.ts";
 import type { QuotaReading } from "../domain/Provider.ts";
+import { type PaceSample, projectAtReset } from "../domain/pace.ts";
 
 /**
  * `sampleQuota` es agnóstica de proveedor: no sabe qué `Provider` la llamó.
@@ -44,6 +45,8 @@ export interface SampleQuotaDeps {
   getPlanWindowTokens(): number | null;
   savePlanWindowTokens(tokens: number): void;
   defaultPlanWindowTokens: number;
+  /** Muestras con endpoint desde `from`, para medir el ritmo (#85). */
+  fiveHourSamplesSince(from: Date): PaceSample[];
   insertQuotaSample(sample: QuotaSampleInput): void;
 }
 
@@ -79,6 +82,7 @@ export async function sampleQuota(
   const localUtilization = estimate(localTokens, ceiling);
 
   let divergence: number | null = null;
+  let fiveHourAtReset: number | null = null;
   if (authoritative) {
     divergence = authoritative.fiveHour.utilization - localUtilization;
 
@@ -89,6 +93,22 @@ export async function sampleQuota(
       authoritative.fiveHour.utilization,
     );
     if (calibrated !== null) deps.savePlanWindowTokens(calibrated);
+
+    // La ventana es fija: se proyecta desde `resets_at − 5 h` y se para en el
+    // reset. La muestra actual aún no está en la BD, se añade a mano.
+    const resets = authoritative.fiveHour.resetsAt;
+    if (resets) {
+      const resetsAt = new Date(resets);
+      const start = new Date(resetsAt.getTime() - FIVE_HOUR_MS);
+      fiveHourAtReset = projectAtReset(
+        [
+          ...deps.fiveHourSamplesSince(start),
+          { at: now, utilization: authoritative.fiveHour.utilization },
+        ],
+        start,
+        resetsAt,
+      );
+    }
   }
 
   deps.insertQuotaSample({
@@ -112,6 +132,7 @@ export async function sampleQuota(
       windowStartedAt: windowStartedAt.toISOString(),
     },
     divergence,
+    projection: { fiveHourAtReset },
     sampledAt: now.toISOString(),
     error: reading.error,
   };

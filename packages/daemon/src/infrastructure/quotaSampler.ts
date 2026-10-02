@@ -10,6 +10,7 @@ import {
 import {
   insertQuotaSample,
   lastKnownReset,
+  samplesBetween,
 } from "./persistence/quotaSamples.ts";
 import { tokensInWindow, usageTimestamps } from "./persistence/usage.ts";
 
@@ -45,6 +46,13 @@ export function createQuotaSampler(
           PLAN_WINDOW_TOKENS[planId() ?? "pro"] ??
           PLAN_WINDOW_TOKENS.pro ??
           44_000,
+        fiveHourSamplesSince: (from) =>
+          samplesBetween(db, accountId, from, new Date())
+            .filter((r) => r.fiveHourUtil !== null)
+            .map((r) => ({
+              at: new Date(r.ts),
+              utilization: r.fiveHourUtil as number,
+            })),
         insertQuotaSample: (sample) =>
           insertQuotaSample(db, { accountId, ...sample }),
       },

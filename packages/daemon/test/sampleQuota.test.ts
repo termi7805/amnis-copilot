@@ -25,6 +25,7 @@ function makeDeps(overrides: Partial<SampleQuotaDeps> = {}): {
     getPlanWindowTokens: () => null,
     savePlanWindowTokens: (tokens) => savedCeilings.push(tokens),
     defaultPlanWindowTokens: DEFAULT_CEILING,
+    fiveHourSamplesSince: () => [],
     insertQuotaSample: (sample) => saved.push(sample),
     ...overrides,
   };
@@ -141,4 +142,32 @@ test("utilización autoritativa suficiente calibra el techo del plan", async () 
   await sampleQuota(deps, NOW);
 
   assert.deepEqual(savedCeilings, [44_000]);
+});
+
+test("proyección: con endpoint y muestras previas da el valor al reset; sin endpoint, null", async () => {
+  // Ventana 10:00-15:00. Ritmo de 10 %/h hasta las 12:00 (20 %): 50 al reset.
+  const previas = [0, 20, 40, 60, 80, 100, 117].map((m) => ({
+    at: new Date(new Date("2026-01-01T10:00:00.000Z").getTime() + m * 60_000),
+    utilization: (10 * m) / 60,
+  }));
+  const { deps } = makeDeps({
+    pollQuota: () =>
+      Promise.resolve({
+        authoritative: {
+          fiveHour: { utilization: 20, resetsAt: "2026-01-01T15:00:00.000Z" },
+          sevenDay: { utilization: 5, resetsAt: "2026-01-08T00:00:00.000Z" },
+          limits: [],
+          weeklyBreakdown: null,
+        },
+        error: null,
+      }),
+    fiveHourSamplesSince: () => previas,
+  });
+  const con = await sampleQuota(deps, new Date("2026-01-01T12:00:00.000Z"));
+  const value = con.projection.fiveHourAtReset;
+  assert.ok(value !== null && Math.abs(value - 50) < 1e-6);
+
+  const { deps: sinEndpoint } = makeDeps();
+  const sin = await sampleQuota(sinEndpoint, NOW);
+  assert.equal(sin.projection.fiveHourAtReset, null);
 });

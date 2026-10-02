@@ -22,6 +22,7 @@ import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
 import { createMediaRoutes } from "../http/routes/media.ts";
+import { createQuotaHistoryRoutes } from "../http/routes/quotaHistory.ts";
 import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
 import { createSettingsRoutes } from "../http/routes/settings.ts";
 import { createSpotifyRoutes } from "../http/routes/spotify.ts";
@@ -198,6 +199,7 @@ export function runServeCli(args: readonly string[] = []): void {
         makeHookDeps(db, accountId, () => watcher.check()),
       ),
       "GET /api/usage": createUsageRoute(db, accountId),
+      ...createQuotaHistoryRoutes(db, accountId),
       "GET /api/state": createStateRoute(stateDeps),
       "POST /api/quota/refresh": createQuotaRefreshRoute(poller.pollNow),
       "GET /api/events": createEventsRoute({

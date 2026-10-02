@@ -13,6 +13,7 @@ const FAKE_SNAPSHOT: QuotaSnapshot = {
     windowStartedAt: "2026-01-01T00:00:00.000Z",
   },
   divergence: null,
+  projection: { fiveHourAtReset: null },
   sampledAt: "2026-01-01T00:00:00.000Z",
   error: null,
 };

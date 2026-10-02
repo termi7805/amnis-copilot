@@ -58,3 +58,65 @@ export function lastKnownReset(
     .get(accountId) as { five_hour_resets_at: string } | undefined;
   return row?.five_hour_resets_at ?? null;
 }
+
+export interface QuotaSampleRow {
+  ts: string;
+  fiveHourUtil: number | null;
+  sevenDayUtil: number | null;
+  localUtil: number;
+}
+
+/** Las muestras de `[from, to]` por `ts` ascendente. */
+export function samplesBetween(
+  db: DatabaseSync,
+  accountId: number,
+  from: Date,
+  to: Date,
+): QuotaSampleRow[] {
+  const rows = db
+    .prepare(`
+      SELECT ts, five_hour_util, seven_day_util, local_util
+      FROM quota_samples
+      WHERE account_id = ? AND ts >= ? AND ts <= ?
+      ORDER BY ts ASC
+    `)
+    .all(accountId, from.toISOString(), to.toISOString()) as {
+    ts: string;
+    five_hour_util: number | null;
+    seven_day_util: number | null;
+    local_util: number;
+  }[];
+  return rows.map((r) => ({
+    ts: r.ts,
+    fiveHourUtil: r.five_hour_util,
+    sevenDayUtil: r.seven_day_util,
+    localUtil: r.local_util,
+  }));
+}
+
+/**
+ * El pico de `five_hour_util` por día, en UTC con `date(ts)` (como
+ * `aggregate()` en `usage.ts`). Solo cuentan las muestras con endpoint: una
+ * estimación local no es un pico del `%` real.
+ */
+export function dailyPeaks(
+  db: DatabaseSync,
+  accountId: number,
+  from: Date,
+  to: Date,
+): { day: string; peak: number }[] {
+  const rows = db
+    .prepare(`
+      SELECT date(ts) AS day, MAX(five_hour_util) AS peak
+      FROM quota_samples
+      WHERE account_id = ? AND ts >= ? AND ts <= ?
+        AND five_hour_util IS NOT NULL
+      GROUP BY day
+      ORDER BY day ASC
+    `)
+    .all(accountId, from.toISOString(), to.toISOString()) as {
+    day: string;
+    peak: number;
+  }[];
+  return rows.map((r) => ({ day: r.day, peak: r.peak }));
+}
