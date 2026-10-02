@@ -16,6 +16,14 @@
      plegado no cambia nada, `.petArea` ya es del mismo ancho que la
      ventana. */
   align-items: stretch;
+  /* La ventana entera es la superficie de clic/arrastre (#32): un doble
+     clic o un arrastre corto seleccionaba el SVG de BIT y el texto de los
+     paneles, y el resaltado azul lo tapaba. Con prefijo porque WebKitGTK
+     (el webview de Tauri en Linux) solo respeta `-webkit-user-select`;
+     `-webkit-user-drag` evita además el arrastre nativo de la imagen. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .petWindow[data-expanded="true"] {
