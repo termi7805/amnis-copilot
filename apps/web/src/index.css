@@ -10,8 +10,17 @@ body,
 #root {
   margin: 0;
   padding: 0;
+  background: transparent;
+}
+
+/*
+ * Solo la ventana flotante va a pantalla completa y sin scroll: en el
+ * dashboard, `overflow: hidden` en la raíz impedía bajar hasta el uso.
+ */
+html[data-window="pet"],
+html[data-window="pet"] body,
+html[data-window="pet"] #root {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: transparent;
 }

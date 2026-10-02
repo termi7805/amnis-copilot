@@ -29,6 +29,12 @@ function App() {
   return pathname === "/pet" ? <PetWindow /> : <Dashboard />;
 }
 
+// Antes del primer render: index.css solo bloquea el scroll en la
+// ventana flotante, nunca en el dashboard.
+if (window.location.pathname === "/pet") {
+  document.documentElement.dataset.window = "pet";
+}
+
 const root = document.getElementById("root");
 if (!root) throw new Error("#root no existe en index.html");
 
