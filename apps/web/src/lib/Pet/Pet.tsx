@@ -1,5 +1,7 @@
-import type { PetSnapshot, PetState } from "@amnis/shared";
+import type { Listening, PetSnapshot, PetState, Vibe } from "@amnis/shared";
 import type { CSSProperties } from "react";
+import { Headphones } from "./Headphones.tsx";
+import { DEFAULT_MUSIC_PREFS, type MusicPrefs } from "./musicLayer.ts";
 import styles from "./Pet.module.css";
 
 export interface PetProps {
@@ -12,6 +14,10 @@ export interface PetProps {
   /** Solo lo usa la escena `pushing` (sello sobre la caja). `null` en
    * cualquier otro estado, o si el daemon no pudo leer `HEAD`. */
   commitHash?: string | null;
+  /** Qué suena (`PetSnapshot.listening`). Con valor, Amnis lleva cascos —
+   * salvo en `waiting` y `limited`, que piden atención y no llevan nada. */
+  listening?: Listening | null;
+  musicPrefs?: MusicPrefs;
 }
 
 /**
@@ -55,10 +61,13 @@ function Scene({
   state,
   resetsAt,
   commitHash,
+  music,
 }: {
   state: PetState;
   resetsAt?: string | null;
   commitHash?: string | null;
+  /** `undefined` = sin capa de música. */
+  music?: { vibe: Vibe };
 }) {
   switch (state) {
     case "coding":
@@ -118,40 +127,71 @@ function Scene({
               <circle cx="76" cy="76" r="4.6" fill="#2F3742" />
               <circle cx="102" cy="82" r="4.2" fill="#2F3742" />
             </g>
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              stroke="#39E0C8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity=".6"
-            >
-              <line x1="38" y1="35" x2="49" y2="37.5" />
-              <line x1="72" y1="35" x2="61" y2="37.5" />
-            </g>
-            <g
-              className={styles.animated}
-              style={{
-                transformOrigin: "55px 46px",
-                animation: `${styles["pet-blink"]} calc(var(--t)*4.5) ease-in-out infinite`,
-              }}
-            >
-              <rect x="40" y="41" width="9" height="9" rx="1" fill="#39E0C8" />
-              <rect x="61" y="41" width="9" height="9" rx="1" fill="#39E0C8" />
-            </g>
-            <g fill="#39E0C8" opacity=".6">
-              <rect x="47" y="56" width="4" height="2.6" />
-              <rect x="53" y="56" width="4" height="2.6" />
-              <rect x="59" y="56" width="4" height="2.6" />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                stroke="#39E0C8"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity=".6"
+              >
+                <line x1="38" y1="35" x2="49" y2="37.5" />
+                <line x1="72" y1="35" x2="61" y2="37.5" />
+              </g>
+              <g
+                className={styles.animated}
+                style={{
+                  transformOrigin: "55px 46px",
+                  animation: `${styles["pet-blink"]} calc(var(--t)*4.5) ease-in-out infinite`,
+                }}
+              >
+                <rect
+                  x="40"
+                  y="41"
+                  width="9"
+                  height="9"
+                  rx="1"
+                  fill="#39E0C8"
+                />
+                <rect
+                  x="61"
+                  y="41"
+                  width="9"
+                  height="9"
+                  rx="1"
+                  fill="#39E0C8"
+                />
+              </g>
+              <g fill="#39E0C8" opacity=".6">
+                <rect x="47" y="56" width="4" height="2.6" />
+                <rect x="53" y="56" width="4" height="2.6" />
+                <rect x="59" y="56" width="4" height="2.6" />
+              </g>
             </g>
           </g>
           <clipPath id="amnis-pet-lap-screen">
@@ -292,51 +332,68 @@ function Scene({
               <circle cx="76" cy="76" r="4.6" fill="#2F3742" />
               <circle cx="95" cy="65" r="4" fill="#2F3742" />
             </g>
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              stroke="#39E0C8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity=".55"
-            >
-              <line x1="39" y1="37" x2="50" y2="37" />
-              <line x1="60" y1="38.5" x2="71" y2="34.5" />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                stroke="#39E0C8"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity=".55"
+              >
+                <line x1="39" y1="37" x2="50" y2="37" />
+                <line x1="60" y1="38.5" x2="71" y2="34.5" />
+              </g>
+              <rect
+                x="39"
+                y="44"
+                width="11"
+                height="3.4"
+                rx="1.7"
+                fill="#39E0C8"
+              />
+              <rect
+                x="60"
+                y="44"
+                width="11"
+                height="3.4"
+                rx="1.7"
+                fill="#39E0C8"
+              />
+              <circle
+                cx="55"
+                cy="57.5"
+                r="2.6"
+                fill="none"
+                stroke="#39E0C8"
+                strokeWidth="2"
+                opacity=".6"
+              />
             </g>
-            <rect
-              x="39"
-              y="44"
-              width="11"
-              height="3.4"
-              rx="1.7"
-              fill="#39E0C8"
-            />
-            <rect
-              x="60"
-              y="44"
-              width="11"
-              height="3.4"
-              rx="1.7"
-              fill="#39E0C8"
-            />
-            <circle
-              cx="55"
-              cy="57.5"
-              r="2.6"
-              fill="none"
-              stroke="#39E0C8"
-              strokeWidth="2"
-              opacity=".6"
-            />
           </g>
           <g
             className={styles.animated}
@@ -424,45 +481,48 @@ function Scene({
           <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
           <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
           <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-          <line
-            x1="55"
-            y1="22"
-            x2="55"
-            y2="14"
-            stroke="#3C4552"
-            strokeWidth="2.6"
-          />
-          <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
-          <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-          <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-          <g
-            stroke="#39E0C8"
-            strokeWidth="2"
-            strokeLinecap="round"
-            opacity=".5"
-          >
-            <path d="M38 35.5q5.5-3 11 0" />
-            <path d="M61 35.5q5.5-3 11 0" />
+          <g className={styles.head}>
+            <line
+              x1="55"
+              y1="22"
+              x2="55"
+              y2="14"
+              stroke="#3C4552"
+              strokeWidth="2.6"
+            />
+            <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
+            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
+            {music && <Headphones vibe={music.vibe} />}
+            <g
+              stroke="#39E0C8"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity=".5"
+            >
+              <path d="M38 35.5q5.5-3 11 0" />
+              <path d="M61 35.5q5.5-3 11 0" />
+            </g>
+            <g
+              className={styles.animated}
+              style={{
+                animation: `${styles["pet-scanX"]} calc(var(--t)*2.4) ease-in-out infinite`,
+              }}
+            >
+              <circle cx="44.5" cy="45" r="6.4" fill="#39E0C8" />
+              <circle cx="65.5" cy="45" r="6.4" fill="#39E0C8" />
+              <circle cx="46.8" cy="45" r="2.6" fill="#171D26" />
+              <circle cx="67.8" cy="45" r="2.6" fill="#171D26" />
+            </g>
+            <path
+              d="M50 57.5q2.5-3 5 0t5 0"
+              fill="none"
+              stroke="#39E0C8"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              opacity=".65"
+            />
           </g>
-          <g
-            className={styles.animated}
-            style={{
-              animation: `${styles["pet-scanX"]} calc(var(--t)*2.4) ease-in-out infinite`,
-            }}
-          >
-            <circle cx="44.5" cy="45" r="6.4" fill="#39E0C8" />
-            <circle cx="65.5" cy="45" r="6.4" fill="#39E0C8" />
-            <circle cx="46.8" cy="45" r="2.6" fill="#171D26" />
-            <circle cx="67.8" cy="45" r="2.6" fill="#171D26" />
-          </g>
-          <path
-            d="M50 57.5q2.5-3 5 0t5 0"
-            fill="none"
-            stroke="#39E0C8"
-            strokeWidth="1.9"
-            strokeLinecap="round"
-            opacity=".65"
-          />
           <g transform="rotate(-4 120 62)">
             <rect
               x="98"
@@ -583,61 +643,92 @@ function Scene({
               <circle cx="35" cy="64" r="4" fill="#2F3742" />
             </g>
             <rect x="75" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle
-              cx="55"
-              cy="12"
-              r="3.4"
-              className={`${styles.antenna} ${styles.animated}`}
-              style={{
-                animation: `${styles["pet-glow"]} calc(var(--t)*2) ease-in-out infinite`,
-              }}
-            />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              stroke="#39E0C8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity=".5"
-            >
-              <line x1="38" y1="33" x2="49" y2="33" />
-              <line x1="61" y1="33" x2="72" y2="33" />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle
+                cx="55"
+                cy="12"
+                r="3.4"
+                className={`${styles.antenna} ${styles.animated}`}
+                style={{
+                  animation: `${styles["pet-glow"]} calc(var(--t)*2) ease-in-out infinite`,
+                }}
+              />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                stroke="#39E0C8"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity=".5"
+              >
+                <line x1="38" y1="33" x2="49" y2="33" />
+                <line x1="61" y1="33" x2="72" y2="33" />
+              </g>
+              <rect
+                x="38"
+                y="38"
+                width="11"
+                height="11"
+                rx="2"
+                fill="#39E0C8"
+              />
+              <rect
+                x="61"
+                y="38"
+                width="11"
+                height="11"
+                rx="2"
+                fill="#39E0C8"
+              />
+              <rect
+                x="43.5"
+                y="39.5"
+                width="4"
+                height="4.5"
+                rx="1"
+                fill="#171D26"
+              />
+              <rect
+                x="66.5"
+                y="39.5"
+                width="4"
+                height="4.5"
+                rx="1"
+                fill="#171D26"
+              />
+              <rect
+                x="52"
+                y="57"
+                width="6"
+                height="2"
+                rx="1"
+                fill="#39E0C8"
+                opacity=".45"
+              />
             </g>
-            <rect x="38" y="38" width="11" height="11" rx="2" fill="#39E0C8" />
-            <rect x="61" y="38" width="11" height="11" rx="2" fill="#39E0C8" />
-            <rect
-              x="43.5"
-              y="39.5"
-              width="4"
-              height="4.5"
-              rx="1"
-              fill="#171D26"
-            />
-            <rect
-              x="66.5"
-              y="39.5"
-              width="4"
-              height="4.5"
-              rx="1"
-              fill="#171D26"
-            />
-            <rect
-              x="52"
-              y="57"
-              width="6"
-              height="2"
-              rx="1"
-              fill="#39E0C8"
-              opacity=".45"
-            />
           </g>
           <ellipse cx="118" cy="92" rx="26" ry="2.4" fill="rgba(23,29,38,.1)" />
           <g
@@ -720,49 +811,66 @@ function Scene({
             <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle
-              cx="55"
-              cy="12"
-              r="4"
-              className={`${styles.antenna} ${styles.animated}`}
-              style={
-                {
-                  "--antenna-base": "#FFB020",
-                  animation: `${styles["pet-glow"]} calc(var(--t)*1.1) ease-in-out infinite`,
-                } as CSSProperties
-              }
-            />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              stroke="#FFB020"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity=".55"
-            >
-              <line x1="37" y1="33" x2="49" y2="31.5" />
-              <line x1="73" y1="33" x2="61" y2="31.5" />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle
+                cx="55"
+                cy="12"
+                r="4"
+                className={`${styles.antenna} ${styles.animated}`}
+                style={
+                  {
+                    "--antenna-base": "#FFB020",
+                    animation: `${styles["pet-glow"]} calc(var(--t)*1.1) ease-in-out infinite`,
+                  } as CSSProperties
+                }
+              />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                stroke="#FFB020"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity=".55"
+              >
+                <line x1="37" y1="33" x2="49" y2="31.5" />
+                <line x1="73" y1="33" x2="61" y2="31.5" />
+              </g>
+              <circle cx="44.5" cy="45" r="7" fill="#FFB020" />
+              <circle cx="65.5" cy="45" r="7" fill="#FFB020" />
+              <circle cx="42" cy="42.5" r="2.2" fill="#171D26" opacity=".35" />
+              <circle cx="63" cy="42.5" r="2.2" fill="#171D26" opacity=".35" />
+              <ellipse
+                cx="55"
+                cy="58"
+                rx="5"
+                ry="3.6"
+                fill="#FFB020"
+                opacity=".7"
+              />
             </g>
-            <circle cx="44.5" cy="45" r="7" fill="#FFB020" />
-            <circle cx="65.5" cy="45" r="7" fill="#FFB020" />
-            <circle cx="42" cy="42.5" r="2.2" fill="#171D26" opacity=".35" />
-            <circle cx="63" cy="42.5" r="2.2" fill="#171D26" opacity=".35" />
-            <ellipse
-              cx="55"
-              cy="58"
-              rx="5"
-              ry="3.6"
-              fill="#FFB020"
-              opacity=".7"
-            />
           </g>
           <g
             className={styles.animated}
@@ -878,39 +986,56 @@ function Scene({
               />
             </g>
             <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <path
-              d="M39 47q5.5-6.5 11 0"
-              fill="none"
-              stroke="#39E0C8"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-            <path
-              d="M60 47q5.5-6.5 11 0"
-              fill="none"
-              stroke="#39E0C8"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-            <path
-              d="M45 56q10 8 20 0"
-              fill="none"
-              stroke="#39E0C8"
-              strokeWidth="2.6"
-              strokeLinecap="round"
-              opacity=".75"
-            />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <path
+                d="M39 47q5.5-6.5 11 0"
+                fill="none"
+                stroke="#39E0C8"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <path
+                d="M60 47q5.5-6.5 11 0"
+                fill="none"
+                stroke="#39E0C8"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <path
+                d="M45 56q10 8 20 0"
+                fill="none"
+                stroke="#39E0C8"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                opacity=".75"
+              />
+            </g>
           </g>
           <g
             className={styles.animated}
@@ -1032,51 +1157,68 @@ function Scene({
             <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
             <rect x="75" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="16"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle
-              cx="55"
-              cy="14"
-              r="3.4"
-              opacity=".3"
-              className={styles.antenna}
-            />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <line
-              x1="39"
-              y1="46"
-              x2="50"
-              y2="46"
-              stroke="#39E0C8"
-              strokeWidth="3"
-              strokeLinecap="round"
-              opacity=".45"
-            />
-            <line
-              x1="60"
-              y1="46"
-              x2="71"
-              y2="46"
-              stroke="#39E0C8"
-              strokeWidth="3"
-              strokeLinecap="round"
-              opacity=".45"
-            />
-            <path
-              d="M52 57q3 3 6 0"
-              fill="none"
-              stroke="#39E0C8"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              opacity=".25"
-            />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="16"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle
+                cx="55"
+                cy="14"
+                r="3.4"
+                opacity=".3"
+                className={styles.antenna}
+              />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <line
+                x1="39"
+                y1="46"
+                x2="50"
+                y2="46"
+                stroke="#39E0C8"
+                strokeWidth="3"
+                strokeLinecap="round"
+                opacity=".45"
+              />
+              <line
+                x1="60"
+                y1="46"
+                x2="71"
+                y2="46"
+                stroke="#39E0C8"
+                strokeWidth="3"
+                strokeLinecap="round"
+                opacity=".45"
+              />
+              <path
+                d="M52 57q3 3 6 0"
+                fill="none"
+                stroke="#39E0C8"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                opacity=".25"
+              />
+            </g>
           </g>
           <g>
             <rect
@@ -1157,48 +1299,65 @@ function Scene({
             <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle
-              cx="55"
-              cy="12"
-              r="3.4"
-              className={`${styles.antenna} ${styles.animated}`}
-              style={{
-                animation: `${styles["pet-glow"]} calc(var(--t)*1.2) ease-in-out infinite`,
-              }}
-            />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              fill="none"
-              stroke="#39E0C8"
-              strokeWidth="3.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M40 40l5 5-5 5" />
-              <path d="M61 40l5 5-5 5" />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle
+                cx="55"
+                cy="12"
+                r="3.4"
+                className={`${styles.antenna} ${styles.animated}`}
+                style={{
+                  animation: `${styles["pet-glow"]} calc(var(--t)*1.2) ease-in-out infinite`,
+                }}
+              />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                fill="none"
+                stroke="#39E0C8"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M40 40l5 5-5 5" />
+                <path d="M61 40l5 5-5 5" />
+              </g>
+              <rect
+                x="49"
+                y="57"
+                width="12"
+                height="2.4"
+                rx="1.2"
+                fill="#39E0C8"
+                opacity=".7"
+                className={styles.animated}
+                style={{
+                  animation: `${styles["pet-cursor"]} calc(var(--t)*.8) step-end infinite`,
+                }}
+              />
             </g>
-            <rect
-              x="49"
-              y="57"
-              width="12"
-              height="2.4"
-              rx="1.2"
-              fill="#39E0C8"
-              opacity=".7"
-              className={styles.animated}
-              style={{
-                animation: `${styles["pet-cursor"]} calc(var(--t)*.8) step-end infinite`,
-              }}
-            />
           </g>
           <g
             className={styles.animated}
@@ -1346,60 +1505,91 @@ function Scene({
             <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle
-              cx="55"
-              cy="12"
-              r="3.4"
-              className={`${styles.antenna} ${styles.animated}`}
-              style={{
-                animation: `${styles["pet-glow"]} calc(var(--t)*1.6) ease-in-out infinite`,
-              }}
-            />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              stroke="#39E0C8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity=".5"
-            >
-              <line x1="38" y1="34" x2="49" y2="35.5" />
-              <line x1="72" y1="34" x2="61" y2="35.5" />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle
+                cx="55"
+                cy="12"
+                r="3.4"
+                className={`${styles.antenna} ${styles.animated}`}
+                style={{
+                  animation: `${styles["pet-glow"]} calc(var(--t)*1.6) ease-in-out infinite`,
+                }}
+              />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                stroke="#39E0C8"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity=".5"
+              >
+                <line x1="38" y1="34" x2="49" y2="35.5" />
+                <line x1="72" y1="34" x2="61" y2="35.5" />
+              </g>
+              <rect
+                x="38"
+                y="40"
+                width="11"
+                height="10"
+                rx="2"
+                fill="#39E0C8"
+              />
+              <rect
+                x="61"
+                y="40"
+                width="11"
+                height="10"
+                rx="2"
+                fill="#39E0C8"
+              />
+              <rect
+                x="43.5"
+                y="42.5"
+                width="4.5"
+                height="5"
+                rx="1"
+                fill="#171D26"
+              />
+              <rect
+                x="66.5"
+                y="42.5"
+                width="4.5"
+                height="5"
+                rx="1"
+                fill="#171D26"
+              />
+              <path
+                d="M49 56.5q6 4.5 12 0"
+                fill="none"
+                stroke="#39E0C8"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                opacity=".7"
+              />
             </g>
-            <rect x="38" y="40" width="11" height="10" rx="2" fill="#39E0C8" />
-            <rect x="61" y="40" width="11" height="10" rx="2" fill="#39E0C8" />
-            <rect
-              x="43.5"
-              y="42.5"
-              width="4.5"
-              height="5"
-              rx="1"
-              fill="#171D26"
-            />
-            <rect
-              x="66.5"
-              y="42.5"
-              width="4.5"
-              height="5"
-              rx="1"
-              fill="#171D26"
-            />
-            <path
-              d="M49 56.5q6 4.5 12 0"
-              fill="none"
-              stroke="#39E0C8"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              opacity=".7"
-            />
           </g>
           <g
             className={styles.animated}
@@ -1578,45 +1768,90 @@ function Scene({
             <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle
-              cx="55"
-              cy="12"
-              r="3.4"
-              className={styles.antenna}
-              fill="#39E0C8"
-            />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              stroke="#39E0C8"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity=".55"
-            >
-              <line x1="38" y1="35" x2="49" y2="36.5" />
-              <line x1="72" y1="35" x2="61" y2="36.5" />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle
+                cx="55"
+                cy="12"
+                r="3.4"
+                className={styles.antenna}
+                fill="#39E0C8"
+              />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                stroke="#39E0C8"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity=".55"
+              >
+                <line x1="38" y1="35" x2="49" y2="36.5" />
+                <line x1="72" y1="35" x2="61" y2="36.5" />
+              </g>
+              <rect
+                x="39"
+                y="41"
+                width="10"
+                height="9"
+                rx="1.5"
+                fill="#39E0C8"
+              />
+              <rect
+                x="61"
+                y="41"
+                width="10"
+                height="9"
+                rx="1.5"
+                fill="#39E0C8"
+              />
+              <rect
+                x="44"
+                y="43"
+                width="4"
+                height="4.6"
+                rx="1"
+                fill="#171D26"
+              />
+              <rect
+                x="66"
+                y="43"
+                width="4"
+                height="4.6"
+                rx="1"
+                fill="#171D26"
+              />
+              <rect
+                x="50"
+                y="56.5"
+                width="10"
+                height="2.2"
+                rx="1.1"
+                fill="#39E0C8"
+                opacity=".55"
+              />
             </g>
-            <rect x="39" y="41" width="10" height="9" rx="1.5" fill="#39E0C8" />
-            <rect x="61" y="41" width="10" height="9" rx="1.5" fill="#39E0C8" />
-            <rect x="44" y="43" width="4" height="4.6" rx="1" fill="#171D26" />
-            <rect x="66" y="43" width="4" height="4.6" rx="1" fill="#171D26" />
-            <rect
-              x="50"
-              y="56.5"
-              width="10"
-              height="2.2"
-              rx="1.1"
-              fill="#39E0C8"
-              opacity=".55"
-            />
           </g>
           <g
             className={styles.animated}
@@ -1725,53 +1960,70 @@ function Scene({
             <rect x="38" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="60" y="91" width="12" height="5" rx="2.5" fill="#2A313B" />
             <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="14"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle
-              cx="55"
-              cy="12"
-              r="3.4"
-              className={styles.antenna}
-              fill="#39E0C8"
-            />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              className={styles.animated}
-              style={{
-                transformOrigin: "55px 45px",
-                animation: `${styles["pet-blink"]} calc(var(--t)*5) ease-in-out infinite`,
-              }}
-            >
-              <path
-                d="M38 47q6-9 12 0"
-                fill="none"
-                stroke="#39E0C8"
-                strokeWidth="3.2"
-                strokeLinecap="round"
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="14"
+                stroke="#3C4552"
+                strokeWidth="2.6"
               />
+              <circle
+                cx="55"
+                cy="12"
+                r="3.4"
+                className={styles.antenna}
+                fill="#39E0C8"
+              />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                className={styles.animated}
+                style={{
+                  transformOrigin: "55px 45px",
+                  animation: `${styles["pet-blink"]} calc(var(--t)*5) ease-in-out infinite`,
+                }}
+              >
+                <path
+                  d="M38 47q6-9 12 0"
+                  fill="none"
+                  stroke="#39E0C8"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M60 47q6-9 12 0"
+                  fill="none"
+                  stroke="#39E0C8"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                />
+              </g>
               <path
-                d="M60 47q6-9 12 0"
+                d="M47 56q8 6 16 0"
                 fill="none"
                 stroke="#39E0C8"
-                strokeWidth="3.2"
+                strokeWidth="2.4"
                 strokeLinecap="round"
+                opacity=".75"
               />
             </g>
-            <path
-              d="M47 56q8 6 16 0"
-              fill="none"
-              stroke="#39E0C8"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              opacity=".75"
-            />
           </g>
           <g
             className={styles.animated}
@@ -1927,63 +2179,80 @@ function Scene({
             <rect x="60" y="92" width="14" height="5" rx="2.5" fill="#2A313B" />
             <rect x="25" y="72" width="8" height="15" rx="4" fill="#2F3742" />
             <rect x="75" y="72" width="8" height="15" rx="4" fill="#2F3742" />
-            <line
-              x1="55"
-              y1="22"
-              x2="55"
-              y2="15"
-              stroke="#3C4552"
-              strokeWidth="2.6"
-            />
-            <circle
-              cx="55"
-              cy="13"
-              r="3.6"
-              className={`${styles.antenna} ${styles.animated}`}
-              style={
-                {
-                  "--antenna-base": "#EC3013",
-                  animation: `${styles["pet-glow"]} calc(var(--t)*2.4) ease-in-out infinite`,
-                } as CSSProperties
-              }
-            />
-            <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
-            <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
-            <g
-              stroke="#EC3013"
-              strokeWidth="2"
-              strokeLinecap="round"
-              opacity=".5"
-            >
-              <line x1="38" y1="36" x2="49" y2="33.5" />
-              <line x1="72" y1="36" x2="61" y2="33.5" />
+            <g className={styles.head}>
+              <line
+                x1="55"
+                y1="22"
+                x2="55"
+                y2="15"
+                stroke="#3C4552"
+                strokeWidth="2.6"
+              />
+              <circle
+                cx="55"
+                cy="13"
+                r="3.6"
+                className={`${styles.antenna} ${styles.animated}`}
+                style={
+                  {
+                    "--antenna-base": "#EC3013",
+                    animation: `${styles["pet-glow"]} calc(var(--t)*2.4) ease-in-out infinite`,
+                  } as CSSProperties
+                }
+              />
+              <rect
+                x="24"
+                y="22"
+                width="62"
+                height="48"
+                rx="7"
+                fill="#4A5563"
+              />
+              <rect
+                x="28"
+                y="26"
+                width="54"
+                height="40"
+                rx="5"
+                fill="#171D26"
+              />
+              {music && <Headphones vibe={music.vibe} />}
+              <g
+                stroke="#EC3013"
+                strokeWidth="2"
+                strokeLinecap="round"
+                opacity=".5"
+              >
+                <line x1="38" y1="36" x2="49" y2="33.5" />
+                <line x1="72" y1="36" x2="61" y2="33.5" />
+              </g>
+              <line
+                x1="38"
+                y1="45"
+                x2="49"
+                y2="45"
+                stroke="#EC3013"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
+              <line
+                x1="61"
+                y1="45"
+                x2="72"
+                y2="45"
+                stroke="#EC3013"
+                strokeWidth="3.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M49 58q6-4.5 12 0"
+                fill="none"
+                stroke="#EC3013"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                opacity=".7"
+              />
             </g>
-            <line
-              x1="38"
-              y1="45"
-              x2="49"
-              y2="45"
-              stroke="#EC3013"
-              strokeWidth="3.2"
-              strokeLinecap="round"
-            />
-            <line
-              x1="61"
-              y1="45"
-              x2="72"
-              y2="45"
-              stroke="#EC3013"
-              strokeWidth="3.2"
-              strokeLinecap="round"
-            />
-            <path
-              d="M49 58q6-4.5 12 0"
-              fill="none"
-              stroke="#EC3013"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              opacity=".7"
-            />
           </g>
           <rect x="88" y="30" width="58" height="62" fill="#E4D9D6" />
           <rect x="88" y="30" width="58" height="6" fill="#B3A7A3" />
@@ -2157,10 +2426,21 @@ export function Pet({
   fatigue,
   resetsAt = null,
   commitHash = null,
+  listening = null,
+  musicPrefs = DEFAULT_MUSIC_PREFS,
 }: PetProps) {
   const style = {
     "--pet-fatigue": fatigueLevel(fatigue),
   } as CSSProperties;
+  // `waiting` y `limited` piden atención (un permiso pendiente, el límite
+  // alcanzado): nada de la capa encima, y no se puede configurar (#61).
+  const music =
+    listening !== null &&
+    musicPrefs.enabled &&
+    state !== "waiting" &&
+    state !== "limited"
+      ? { vibe: listening.vibe }
+      : undefined;
 
   return (
     <svg
@@ -2175,7 +2455,12 @@ export function Pet({
       style={style}
     >
       <title>{STATE_TITLE[state]}</title>
-      <Scene state={state} resetsAt={resetsAt} commitHash={commitHash} />
+      <Scene
+        state={state}
+        resetsAt={resetsAt}
+        commitHash={commitHash}
+        music={music}
+      />
     </svg>
   );
 }

@@ -1,4 +1,4 @@
-import type { PetSnapshot } from "@amnis/shared";
+import type { Listening, PetSnapshot } from "@amnis/shared";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { fatigueLevel, Pet, PetOffline } from "./Pet.tsx";
@@ -148,6 +148,116 @@ describe("PetOffline", () => {
     expect(pet.querySelector("title")?.textContent).toMatch(/sin conexión/i);
     expect(pet.querySelector("[data-look]")?.getAttribute("data-look")).toBe(
       "offline",
+    );
+  });
+});
+
+const LISTENING: Listening = {
+  vibe: "fiesta",
+  bpm: 124,
+  track: { id: "t1", title: "Canción", artist: "A", imageUrl: null },
+};
+
+/** Estados que piden atención: la capa de música no se pinta (#61). */
+const ATTENTION: PetSnapshot["state"][] = ["waiting", "limited"];
+const WITH_LAYER = ALL_STATES.filter((s) => !ATTENTION.includes(s));
+
+describe("capa de música", () => {
+  it("el data-look depende solo de state, con y sin listening", () => {
+    for (const listening of [null, LISTENING]) {
+      const looks = ALL_STATES.map((state) => {
+        const { container, unmount } = render(
+          <Pet state={state} level={1} fatigue={0.3} listening={listening} />,
+        );
+        const look = container
+          .querySelector("[data-look]")
+          ?.getAttribute("data-look");
+        unmount();
+        return look;
+      });
+      expect(looks).toEqual(ALL_STATES);
+    }
+  });
+
+  it("los cascos aparecen una sola vez en los 10 estados con capa, y solo con listening", () => {
+    expect(WITH_LAYER).toHaveLength(10);
+    for (const state of WITH_LAYER) {
+      const on = render(
+        <Pet state={state} level={1} fatigue={0} listening={LISTENING} />,
+      );
+      expect(on.queryAllByTestId("headphones"), state).toHaveLength(1);
+      on.unmount();
+
+      const off = render(<Pet state={state} level={1} fatigue={0} />);
+      expect(off.queryAllByTestId("headphones"), state).toHaveLength(0);
+      off.unmount();
+    }
+  });
+
+  it("waiting y limited no pintan ningún elemento de la capa", () => {
+    for (const state of ATTENTION) {
+      const { container, unmount } = render(
+        <Pet state={state} level={1} fatigue={0} listening={LISTENING} />,
+      );
+      expect(container.querySelector("[data-music]"), state).toBeNull();
+      unmount();
+    }
+  });
+
+  it("con el interruptor general apagado no se pinta nada, en ningún estado", () => {
+    for (const state of ALL_STATES) {
+      const { container, unmount } = render(
+        <Pet
+          state={state}
+          level={1}
+          fatigue={0}
+          listening={LISTENING}
+          musicPrefs={{ enabled: false }}
+        />,
+      );
+      expect(container.querySelector("[data-music]"), state).toBeNull();
+      unmount();
+    }
+  });
+
+  it("los cascos van dentro del grupo de la cabeza, que existe en las 12 escenas", () => {
+    for (const state of ALL_STATES) {
+      const { container, unmount } = render(
+        <Pet state={state} level={1} fatigue={0} listening={LISTENING} />,
+      );
+      const head = container.querySelector('[class*="head"]');
+      expect(head, state).not.toBeNull();
+      if (!ATTENTION.includes(state)) {
+        expect(
+          head?.querySelector("[data-testid='headphones']"),
+          state,
+        ).not.toBeNull();
+      }
+      unmount();
+    }
+  });
+
+  it("el LED lleva el color de la vibe y el resto de la escena no cambia de color", () => {
+    const { container } = render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={0}
+        listening={{ ...LISTENING, vibe: "intensa" }}
+      />,
+    );
+    const phones = screen.getByTestId("headphones");
+    expect(phones.dataset.vibe).toBe("intensa");
+    expect(phones.querySelectorAll("circle")[0]).toHaveAttribute(
+      "fill",
+      "#F2A23A",
+    );
+    // Sin la capa, el markup es el mismo salvo los cascos: el cuerpo no cambia.
+    const withPhones = container.querySelector("[data-look]");
+    withPhones?.querySelector("[data-testid='headphones']")?.remove();
+    const bare = render(<Pet state="coding" level={1} fatigue={0} />);
+    expect(withPhones?.innerHTML).toBe(
+      bare.container.querySelector("[data-look]")?.innerHTML,
     );
   });
 });

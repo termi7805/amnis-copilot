@@ -70,6 +70,20 @@ describe("MediaPanel", () => {
     expect(screen.getByTestId("activity-duration")).toHaveTextContent("12 min");
   });
 
+  it("el bicho del panel lleva los cascos cuando suena algo (#61)", () => {
+    renderPanel({
+      pet: {
+        ...pet,
+        listening: {
+          vibe: "fiesta",
+          bpm: 124,
+          track: { id: "t1", title: "T", artist: "A", imageUrl: null },
+        },
+      },
+    });
+    expect(screen.getByTestId("headphones")).toBeInTheDocument();
+  });
+
   it("offline, el bicho pasa a la escena de sin conexión", () => {
     const { container } = renderPanel({ status: "offline" });
     expect(

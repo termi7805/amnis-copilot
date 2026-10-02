@@ -231,6 +231,25 @@ describe("PetWindow", () => {
 
     vi.useRealTimers();
   });
+  it("con listening en el snapshot, la mascota lleva cascos; sin él, no (#61)", () => {
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", fakeState));
+    expect(screen.queryByTestId("headphones")).toBeNull();
+
+    const listening = {
+      vibe: "chill" as const,
+      bpm: 90,
+      track: { id: "t1", title: "T", artist: "A", imageUrl: null },
+    };
+    act(() => source?.emit("state", { ...fakeState.pet, listening }));
+    expect(screen.getByTestId("headphones").dataset.vibe).toBe("chill");
+
+    act(() => source?.emit("state", { ...fakeState.pet, listening: null }));
+    expect(screen.queryByTestId("headphones")).toBeNull();
+  });
+
   describe("paneles (#57)", () => {
     function mount(state: StateResponse = fakeState) {
       render(<PetWindow />);

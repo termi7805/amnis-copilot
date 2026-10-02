@@ -24,6 +24,7 @@ export function ActivityRow({ pet, status, resetsAt, now }: ActivityRowProps) {
             fatigue={pet.fatigue}
             resetsAt={resetsAt}
             commitHash={pet.commitHash}
+            listening={pet.listening}
           />
         )}
       </div>

@@ -753,3 +753,10 @@
     transition: none !important;
   }
 }
+
+/* Grupo de la cabeza de cada escena (#61): antena, marco, pantalla, cara y
+   cascos. Origen del cabeceo al BPM de #62; hoy no anima nada. */
+.head {
+  transform-box: view-box;
+  transform-origin: 55px 70px;
+}
