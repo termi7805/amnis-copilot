@@ -146,10 +146,60 @@ export interface MediaSnapshot {
   bpm: number | null;
 }
 
+/** Qué enseña la pantalla de Amnis al cambiar de canción. */
+export type ScreenMode =
+  | "two-phase"
+  | "cover"
+  | "cover-title"
+  | "pixel"
+  | "text"
+  | "none";
+
+/**
+ * Preferencias de la capa de música de la mascota. Viven en el daemon
+ * (`~/.amnis/settings.json`) y viajan por SSE: la mascota (webview de Tauri) y
+ * el dashboard (navegador) no comparten `localStorage`, así que un ajuste
+ * hecho en uno no llegaría al otro.
+ *
+ * No son configurables a propósito: la capa apagada en `waiting` y `limited`,
+ * los colores de cada vibe, los umbrales de la vibe y el movimiento reducido
+ * (lo decide el sistema operativo).
+ */
+export interface MusicPrefs {
+  /** Interruptor general: apagado, Amnis no lleva nada de la capa. */
+  enabled: boolean;
+  /** Qué se mueve: la cabeza además del accesorio, o solo el accesorio. */
+  motion: "head" | "accessory";
+  /** 0–1: cuánto reduce la fatiga la amplitud del movimiento. */
+  damping: number;
+  color: "vibe" | "cover" | "teal";
+  /** Sin datos de ReccoBeats: notas neutras, o solo los cascos. */
+  fallback: "neutral" | "quiet";
+  screen: ScreenMode;
+  /** 2–8 s en pantalla. */
+  screenSeconds: number;
+  screenEntry: "tv" | "fade";
+  /** Líneas de pantalla sobre la portada. */
+  scanlines: boolean;
+}
+
+export const DEFAULT_MUSIC_PREFS: MusicPrefs = {
+  enabled: true,
+  motion: "head",
+  damping: 0.7,
+  color: "vibe",
+  fallback: "neutral",
+  screen: "two-phase",
+  screenSeconds: 6,
+  screenEntry: "tv",
+  scanlines: true,
+};
+
 export interface StateResponse {
   pet: PetSnapshot;
   quotas: QuotaSnapshot[];
   media: MediaSnapshot;
+  settings: MusicPrefs;
   daemon: {
     version: string;
     startedAt: string;
@@ -167,7 +217,8 @@ export type AmnisEvent =
   | { event: "hello"; data: StateResponse }
   | { event: "state"; data: PetSnapshot }
   | { event: "quota"; data: QuotaSnapshot[] }
-  | { event: "media"; data: MediaSnapshot };
+  | { event: "media"; data: MediaSnapshot }
+  | { event: "settings"; data: MusicPrefs };
 
 /** Evento de hook ya normalizado por el `Provider`. */
 export interface NormalizedHookEvent {

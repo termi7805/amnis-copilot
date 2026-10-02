@@ -1,5 +1,6 @@
 import type {
   MediaSnapshot,
+  MusicPrefs,
   PetSnapshot,
   QuotaSnapshot,
   StateResponse,
@@ -34,7 +35,7 @@ export const CONNECTION_LABEL: Record<ConnectionStatus, string> = {
 
 /**
  * GET /api/events por SSE (docs/STACK.md §4): `hello` trae el
- * StateResponse completo al conectar, `state`/`quota`/`media` solo
+ * StateResponse completo al conectar, `state`/`quota`/`media`/`settings` solo
  * sustituyen su parte — nunca se pierde lo que otro evento ya trajo.
  */
 export function useAmnisStream(): AmnisStream {
@@ -65,6 +66,13 @@ export function useAmnisStream(): AmnisStream {
     source.addEventListener("media", (e: MessageEvent<string>) => {
       const media = JSON.parse(e.data) as MediaSnapshot;
       setState((current) => (current ? { ...current, media } : current));
+    });
+
+    // Las preferencias de la capa de música viven en el daemon: un cambio
+    // hecho en el dashboard llega aquí y se aplica en vivo (#65).
+    source.addEventListener("settings", (e: MessageEvent<string>) => {
+      const settings = JSON.parse(e.data) as MusicPrefs;
+      setState((current) => (current ? { ...current, settings } : current));
     });
 
     source.onopen = () => {

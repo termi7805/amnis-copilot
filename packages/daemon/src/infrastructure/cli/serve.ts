@@ -21,6 +21,7 @@ import { createEventsRoute } from "../http/routes/events.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
 import { createMediaRoutes } from "../http/routes/media.ts";
 import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
+import { createSettingsRoutes } from "../http/routes/settings.ts";
 import { createSpotifyRoutes } from "../http/routes/spotify.ts";
 import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
@@ -35,6 +36,7 @@ import {
   insertHookEvent,
   lastKnownStateEvent,
 } from "../persistence/hookEvents.ts";
+import { readSettings, writeSettings } from "../persistence/settings.ts";
 import {
   readSpotifyConfig,
   writeSpotifyToken,
@@ -72,6 +74,7 @@ function makeStateDeps(
   startedAt: string,
   media: GetStateDeps["media"],
   listening: GetStateDeps["listening"],
+  settings: GetStateDeps["settings"],
 ): GetStateDeps {
   const quotaSamplers = providers.map((provider) =>
     createQuotaSampler(db, accountId, provider),
@@ -85,6 +88,7 @@ function makeStateDeps(
     sampleQuotas: () => Promise.all(quotaSamplers.map((sample) => sample())),
     media,
     listening,
+    settings,
     readCommitHash,
   };
 }
@@ -101,6 +105,9 @@ export function runServeCli(args: readonly string[] = []): void {
   const startedAt = new Date().toISOString();
 
   const broadcaster = createEventBroadcaster();
+  // Preferencias de la capa de música: en memoria, con `~/.amnis/settings.json`
+  // como copia. Un fichero estropeado arranca con los valores por defecto.
+  let settings = readSettings();
   // Sin clientes SSE no se consulta Spotify: el ciclo lo arranca el primer
   // cliente y se apaga solo al irse el último (mediaPoller.ts).
   const mediaPoller = startMediaPoller({
@@ -125,6 +132,7 @@ export function runServeCli(args: readonly string[] = []): void {
       watcher.check();
       return watcher.listening();
     },
+    () => settings,
   );
 
   // Cacheadas del último poll de cuota: un `state` disparado por hooks no
@@ -179,6 +187,15 @@ export function runServeCli(args: readonly string[] = []): void {
           writeSpotifyToken(token);
           // Recién conectado: que la UI vea qué suena ya, no en 30 s.
           mediaPoller.pollNow();
+        },
+      }),
+      ...createSettingsRoutes({
+        get: () => settings,
+        save: (next) => {
+          writeSettings(next);
+          settings = next;
+          // La mascota y el dashboard las aplican en vivo, sin reiniciar.
+          broadcaster.broadcast({ event: "settings", data: next });
         },
       }),
       ...createMediaRoutes({

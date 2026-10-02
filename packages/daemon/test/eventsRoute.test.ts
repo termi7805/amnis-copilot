@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { AmnisEvent, StateResponse } from "@amnis/shared";
+import {
+  type AmnisEvent,
+  DEFAULT_MUSIC_PREFS,
+  type StateResponse,
+} from "@amnis/shared";
 import { createEventBroadcaster } from "../src/infrastructure/http/events.ts";
 import { createEventsRoute } from "../src/infrastructure/http/routes/events.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
@@ -18,6 +22,7 @@ const HELLO_STATE: StateResponse = {
   },
   quotas: [],
   media: emptyMedia("not-configured", "2026-01-01T00:00:00.000Z"),
+  settings: DEFAULT_MUSIC_PREFS,
   daemon: {
     version: "0.0.1",
     startedAt: "2026-01-01T00:00:00.000Z",

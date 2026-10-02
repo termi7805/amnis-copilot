@@ -1,8 +1,9 @@
-import type {
-  MediaSnapshot,
-  PetSnapshot,
-  QuotaSnapshot,
-  StateResponse,
+import {
+  DEFAULT_MUSIC_PREFS,
+  type MediaSnapshot,
+  type PetSnapshot,
+  type QuotaSnapshot,
+  type StateResponse,
 } from "@amnis/shared";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -61,6 +62,7 @@ const hello: StateResponse = {
     vibe: "neutral",
     bpm: null,
   },
+  settings: DEFAULT_MUSIC_PREFS,
   quotas: [
     {
       provider: "anthropic",
@@ -106,6 +108,28 @@ describe("useAmnisStream", () => {
 
     expect(result.current.state?.pet.state).toBe("testing");
     expect(result.current.state?.quotas).toHaveLength(1);
+  });
+
+  it("aplica settings sin perder el resto, y el hello ya las trae (#65)", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.emit("hello", hello));
+    expect(result.current.state?.settings).toEqual(DEFAULT_MUSIC_PREFS);
+
+    const next = { ...DEFAULT_MUSIC_PREFS, enabled: false, screenSeconds: 3 };
+    act(() => source?.emit("settings", next));
+
+    expect(result.current.state?.settings).toEqual(next);
+    expect(result.current.state?.pet.state).toBe("coding");
+    expect(result.current.state?.quotas).toHaveLength(1);
+  });
+
+  it("un settings antes del hello no rompe nada", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+    act(() => source?.emit("settings", DEFAULT_MUSIC_PREFS));
+    expect(result.current.state).toBeNull();
   });
 
   it("aplica quota sin perder el pet ya conocido", () => {

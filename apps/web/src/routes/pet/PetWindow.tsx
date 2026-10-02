@@ -149,6 +149,7 @@ export function PetWindow() {
               }
               commitHash={state.pet.commitHash}
               listening={state.pet.listening}
+              musicPrefs={state.settings}
             />
           ) : (
             <span>{CONNECTION_LABEL[status]}</span>
@@ -163,6 +164,7 @@ export function PetWindow() {
               status={status}
               quotas={state.quotas}
               now={now}
+              musicPrefs={state.settings}
               onSelectPanel={setPanel}
             />
           )}
@@ -175,6 +177,7 @@ export function PetWindow() {
               now={now}
               media={state?.media ?? null}
               status={status}
+              musicPrefs={state?.settings}
               onSelectPanel={setPanel}
             />
           )}

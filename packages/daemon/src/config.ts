@@ -19,6 +19,12 @@ export const CLAUDE_CREDENTIALS = join(CLAUDE_DIR, ".credentials.json");
 /** Datos propios de Amnis. La BD de aquí es caché derivada: borrable. */
 export const AMNIS_DIR = process.env.AMNIS_DIR ?? join(HOME, ".amnis");
 export const DB_PATH = join(AMNIS_DIR, "amnis.sqlite");
+/**
+ * Preferencias del usuario (#65). Fichero aparte, no SQLite: `amnis ingest
+ * --rebuild` solo borra `DB_PATH`, y perder los ajustes al reconstruir datos
+ * sería un bug difícil de atribuir.
+ */
+export const SETTINGS_PATH = join(AMNIS_DIR, "settings.json");
 /** Token refrescado por Amnis. Nunca de vuelta en ~/.claude/. Permisos 0600. */
 export const TOKEN_CACHE_PATH = join(AMNIS_DIR, "token.json");
 

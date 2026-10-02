@@ -1,4 +1,4 @@
-import type { StateResponse } from "@amnis/shared";
+import { DEFAULT_MUSIC_PREFS, type StateResponse } from "@amnis/shared";
 import {
   act,
   cleanup,
@@ -64,6 +64,7 @@ const fakeState: StateResponse = {
     vibe: "neutral",
     bpm: null,
   },
+  settings: DEFAULT_MUSIC_PREFS,
   quotas: [],
   daemon: {
     version: "0.0.1",
@@ -252,6 +253,45 @@ describe("PetWindow", () => {
     expect(screen.getByTestId("headphones").dataset.visible).toBe("false");
     act(() => vi.advanceTimersByTime(400));
     expect(screen.queryByTestId("headphones")).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it("un cambio de preferencias del daemon se aplica en vivo, sin reiniciar (#65)", () => {
+    vi.useFakeTimers();
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    const listening = {
+      vibe: "fiesta" as const,
+      bpm: 120,
+      track: { id: "t1", title: "T", artist: "A", imageUrl: null },
+    };
+    act(() =>
+      source?.emit("hello", {
+        ...fakeState,
+        pet: { ...fakeState.pet, listening },
+      }),
+    );
+    const pet = () => screen.getByTestId("pet") as unknown as HTMLElement;
+    expect(screen.getByTestId("headphones")).toBeInTheDocument();
+    expect(pet().dataset.motion).toBe("head");
+
+    // Solo el accesorio: la cabeza deja de cabecear, los cascos siguen.
+    act(() =>
+      source?.emit("settings", { ...DEFAULT_MUSIC_PREFS, motion: "accessory" }),
+    );
+    expect(pet().dataset.motion).toBe("accessory");
+    expect(screen.getByTestId("headphones")).toBeInTheDocument();
+
+    // Interruptor general apagado: Amnis se quita los cascos.
+    act(() =>
+      source?.emit("settings", { ...DEFAULT_MUSIC_PREFS, enabled: false }),
+    );
+    expect(screen.queryByTestId("headphones")).toBeNull();
+
+    // Y encendido otra vez, vuelven.
+    act(() => source?.emit("settings", DEFAULT_MUSIC_PREFS));
+    expect(screen.getByTestId("headphones")).toBeInTheDocument();
     vi.useRealTimers();
   });
 

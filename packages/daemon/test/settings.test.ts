@@ -1,0 +1,118 @@
+import assert from "node:assert/strict";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { test } from "node:test";
+import { DEFAULT_MUSIC_PREFS } from "@amnis/shared";
+import { DB_PATH, SETTINGS_PATH } from "../src/config.ts";
+import {
+  readSettings,
+  writeSettings,
+} from "../src/infrastructure/persistence/settings.ts";
+
+function withDir(fn: (dir: string) => void): void {
+  const dir = mkdtempSync(join(tmpdir(), "amnis-settings-"));
+  try {
+    fn(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+test("sin fichero: valores por defecto", () => {
+  withDir((dir) => {
+    assert.deepEqual(
+      readSettings(join(dir, "settings.json")),
+      DEFAULT_MUSIC_PREFS,
+    );
+  });
+});
+
+test("un settings.json corrupto arranca con los valores por defecto, sin lanzar", () => {
+  withDir((dir) => {
+    for (const contents of [
+      "{ esto no es json",
+      "",
+      "null",
+      "[1,2]",
+      "\u0000\u0001",
+    ]) {
+      const path = join(dir, "settings.json");
+      writeFileSync(path, contents);
+      assert.deepEqual(
+        readSettings(path),
+        DEFAULT_MUSIC_PREFS,
+        JSON.stringify(contents),
+      );
+    }
+  });
+});
+
+test("campos sueltos inválidos: solo esos vuelven a su valor por defecto", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    writeFileSync(
+      path,
+      JSON.stringify({ enabled: false, damping: "x", screen: "text" }),
+    );
+    const prefs = readSettings(path);
+    assert.equal(prefs.enabled, false);
+    assert.equal(prefs.screen, "text");
+    assert.equal(prefs.damping, DEFAULT_MUSIC_PREFS.damping);
+  });
+});
+
+test("ida y vuelta, y sobrevive a 'reiniciar' (releer del disco)", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    const prefs = {
+      ...DEFAULT_MUSIC_PREFS,
+      enabled: false,
+      screenSeconds: 3.5,
+      color: "teal" as const,
+    };
+    writeSettings(prefs, path);
+    assert.deepEqual(readSettings(path), prefs);
+    assert.deepEqual(readSettings(path), prefs);
+  });
+});
+
+test("crea el directorio si no existe", () => {
+  withDir((dir) => {
+    const path = join(dir, "nuevo", "dentro", "settings.json");
+    writeSettings(DEFAULT_MUSIC_PREFS, path);
+    assert.deepEqual(readSettings(path), DEFAULT_MUSIC_PREFS);
+  });
+});
+
+test("escribir no deja temporales y el fichero es JSON válido", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    writeSettings(DEFAULT_MUSIC_PREFS, path);
+    writeSettings({ ...DEFAULT_MUSIC_PREFS, enabled: false }, path);
+    assert.deepEqual(readdirSync(dir), ["settings.json"]);
+    JSON.parse(readFileSync(path, "utf8"));
+  });
+});
+
+test("escribir sobre un fichero corrupto lo repara", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "{ roto");
+    writeSettings({ ...DEFAULT_MUSIC_PREFS, enabled: false }, path);
+    assert.equal(readSettings(path).enabled, false);
+  });
+});
+
+test("las preferencias están fuera de la BD: `ingest --rebuild` solo borra DB_PATH", () => {
+  assert.notEqual(SETTINGS_PATH, DB_PATH);
+  assert.equal(dirname(SETTINGS_PATH), dirname(DB_PATH));
+});

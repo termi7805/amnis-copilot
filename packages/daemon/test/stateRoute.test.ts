@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { StateResponse } from "@amnis/shared";
+import { DEFAULT_MUSIC_PREFS, type StateResponse } from "@amnis/shared";
 import type { GetStateDeps } from "../src/application/getState.ts";
 import { createStateRoute } from "../src/infrastructure/http/routes/state.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
@@ -15,6 +15,7 @@ function makeDeps(): GetStateDeps {
     countUsageEvents: () => 0,
     readCommitHash: () => null,
     listening: () => null,
+    settings: () => DEFAULT_MUSIC_PREFS,
     media: () =>
       Promise.resolve(emptyMedia("not-configured", "2026-01-01T00:00:00.000Z")),
     sampleQuotas: () =>

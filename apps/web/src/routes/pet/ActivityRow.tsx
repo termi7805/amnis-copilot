@@ -1,4 +1,4 @@
-import type { PetSnapshot } from "@amnis/shared";
+import type { MusicPrefs, PetSnapshot } from "@amnis/shared";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { formatElapsed } from "../../lib/countdown.ts";
 import { Pet, PetOffline, STATE_TITLE } from "../../lib/Pet/Pet.tsx";
@@ -9,9 +9,16 @@ export interface ActivityRowProps {
   status: ConnectionStatus;
   resetsAt: string | null;
   now: Date;
+  musicPrefs?: MusicPrefs;
 }
 
-export function ActivityRow({ pet, status, resetsAt, now }: ActivityRowProps) {
+export function ActivityRow({
+  pet,
+  status,
+  resetsAt,
+  now,
+  musicPrefs,
+}: ActivityRowProps) {
   return (
     <div className={styles.activity}>
       <div className={styles.activityPet}>
@@ -25,6 +32,7 @@ export function ActivityRow({ pet, status, resetsAt, now }: ActivityRowProps) {
             resetsAt={resetsAt}
             commitHash={pet.commitHash}
             listening={pet.listening}
+            musicPrefs={musicPrefs}
           />
         )}
       </div>

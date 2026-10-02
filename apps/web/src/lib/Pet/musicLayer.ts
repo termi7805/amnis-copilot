@@ -1,6 +1,5 @@
-import type { Listening, Vibe } from "@amnis/shared";
+import type { Listening, MusicPrefs, Vibe } from "@amnis/shared";
 import { useEffect, useState } from "react";
-import type { ScreenMode } from "./useNowPlaying.ts";
 
 /** Color de la capa de música: solo LED, notas y ondas — nunca el cuerpo ni
  * el objeto de la escena, que siguen diciendo qué hacen los agentes (#60). */
@@ -15,40 +14,8 @@ export const VIBE_COLOR: Record<Vibe, string> = {
 
 const TEAL = "#39E0C8";
 
-/**
- * Preferencias de la capa de música de la mascota. El tipo y su persistencia
- * son del daemon (#65); hasta entonces `<Pet>` usa estos valores por defecto.
- */
-export interface MusicPrefs {
-  /** Interruptor general: apagado, Amnis no lleva nada de la capa. */
-  enabled: boolean;
-  /** Qué se mueve: la cabeza además del accesorio, o solo el accesorio. */
-  motion: "head" | "accessory";
-  /** 0–1: cuánto reduce la fatiga la amplitud del movimiento. */
-  damping: number;
-  color: "vibe" | "cover" | "teal";
-  /** Sin datos de ReccoBeats: notas neutras, o solo los cascos. */
-  fallback: "neutral" | "quiet";
-  /** Qué enseña la pantalla de Amnis al cambiar de canción (#64). */
-  screen: ScreenMode;
-  /** Cuánto dura en pantalla, en segundos. */
-  screenSeconds: number;
-  screenEntry: "tv" | "fade";
-  /** Líneas de pantalla sobre la portada. */
-  scanlines: boolean;
-}
-
-export const DEFAULT_MUSIC_PREFS: MusicPrefs = {
-  enabled: true,
-  motion: "head",
-  damping: 0.7,
-  color: "vibe",
-  fallback: "neutral",
-  screen: "two-phase",
-  screenSeconds: 6,
-  screenEntry: "tv",
-  scanlines: true,
-};
+export type { MusicPrefs } from "@amnis/shared";
+export { DEFAULT_MUSIC_PREFS } from "@amnis/shared";
 
 /** Pulso por defecto de las vibes sin BPM (podcast, sin datos): no se usa, el
  * CSS lleva su ritmo fijo, pero la variable no puede quedar sin valor. */

@@ -1,12 +1,7 @@
+import type { ScreenMode } from "@amnis/shared";
 import { useEffect, useRef, useState } from "react";
 
-export type ScreenMode =
-  | "two-phase"
-  | "cover"
-  | "cover-title"
-  | "pixel"
-  | "text"
-  | "none";
+export type { ScreenMode };
 
 /** Lo que enseña la pantalla en cada momento. */
 export type ScreenPhase = "cover" | "cover-title" | "pixel" | "text";

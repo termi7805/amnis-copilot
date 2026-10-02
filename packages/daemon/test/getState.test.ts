@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { QuotaSnapshot } from "@amnis/shared";
+import { DEFAULT_MUSIC_PREFS, type QuotaSnapshot } from "@amnis/shared";
 import {
   commitHashFrom,
   type GetStateDeps,
@@ -39,6 +39,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     sampleQuotas: () => Promise.resolve([makeQuota()]),
     media: () => Promise.resolve(emptyMedia("not-configured", STARTED_AT)),
     listening: () => null,
+    settings: () => DEFAULT_MUSIC_PREFS,
     readCommitHash: () => {
       throw new Error("readCommitHash no debería llamarse en este test");
     },
@@ -304,4 +305,10 @@ test("pet.listening sale de deps.listening()", async () => {
   };
   const state = await getState(makeDeps({ listening: () => listening }), NOW);
   assert.deepEqual(state.pet.listening, listening);
+});
+
+test("settings: las preferencias de deps.settings() viajan en el hello", async () => {
+  const prefs = { ...DEFAULT_MUSIC_PREFS, enabled: false, screenSeconds: 3 };
+  const state = await getState(makeDeps({ settings: () => prefs }), NOW);
+  assert.deepEqual(state.settings, prefs);
 });

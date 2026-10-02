@@ -1,4 +1,8 @@
-import type { QuotaSnapshot, StateResponse } from "@amnis/shared";
+import {
+  DEFAULT_MUSIC_PREFS,
+  type QuotaSnapshot,
+  type StateResponse,
+} from "@amnis/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "./Dashboard.tsx";
@@ -56,6 +60,7 @@ const fakeState: StateResponse = {
     vibe: "neutral",
     bpm: null,
   },
+  settings: DEFAULT_MUSIC_PREFS,
   quotas: [],
   daemon: {
     version: "0.0.1",

@@ -1,4 +1,9 @@
-import type { PetSnapshot, ProviderId, QuotaSnapshot } from "@amnis/shared";
+import type {
+  MusicPrefs,
+  PetSnapshot,
+  ProviderId,
+  QuotaSnapshot,
+} from "@amnis/shared";
 import { useEffect, useRef, useState } from "react";
 import { daemonUrl } from "../../api/config.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
@@ -26,6 +31,7 @@ export interface QuotaPanelProps {
   status: ConnectionStatus;
   quotas: QuotaSnapshot[];
   now: Date;
+  musicPrefs?: MusicPrefs;
   onSelectPanel?: (panel: PanelId) => void;
 }
 
@@ -40,6 +46,7 @@ export function QuotaPanel({
   status,
   quotas,
   now,
+  musicPrefs,
   onSelectPanel,
 }: QuotaPanelProps) {
   const [refreshing, setRefreshing] = useState(false);
@@ -85,6 +92,7 @@ export function QuotaPanel({
         status={status}
         resetsAt={quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
         now={now}
+        musicPrefs={musicPrefs}
       />
 
       {quotas.map((quota, i) => (

@@ -1,4 +1,4 @@
-import type { MediaSnapshot, PetSnapshot } from "@amnis/shared";
+import type { MediaSnapshot, MusicPrefs, PetSnapshot } from "@amnis/shared";
 import { fetchMediaDevices, sendMediaCommand } from "../../api/media.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { MediaPlayer } from "../../lib/MediaPlayer/MediaPlayer.tsx";
@@ -12,6 +12,7 @@ export interface MediaPanelProps {
   now: Date;
   media: MediaSnapshot | null;
   status: ConnectionStatus;
+  musicPrefs?: MusicPrefs;
   onSelectPanel: (panel: PanelId) => void;
 }
 
@@ -22,13 +23,20 @@ export function MediaPanel({
   now,
   media,
   status,
+  musicPrefs,
   onSelectPanel,
 }: MediaPanelProps) {
   return (
     <div>
       <PanelHeader status={status} active="media" onSelect={onSelectPanel} />
       {pet && (
-        <ActivityRow pet={pet} status={status} resetsAt={resetsAt} now={now} />
+        <ActivityRow
+          pet={pet}
+          status={status}
+          resetsAt={resetsAt}
+          now={now}
+          musicPrefs={musicPrefs}
+        />
       )}
       <MediaPlayer
         media={media}

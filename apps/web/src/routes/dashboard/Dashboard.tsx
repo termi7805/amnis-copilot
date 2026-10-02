@@ -26,6 +26,7 @@ export function Dashboard() {
             resetsAt={state.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
             commitHash={state.pet.commitHash}
             listening={state.pet.listening}
+            musicPrefs={state.settings}
           />
         ) : (
           <span>conectando…</span>

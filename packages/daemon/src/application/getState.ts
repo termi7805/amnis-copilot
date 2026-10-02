@@ -1,6 +1,7 @@
 import type {
   Listening,
   MediaSnapshot,
+  MusicPrefs,
   PetState,
   QuotaSnapshot,
   StateResponse,
@@ -38,6 +39,8 @@ export interface GetStateDeps {
   media(): Promise<MediaSnapshot>;
   /** El eje `listening` ya derivado (petStateWatcher.ts). */
   listening(): Listening | null;
+  /** Preferencias de la capa de música (`~/.amnis/settings.json`). */
+  settings(): MusicPrefs;
   /** `HEAD` corto del repo en `project` — solo se llama en `pushing`
    * (infrastructure/git.ts). */
   readCommitHash(project: string): string | null;
@@ -162,6 +165,7 @@ export async function getState(
     },
     quotas,
     media,
+    settings: deps.settings(),
     daemon: {
       version: deps.version,
       startedAt: deps.startedAt,
