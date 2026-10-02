@@ -6,7 +6,9 @@ import { useEffect, useState } from "react";
 export const VIBE_COLOR: Record<Vibe, string> = {
   fiesta: "#39E0C8",
   intensa: "#F2A23A",
-  chill: "#6FD3A8",
+  // Verde amarillento: el verde azulado que tenía era casi indistinguible del
+  // turquesa de fiesta y neutral a 150×110.
+  chill: "#A6DB6E",
   melancolica: "#8FB3D9",
   podcast: "#C4B2F2",
   neutral: "#39E0C8",
