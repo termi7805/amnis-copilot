@@ -108,7 +108,8 @@ describe("Dashboard", () => {
     expect(screen.getByTestId("connection-status")).toHaveTextContent(
       "conectado",
     );
-    expect(screen.getByTestId("pet").dataset.state).toBe("coding");
+    // El primero es la tarjeta; el segundo, la vista previa de MusicSettings.
+    expect(screen.getAllByTestId("pet")[0]?.dataset.state).toBe("coding");
   });
 
   it("un error del stream se ve como reconectando, no como conectado", () => {

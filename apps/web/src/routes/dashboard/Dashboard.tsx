@@ -1,9 +1,11 @@
 import { fetchMediaDevices, sendMediaCommand } from "../../api/media.ts";
+import { saveSettings } from "../../api/settings.ts";
 import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
 import { useNow } from "../../lib/countdown.ts";
 import { MediaPlayer } from "../../lib/MediaPlayer/MediaPlayer.tsx";
 import { Pet } from "../../lib/Pet/Pet.tsx";
 import styles from "./Dashboard.module.css";
+import { MusicSettings } from "./MusicSettings.tsx";
 import { QuotaRing } from "./QuotaRing.tsx";
 import { Usage } from "./Usage.tsx";
 
@@ -68,6 +70,7 @@ export function Dashboard() {
           />
         </div>
       </div>
+      <MusicSettings settings={state?.settings} save={saveSettings} />
       <Usage />
       <pre>{state ? JSON.stringify(state, null, 2) : null}</pre>
     </main>
