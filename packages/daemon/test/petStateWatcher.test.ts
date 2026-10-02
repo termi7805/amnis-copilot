@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { PetSnapshot } from "@amnis/shared";
+import type { MediaSnapshot, PetSnapshot } from "@amnis/shared";
 import type { LastKnownStateEvent } from "../src/application/getState.ts";
+import { LISTENING_GRACE_MS } from "../src/domain/listening.ts";
+import { SLEEP_AFTER_MS } from "../src/domain/petState.ts";
 import { startPetStateWatcher } from "../src/infrastructure/petStateWatcher.ts";
 
 const STARTED_AT = "2026-01-01T00:00:00.000Z";
@@ -10,6 +12,7 @@ function makeWatcher(
   lastEvent: () => LastKnownStateEvent | null,
   getCachedExhausted: () => boolean = () => false,
   readCommitHash: (project: string) => string | null = () => null,
+  getCachedMedia: () => MediaSnapshot | null = () => null,
 ) {
   const broadcasts: PetSnapshot[] = [];
   const watcher = startPetStateWatcher({
@@ -17,6 +20,7 @@ function makeWatcher(
     startedAt: STARTED_AT,
     getCachedFatigue: () => 0.5,
     getCachedExhausted,
+    getCachedMedia,
     readCommitHash,
     broadcast: (snapshot) => broadcasts.push(snapshot),
     intervalMs: 3_600_000,
@@ -141,5 +145,126 @@ test("pushing lleva el commitHash de readCommitHash(project)", () => {
 
   assert.equal(broadcasts.at(-1)?.state, "pushing");
   assert.equal(broadcasts.at(-1)?.commitHash, "cafe123");
+  watcher.stop();
+});
+
+const T0 = "2026-01-01T00:00:00.000Z";
+const at = (seconds: number) => new Date(Date.parse(T0) + seconds * 1000);
+
+function music(isPlaying: boolean, progressMs = 0): MediaSnapshot {
+  return {
+    status: "ok",
+    isPlaying,
+    track: {
+      id: "t1",
+      title: "Canción",
+      artists: ["A", "B"],
+      album: "Álbum",
+      imageUrl: null,
+      durationMs: 200_000,
+    },
+    progressMs,
+    measuredAt: T0,
+    shuffle: false,
+    repeat: "off",
+    device: null,
+    vibe: "fiesta",
+    bpm: 128,
+  };
+}
+
+const codingEvent: LastKnownStateEvent = {
+  hook: "PreToolUse",
+  toolName: "Edit",
+  derivedState: "coding",
+  ts: T0,
+  project: null,
+  stateEnteredAt: T0,
+};
+
+test("cambiar listening emite con el mismo state: nunca lo altera", () => {
+  let media: MediaSnapshot | null = null;
+  const { watcher, broadcasts } = makeWatcher(
+    () => codingEvent,
+    () => false,
+    () => null,
+    () => media,
+  );
+  watcher.check(at(1));
+  const before = broadcasts.length;
+  assert.equal(broadcasts.at(-1)?.listening, null);
+
+  media = music(true);
+  watcher.check(at(2));
+
+  assert.equal(broadcasts.length, before + 1);
+  assert.equal(broadcasts.at(-1)?.state, "coding");
+  assert.deepEqual(broadcasts.at(-1)?.listening, {
+    vibe: "fiesta",
+    bpm: 128,
+    track: { id: "t1", title: "Canción", artist: "A, B", imageUrl: null },
+  });
+  watcher.stop();
+});
+
+test("sin hooks más de SLEEP_AFTER_MS y con música: sleeping con listening no nulo", () => {
+  const { watcher, broadcasts } = makeWatcher(
+    () => codingEvent,
+    () => false,
+    () => null,
+    () => music(true),
+  );
+
+  watcher.check(at(SLEEP_AFTER_MS / 1000 + 60));
+
+  assert.equal(broadcasts.at(-1)?.state, "sleeping");
+  assert.notEqual(broadcasts.at(-1)?.listening, null);
+  assert.equal(watcher.listening()?.track.id, "t1");
+  watcher.stop();
+});
+
+test("cambiar solo el progreso del media no emite", () => {
+  let media: MediaSnapshot | null = music(true, 1_000);
+  const { watcher, broadcasts } = makeWatcher(
+    () => codingEvent,
+    () => false,
+    () => null,
+    () => media,
+  );
+  watcher.check(at(1));
+  const before = broadcasts.length;
+
+  media = music(true, 4_000);
+  watcher.check(at(4));
+
+  assert.equal(broadcasts.length, before);
+  watcher.stop();
+});
+
+test("pausa corta no apaga listening; pausa larga sí, sin tocar state", () => {
+  let media: MediaSnapshot | null = music(true);
+  const { watcher, broadcasts } = makeWatcher(
+    () => codingEvent,
+    () => false,
+    () => null,
+    () => media,
+  );
+  watcher.check(at(1));
+
+  media = music(false);
+  watcher.check(at(2));
+  watcher.check(at(7)); // 5 s en pausa
+  assert.notEqual(watcher.listening(), null);
+  media = music(true);
+  watcher.check(at(8));
+  assert.notEqual(watcher.listening(), null);
+
+  media = music(false);
+  watcher.check(at(9));
+  watcher.check(at(9 + LISTENING_GRACE_MS / 1000 + 5));
+
+  assert.equal(watcher.listening(), null);
+  assert.equal(broadcasts.at(-1)?.listening, null);
+  assert.equal(broadcasts.at(-1)?.state, "coding");
   watcher.stop();
 });

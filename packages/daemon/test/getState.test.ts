@@ -38,6 +38,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     countUsageEvents: () => 0,
     sampleQuotas: () => Promise.resolve([makeQuota()]),
     media: () => Promise.resolve(emptyMedia("not-configured", STARTED_AT)),
+    listening: () => null,
     readCommitHash: () => {
       throw new Error("readCommitHash no debería llamarse en este test");
     },
@@ -293,4 +294,14 @@ test("commitHashFrom: null si readCommitHash no encuentra un repo", () => {
     ),
     null,
   );
+});
+
+test("pet.listening sale de deps.listening()", async () => {
+  const listening = {
+    vibe: "chill" as const,
+    bpm: 90,
+    track: { id: "t1", title: "T", artist: "A", imageUrl: null },
+  };
+  const state = await getState(makeDeps({ listening: () => listening }), NOW);
+  assert.deepEqual(state.pet.listening, listening);
 });

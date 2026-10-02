@@ -1,4 +1,5 @@
 import type {
+  Listening,
   MediaSnapshot,
   PetState,
   QuotaSnapshot,
@@ -35,6 +36,8 @@ export interface GetStateDeps {
   sampleQuotas(): Promise<QuotaSnapshot[]>;
   /** Qué suena ahora; nunca rechaza (degrada a `status: "unavailable"`). */
   media(): Promise<MediaSnapshot>;
+  /** El eje `listening` ya derivado (petStateWatcher.ts). */
+  listening(): Listening | null;
   /** `HEAD` corto del repo en `project` — solo se llama en `pushing`
    * (infrastructure/git.ts). */
   readCommitHash(project: string): string | null;
@@ -155,6 +158,7 @@ export async function getState(
       fatigue: fatigueFrom(quotas),
       level: 1,
       commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
+      listening: deps.listening(),
     },
     quotas,
     media,

@@ -14,6 +14,7 @@ function makeDeps(): GetStateDeps {
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
     readCommitHash: () => null,
+    listening: () => null,
     media: () =>
       Promise.resolve(emptyMedia("not-configured", "2026-01-01T00:00:00.000Z")),
     sampleQuotas: () =>

@@ -33,6 +33,9 @@ export interface PetSnapshot {
   /** Short hash de `HEAD` en el momento de `pushing` — `null` en
    * cualquier otro estado, o si no se pudo leer (fuera de un repo git). */
   commitHash: string | null;
+  /** Eje ortogonal al estado: qué suena. Lo deciden Spotify y ReccoBeats, no
+   * los agentes; `null` tras ~15 s sin sonar. */
+  listening: Listening | null;
 }
 
 export interface QuotaWindow {
@@ -104,6 +107,16 @@ export type Vibe =
   | "melancolica"
   | "podcast"
   | "neutral";
+
+/** Lo que la capa de música de la mascota necesita de lo que suena. */
+export interface Listening {
+  vibe: Vibe;
+  /** `null` en podcast y sin datos. */
+  bpm: number | null;
+  /** Basta el `id`: la mascota enseña la pista cuando cambia, sin marcas de
+   * tiempo en el contrato. */
+  track: { id: string; title: string; artist: string; imageUrl: string | null };
+}
 
 /** Un dispositivo Spotify Connect de `GET /api/media/devices`. */
 export interface MediaDeviceOption extends MediaDevice {

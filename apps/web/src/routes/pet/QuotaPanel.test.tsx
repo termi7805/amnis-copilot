@@ -12,6 +12,7 @@ const basePet: PetSnapshot = {
   level: 1,
   reason: "test",
   commitHash: null,
+  listening: null,
 };
 
 const baseQuota: QuotaSnapshot = {

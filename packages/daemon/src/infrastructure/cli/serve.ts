@@ -71,6 +71,7 @@ function makeStateDeps(
   accountId: number,
   startedAt: string,
   media: GetStateDeps["media"],
+  listening: GetStateDeps["listening"],
 ): GetStateDeps {
   const quotaSamplers = providers.map((provider) =>
     createQuotaSampler(db, accountId, provider),
@@ -83,6 +84,7 @@ function makeStateDeps(
     countUsageEvents: () => countUsageEvents(db, accountId),
     sampleQuotas: () => Promise.all(quotaSamplers.map((sample) => sample())),
     media,
+    listening,
     readCommitHash,
   };
 }
@@ -105,14 +107,24 @@ export function runServeCli(args: readonly string[] = []): void {
     read: readMedia,
     vibes: createTrackVibes({ fetchFeatures }),
     hasClients: () => broadcaster.clientCount() > 0,
-    onChange: (snapshot) =>
-      broadcaster.broadcast({ event: "media", data: snapshot }),
+    onChange: (snapshot) => {
+      broadcaster.broadcast({ event: "media", data: snapshot });
+      // Cambio de pista, pausa o vibe que llega tarde: `listening` al día.
+      watcher.check();
+    },
   });
   broadcaster.onClientsChange((count) => {
     if (count > 0) mediaPoller.wake();
   });
-  const stateDeps = makeStateDeps(db, accountId, startedAt, () =>
-    mediaPoller.snapshot(),
+  const stateDeps = makeStateDeps(
+    db,
+    accountId,
+    startedAt,
+    () => mediaPoller.snapshot(),
+    () => {
+      watcher.check();
+      return watcher.listening();
+    },
   );
 
   // Cacheadas del último poll de cuota: un `state` disparado por hooks no
@@ -124,6 +136,7 @@ export function runServeCli(args: readonly string[] = []): void {
     startedAt,
     getCachedFatigue: () => cachedFatigue,
     getCachedExhausted: () => cachedExhausted,
+    getCachedMedia: () => mediaPoller.peek(),
     readCommitHash,
     broadcast: (snapshot) =>
       broadcaster.broadcast({ event: "state", data: snapshot }),

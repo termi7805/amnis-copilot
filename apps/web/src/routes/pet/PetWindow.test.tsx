@@ -50,6 +50,7 @@ const fakeState: StateResponse = {
     level: 1,
     reason: "test",
     commitHash: null,
+    listening: null,
   },
   media: {
     status: "not-configured",

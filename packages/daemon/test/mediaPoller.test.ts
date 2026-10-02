@@ -464,3 +464,14 @@ test("un episodio (podcast) no consulta a ReccoBeats", async () => {
   assert.equal(state.fetches.length, 0);
   assert.equal(state.changes[0]?.vibe, "podcast");
 });
+
+test("peek() devuelve el último snapshot sin leer, y null antes de la primera lectura", async () => {
+  const { state, poller } = setup(() => ({ snapshot: playing() }));
+  assert.equal(poller.peek(), null);
+  state.clients = 1;
+  await poller.snapshot();
+  const reads = state.reads;
+  assert.equal(poller.peek()?.track?.id, "t1");
+  assert.equal(state.reads, reads);
+  poller.stop();
+});

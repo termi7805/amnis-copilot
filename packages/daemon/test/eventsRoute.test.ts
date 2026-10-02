@@ -14,6 +14,7 @@ const HELLO_STATE: StateResponse = {
     level: 1,
     reason: "sin eventos",
     commitHash: null,
+    listening: null,
   },
   quotas: [],
   media: emptyMedia("not-configured", "2026-01-01T00:00:00.000Z"),
@@ -90,6 +91,7 @@ test("GET /api/events: un broadcast posterior llega al cliente conectado", async
         level: 1,
         reason: "PreToolUse Edit",
         commitHash: null,
+        listening: null,
       },
     };
     broadcaster.broadcast(event);

@@ -52,6 +52,8 @@ export interface MediaPoller {
    * clientes SSE no hace nada, como el resto del poller.
    */
   pollSoon(delayMs?: number): void;
+  /** Último snapshot leído, sin tocar Spotify: `null` antes de la primera. */
+  peek(): MediaSnapshot | null;
   /** Último snapshot si es reciente; si no, hace una lectura. */
   snapshot(): Promise<MediaSnapshot>;
   stop(): void;
@@ -238,6 +240,7 @@ export function startMediaPoller(deps: MediaPollerDeps): MediaPoller {
       }
       schedule(delayMs);
     },
+    peek: () => last,
     snapshot() {
       if (last && isFresh()) return Promise.resolve(last);
       return read();
