@@ -1,6 +1,7 @@
 import type { Listening, PetSnapshot } from "@amnis/shared";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { DEFAULT_MUSIC_PREFS } from "./musicLayer.ts";
 import { fatigueLevel, Pet, PetOffline } from "./Pet.tsx";
 
 // Cada `it` renderiza sobre el mismo `document`; sin esto, los `it`
@@ -547,7 +548,12 @@ describe("pantalla 'sonando' (#64)", () => {
     expect(screenOf(container)?.dataset.phase).toBe("cover");
     act(() => vi.advanceTimersByTime(1_200));
     expect(screenOf(container)?.dataset.phase).toBe("text");
-    act(() => vi.advanceTimersByTime(2_800 + 300));
+    // Dura lo configurado por defecto (más lo que tarda en apagarse).
+    act(() =>
+      vi.advanceTimersByTime(
+        DEFAULT_MUSIC_PREFS.screenSeconds * 1_000 - 1_200 + 300,
+      ),
+    );
     expect(screenOf(container)).toBeNull();
   });
 

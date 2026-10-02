@@ -45,7 +45,7 @@ export const DEFAULT_MUSIC_PREFS: MusicPrefs = {
   color: "vibe",
   fallback: "neutral",
   screen: "two-phase",
-  screenSeconds: 4,
+  screenSeconds: 6,
   screenEntry: "tv",
   scanlines: true,
 };
