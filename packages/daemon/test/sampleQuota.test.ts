@@ -37,6 +37,7 @@ test("con endpoint: inicio de ventana = resets_at - 5h, divergencia = autoritati
       fiveHour: { utilization: 50, resetsAt: "2026-01-01T15:00:00.000Z" },
       sevenDay: { utilization: 20, resetsAt: "2026-01-08T00:00:00.000Z" },
       limits: [],
+      weeklyBreakdown: null,
     },
     error: null,
   };
@@ -93,6 +94,7 @@ test("utilización autoritativa por debajo del 10% no toca el techo calibrado", 
       fiveHour: { utilization: 5, resetsAt: "2026-01-01T15:00:00.000Z" },
       sevenDay: { utilization: 5, resetsAt: "2026-01-08T00:00:00.000Z" },
       limits: [],
+      weeklyBreakdown: null,
     },
     error: null,
   };
@@ -127,6 +129,7 @@ test("utilización autoritativa suficiente calibra el techo del plan", async () 
       fiveHour: { utilization: 50, resetsAt: "2026-01-01T15:00:00.000Z" },
       sevenDay: { utilization: 20, resetsAt: "2026-01-08T00:00:00.000Z" },
       limits: [],
+      weeklyBreakdown: null,
     },
     error: null,
   };

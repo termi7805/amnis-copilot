@@ -3,6 +3,7 @@ import type {
   ProviderId,
   QuotaLimit,
   QuotaWindow,
+  WeeklyBreakdown,
 } from "@amnis/shared";
 
 export interface IngestResult {
@@ -47,6 +48,7 @@ export interface QuotaReading {
     fiveHour: QuotaWindow;
     sevenDay: QuotaWindow;
     limits: QuotaLimit[];
+    weeklyBreakdown: WeeklyBreakdown | null;
   } | null;
   error: string | null;
 }

@@ -1,4 +1,4 @@
-import type { QuotaLimit, QuotaWindow } from "@amnis/shared";
+import type { QuotaLimit, QuotaWindow, WeeklyBreakdown } from "@amnis/shared";
 import type { QuotaReading } from "../../../domain/Provider.ts";
 
 const QUOTA_URL = "https://api.anthropic.com/api/oauth/usage";
@@ -98,6 +98,35 @@ export function parseLimits(body: Record<string, unknown>): QuotaLimit[] {
 }
 
 /**
+ * Reparto del consumo de 7 d por origen. Tolerante: un `key` desconocido se
+ * conserva con su `display_name`; lo que no encaja degrada a `null` sin
+ * invalidar el resto de la respuesta.
+ */
+export function parseWeeklyBreakdown(raw: unknown): WeeklyBreakdown | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const b = raw as Record<string, unknown>;
+  if (!Array.isArray(b.rows)) return null;
+
+  const rows: WeeklyBreakdown["rows"] = [];
+  for (const row of b.rows) {
+    if (typeof row !== "object" || row === null) continue;
+    const r = row as Record<string, unknown>;
+    if (typeof r.key !== "string" || typeof r.percent !== "number") continue;
+    rows.push({
+      key: r.key,
+      label: typeof r.display_name === "string" ? r.display_name : r.key,
+      percent: r.percent,
+    });
+  }
+  return {
+    asOf: typeof b.as_of === "string" ? b.as_of : null,
+    windowStartedAt:
+      typeof b.window_started_at === "string" ? b.window_started_at : null,
+    rows,
+  };
+}
+
+/**
  * Pura: castea la forma documentada en DESIGN.md §2. `null` si no encaja
  * — degradar, nunca lanzar, porque el endpoint no está soportado.
  *
@@ -114,7 +143,12 @@ export function parseQuotaResponse(
   const sevenDay = parseWindow(body.seven_day);
   if (!fiveHour || !sevenDay) return null;
 
-  return { fiveHour, sevenDay, limits: parseLimits(body) };
+  return {
+    fiveHour,
+    sevenDay,
+    limits: parseLimits(body),
+    weeklyBreakdown: parseWeeklyBreakdown(body.seven_day_breakdown),
+  };
 }
 
 export interface FetchQuotaOptions {

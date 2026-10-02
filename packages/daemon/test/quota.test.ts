@@ -47,6 +47,7 @@ test("parseQuotaResponse castea la forma documentada en DESIGN.md §2", () => {
         label: "7d",
       },
     ],
+    weeklyBreakdown: null,
   });
 });
 
@@ -182,4 +183,47 @@ test("la petición lleva Authorization, anthropic-beta y User-Agent", async () =
   assert.equal(headers.Authorization, "Bearer my-token");
   assert.equal(headers["anthropic-beta"], "oauth-2025-04-20");
   assert.equal(headers["User-Agent"], "claude-code/9.9.9");
+});
+
+test("con la respuesta real, trae el reparto semanal por origen", () => {
+  const result = parseQuotaResponse(fixture);
+
+  assert.deepEqual(result?.weeklyBreakdown?.rows, [
+    { key: "claude_code", label: "Claude Code", percent: 100 },
+    { key: "chat", label: "Chats", percent: 0 },
+    { key: "cowork", label: "Cowork", percent: 0 },
+    { key: "other", label: "Other", percent: 0 },
+  ]);
+  assert.equal(
+    result?.weeklyBreakdown?.windowStartedAt,
+    "2026-09-28T19:00:00.000485+00:00",
+  );
+});
+
+test("un origen desconocido del reparto se conserva con su display_name", () => {
+  const result = parseQuotaResponse({
+    ...fixture,
+    seven_day_breakdown: {
+      rows: [
+        { key: "origen_nuevo", display_name: "Origen nuevo", percent: 3 },
+        { key: "sin_nombre", percent: 1 },
+        { key: "roto", percent: "x" },
+      ],
+    },
+  });
+
+  assert.deepEqual(result?.weeklyBreakdown?.rows, [
+    { key: "origen_nuevo", label: "Origen nuevo", percent: 3 },
+    { key: "sin_nombre", label: "sin_nombre", percent: 1 },
+  ]);
+  assert.equal(result?.weeklyBreakdown?.asOf, null);
+});
+
+test("sin seven_day_breakdown o con forma rota, es null y el resto sigue", () => {
+  const { seven_day_breakdown: _omit, ...sin } = fixture;
+  for (const body of [sin, { ...sin, seven_day_breakdown: { rows: "x" } }]) {
+    const result = parseQuotaResponse(body);
+    assert.equal(result?.weeklyBreakdown, null);
+    assert.equal(result?.limits.length, 2);
+  }
 });

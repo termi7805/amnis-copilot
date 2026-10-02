@@ -62,6 +62,17 @@ export interface QuotaLimit {
 }
 
 /**
+ * De dónde sale el consumo de la ventana de 7 d (Claude Code, chats, Cowork…),
+ * tal como lo reporta Anthropic. Dato del momento: no se persiste. `key` y
+ * `label` son abiertos; un origen desconocido se conserva con su etiqueta.
+ */
+export interface WeeklyBreakdown {
+  asOf: string | null;
+  windowStartedAt: string | null;
+  rows: { key: string; label: string; percent: number }[];
+}
+
+/**
  * Las dos vías se calculan siempre en paralelo, no solo como fallback:
  * su divergencia dice cuánto se consume fuera de Claude Code.
  */
@@ -74,6 +85,7 @@ export interface QuotaSnapshot {
     fiveHour: QuotaWindow;
     sevenDay: QuotaWindow;
     limits: QuotaLimit[];
+    weeklyBreakdown: WeeklyBreakdown | null;
   } | null;
   /** Reconstruida de los JSONL locales. Siempre presente. */
   local: {

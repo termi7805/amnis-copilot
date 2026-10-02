@@ -24,6 +24,7 @@ const baseQuota: QuotaSnapshot = {
     },
     sevenDay: { utilization: 41, resetsAt: null },
     limits: [],
+    weeklyBreakdown: null,
   },
   local: {
     fiveHourTokens: 100,

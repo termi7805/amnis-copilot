@@ -98,6 +98,9 @@ User-Agent: claude-code/<version>
     { "kind": "weekly_all", "group": "weekly",  "percent": 38, "severity": "normal",
       "resets_at": "ISO8601", "scope": null, "is_active": false }
   ],
+  "seven_day_breakdown": { "as_of": "ISO8601", "window_started_at": "ISO8601",
+    "rows": [ { "key": "claude_code", "display_name": "Claude Code", "percent": 100 },
+              { "key": "chat", "display_name": "Chats", "percent": 0 } ] },
   "extra_usage": { "is_enabled": false, "monthly_limit": null,
                    "used_credits": null, "utilization": null } }
 ```
@@ -111,6 +114,14 @@ User-Agent: claude-code/<version>
   con ventana válida (`seven_day_sonnet` incluida).
 - La respuesta trae además una docena de claves con nombre en clave (`iguana_necktie`,
   `tangelo`…), casi todas `null`. Son internas de Anthropic y cambian sin aviso: se ignoran.
+- **`seven_day_breakdown`** reparte el consumo de la ventana de 7 d por origen (Claude Code,
+  Chats, Cowork, Other). Responde directamente a «¿cuánto consumo fuera de Claude Code?»
+  para 7 d; **no sustituye** a la divergencia, que sigue siendo la única respuesta para 5 h.
+  Un `key` desconocido se conserva con su `display_name`. No se persiste: es un dato del
+  momento y viaja con cada muestra por SSE. Anthropic no documenta cómo atribuye cada
+  petición a un origen, por eso se validó empíricamente (#83): tras chatear en claude.ai fuera de
+  Claude Code, `Chats` subió de 0 a 1 y `Claude Code` bajó de 100 a 99, en la misma medida.
+  Los porcentajes son enteros sobre toda la semana: un rato corto de chat no mueve ninguno.
 - `quota_samples.limits_json` guarda la lista de cada muestra; `opus_util` se conserva por
   compatibilidad y las filas nuevas la dejan en `NULL`.
 
