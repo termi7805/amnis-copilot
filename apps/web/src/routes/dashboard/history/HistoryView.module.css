@@ -1,0 +1,4 @@
+/* Las tablas anchas scrollean dentro de la vista, no la página. */
+.scroll {
+  overflow-x: auto;
+}

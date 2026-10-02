@@ -1,0 +1,41 @@
+/* Apaisado (200×150) porque la escena de BIT lo es — viewBox 150×110
+   (#47) — y un contenedor cuadrado la letterboxea. */
+.petCard {
+  width: 200px;
+  height: 150px;
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--stage);
+}
+
+.overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.quotas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+/* Sin altura fija: sin login el estado vacío ocupa poco y la cuota no se
+   mueve de sitio. */
+.mediaCard {
+  flex: 1 1 340px;
+  max-width: 440px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.quotaError {
+  color: var(--crit);
+  font-size: 0.85rem;
+}

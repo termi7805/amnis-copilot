@@ -99,6 +99,7 @@ describe("Dashboard", () => {
   });
 
   afterEach(() => {
+    window.location.hash = "";
     vi.unstubAllGlobals();
     cleanup();
   });
@@ -183,6 +184,8 @@ describe("Dashboard", () => {
 
     expect(screen.getByText("Spotify desconectado")).toBeInTheDocument();
     expect(screen.getAllByTestId("quota-value")[0]).toHaveTextContent("~30%");
+    // <Usage/> ya no vive en la portada: pide /api/usage al abrir Histórico.
+    goTo("#historico");
     expect(fetch).toHaveBeenCalledWith(expect.stringContaining("/api/usage"));
   });
 
@@ -225,4 +228,44 @@ describe("Dashboard", () => {
       screen.getByRole("button", { name: "Reproducir" }),
     ).toBeInTheDocument();
   }, 15_000);
+
+  function goTo(hash: string) {
+    act(() => {
+      window.location.hash = hash;
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+  }
+
+  it("abre la vista indicada por el hash y marca su enlace como actual", () => {
+    window.location.hash = "#actividad";
+    render(<Dashboard />);
+
+    expect(
+      screen.getByRole("heading", { name: "Actividad" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Actividad" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Ahora" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("cambiar de vista no abre otra conexión SSE", () => {
+    render(<Dashboard />);
+    for (const hash of ["#historico", "#actividad", "#ajustes", "#ahora"]) {
+      goTo(hash);
+    }
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+  });
+
+  it("Ajustes tiene el tema y la música; ya no hay volcado del JSON", () => {
+    render(<Dashboard />);
+    expect(document.querySelector("pre")).toBeNull();
+
+    goTo("#ajustes");
+    expect(screen.getByRole("group", { name: "Tema" })).toBeInTheDocument();
+  });
 });
