@@ -744,7 +744,9 @@
   .phonesIn,
   .note,
   .wave,
-  .head {
+  .head,
+  .np,
+  .marquee {
     /* biome-ignore lint/complexity/noImportantStyles: la animación vive
        en el atributo `style` inline de cada elemento (calc(var(--t)*N)
        por escena); solo !important gana esa especificidad sin reescribir
@@ -1062,5 +1064,94 @@
   }
   100% {
     opacity: 0;
+  }
+}
+
+/* ── Pantalla "sonando" (#64) ─────────────────────────────────────────
+   Va dentro de .head, encima de la cara: se mueve con el cabeceo. Entrada
+   de tele (o fundido) al montar y salida al cerrar, por animación y no por
+   transición: no hay que esperar a un segundo render para que corra. */
+
+.np {
+  transform-box: view-box;
+  transform-origin: 55px 46px;
+  pointer-events: none;
+  animation: mx-tv-on 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.np[data-visible="false"] {
+  animation: mx-tv-off 0.26s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.np[data-entry="fade"] {
+  animation: mx-fade-on 0.22s ease both;
+}
+
+.np[data-entry="fade"][data-visible="false"] {
+  animation: mx-fade-off 0.22s ease both;
+}
+
+.npText {
+  font-family: ui-monospace, Menlo, monospace;
+  fill: var(--mx-color);
+}
+
+.npIcon path {
+  stroke: var(--mx-color);
+}
+
+.npIcon ellipse {
+  fill: var(--mx-color);
+}
+
+/* Solo dentro de su columna: el recorte lo pone el clipPath del padre. */
+.marquee {
+  animation: mx-marquee var(--np-dur, 3s) linear forwards;
+}
+
+@keyframes mx-tv-on {
+  from {
+    transform: scaleY(0.03) scaleX(0.6);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes mx-tv-off {
+  from {
+    transform: none;
+  }
+  to {
+    transform: scaleY(0.03) scaleX(0.6);
+  }
+}
+
+@keyframes mx-fade-on {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mx-fade-off {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes mx-marquee {
+  0%,
+  18% {
+    transform: translateX(0);
+  }
+  82%,
+  100% {
+    transform: translateX(var(--dx));
   }
 }

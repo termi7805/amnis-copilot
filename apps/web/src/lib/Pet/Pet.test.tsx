@@ -470,3 +470,201 @@ describe("animación de la capa (#62)", () => {
     );
   });
 });
+
+describe("pantalla 'sonando' (#64)", () => {
+  const withTrack = (
+    id: string,
+    over: Partial<Listening["track"]> = {},
+  ): Listening => ({
+    ...LISTENING,
+    track: {
+      id,
+      title: "Canción",
+      artist: "Artista",
+      imageUrl: "https://i.scdn.co/x",
+      ...over,
+    },
+  });
+  const screenOf = (container: HTMLElement) =>
+    container.querySelector<HTMLElement>("[data-testid='now-playing']");
+
+  function mount(prefs = {}, state: PetSnapshot["state"] = "coding") {
+    const view = render(
+      <Pet
+        state={state}
+        level={1}
+        fatigue={0}
+        listening={withTrack("a")}
+        musicPrefs={prefs}
+      />,
+    );
+    const next = (listening: Listening | null, st = state) =>
+      view.rerender(
+        <Pet
+          state={st}
+          level={1}
+          fatigue={0}
+          listening={listening}
+          musicPrefs={prefs}
+        />,
+      );
+    return { ...view, next };
+  }
+
+  const realLength = Object.getOwnPropertyDescriptor(
+    SVGElement.prototype,
+    "getComputedTextLength",
+  );
+  const useMeasure = () =>
+    Object.defineProperty(SVGElement.prototype, "getComputedTextLength", {
+      configurable: true,
+      value(this: SVGElement) {
+        return (this.textContent?.length ?? 0) * 4;
+      },
+    });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    if (realLength) {
+      Object.defineProperty(
+        SVGElement.prototype,
+        "getComputedTextLength",
+        realLength,
+      );
+    } else {
+      delete (SVGElement.prototype as unknown as Record<string, unknown>)
+        .getComputedTextLength;
+    }
+  });
+
+  it("el primer render con pista no la enseña; al cambiar track.id sí, y luego vuelve la cara", () => {
+    vi.useFakeTimers();
+    const { container, next } = mount();
+    expect(screenOf(container)).toBeNull();
+
+    next(withTrack("b"));
+    expect(screenOf(container)?.dataset.phase).toBe("cover");
+    act(() => vi.advanceTimersByTime(1_200));
+    expect(screenOf(container)?.dataset.phase).toBe("text");
+    act(() => vi.advanceTimersByTime(2_800 + 300));
+    expect(screenOf(container)).toBeNull();
+  });
+
+  it("la misma pista con otro objeto (reconexión del SSE) no la enseña", () => {
+    const { container, next } = mount();
+    next(withTrack("a"));
+    expect(screenOf(container)).toBeNull();
+  });
+
+  it("va dentro de la cabeza, después de la cara, y el cuerpo no cambia", () => {
+    const { container, next } = mount();
+    next(withTrack("b"));
+    const head = container.querySelector('[class*="head"]');
+    const screen = screenOf(container);
+    expect(head?.contains(screen)).toBe(true);
+    expect(head?.lastElementChild).toBe(screen);
+
+    const scene = container.querySelector("[data-look]");
+    for (const el of scene?.querySelectorAll("[data-music]") ?? []) el.remove();
+    const bare = render(<Pet state="coding" level={1} fatigue={0} />);
+    expect(scene?.innerHTML).toBe(
+      bare.container.querySelector("[data-look]")?.innerHTML,
+    );
+  });
+
+  it("si Amnis pasa a waiting con la pantalla en vivo, desaparece al instante y no vuelve", () => {
+    vi.useFakeTimers();
+    const { container, next } = mount();
+    next(withTrack("b"));
+    expect(screenOf(container)).not.toBeNull();
+
+    next(withTrack("b"), "waiting");
+    expect(screenOf(container)).toBeNull();
+    expect(container.querySelector("[data-music]")).toBeNull();
+
+    next(withTrack("b"), "coding");
+    act(() => vi.advanceTimersByTime(500));
+    expect(screenOf(container)).toBeNull();
+  });
+
+  it("cada modo pinta lo suyo, y 'none' no enseña nada", () => {
+    for (const [screen, phase] of [
+      ["cover", "cover"],
+      ["cover-title", "cover-title"],
+      ["text", "text"],
+    ] as const) {
+      const { container, next, unmount } = mount({ screen });
+      next(withTrack("b"));
+      expect(screenOf(container)?.dataset.phase, screen).toBe(phase);
+      unmount();
+    }
+    const none = mount({ screen: "none" });
+    none.next(withTrack("b"));
+    expect(screenOf(none.container)).toBeNull();
+  });
+
+  it("sin portada, los modos con imagen caen a texto", () => {
+    const { container, next } = mount({ screen: "cover-title" });
+    next(withTrack("b", { imageUrl: null }));
+    expect(screenOf(container)?.dataset.phase).toBe("text");
+  });
+
+  it("pixelado sin canvas cae a la portada nítida; el color 'cover' cae a la vibe", () => {
+    const { container, next } = mount({ screen: "pixel", color: "cover" });
+    next(withTrack("b"));
+    expect(screenOf(container)?.dataset.phase).toBe("cover");
+    expect(
+      (
+        screen.getByTestId("pet") as unknown as HTMLElement
+      ).style.getPropertyValue("--mx-color"),
+    ).toBe("#39E0C8");
+  });
+
+  it("un título largo se desplaza solo dentro de su columna (clipPath propio)", () => {
+    useMeasure();
+    const { container, next } = mount({ screen: "cover-title" });
+    next(
+      withTrack("b", {
+        title: "Un título larguísimo que no cabe en la columna",
+      }),
+    );
+    const marquee = container.querySelector(
+      '[class*="marquee"]',
+    ) as HTMLElement | null;
+    expect(marquee).not.toBeNull();
+    expect(
+      Number.parseFloat(marquee?.style.getPropertyValue("--dx") ?? "0"),
+    ).toBeLessThan(0);
+    // la marquesina vive dentro de un grupo recortado a la columna
+    expect(marquee?.closest("[clip-path]")?.getAttribute("clip-path")).toMatch(
+      /side\)$/,
+    );
+  });
+
+  it("con movimiento reducido no hay marquesina y el texto se corta con '…'", () => {
+    useMeasure();
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q.includes("reduce"),
+      media: q,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    const { container, next } = mount({ screen: "text" });
+    next(
+      withTrack("b", {
+        title: "Un título larguísimo que no cabe en la pantalla",
+      }),
+    );
+    expect(container.querySelector('[class*="marquee"]')).toBeNull();
+    expect(screenOf(container)?.textContent).toContain("…");
+  });
+
+  it("un título corto se ve entero, sin marquesina", () => {
+    useMeasure();
+    const { container, next } = mount({ screen: "text" });
+    next(withTrack("b", { title: "Corto" }));
+    expect(container.querySelector('[class*="marquee"]')).toBeNull();
+    expect(screenOf(container)?.textContent).toContain("Corto");
+  });
+});

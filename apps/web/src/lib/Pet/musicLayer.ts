@@ -1,5 +1,6 @@
 import type { Listening, Vibe } from "@amnis/shared";
 import { useEffect, useState } from "react";
+import type { ScreenMode } from "./useNowPlaying.ts";
 
 /** Color de la capa de música: solo LED, notas y ondas — nunca el cuerpo ni
  * el objeto de la escena, que siguen diciendo qué hacen los agentes (#60). */
@@ -28,6 +29,13 @@ export interface MusicPrefs {
   color: "vibe" | "cover" | "teal";
   /** Sin datos de ReccoBeats: notas neutras, o solo los cascos. */
   fallback: "neutral" | "quiet";
+  /** Qué enseña la pantalla de Amnis al cambiar de canción (#64). */
+  screen: ScreenMode;
+  /** Cuánto dura en pantalla, en segundos. */
+  screenSeconds: number;
+  screenEntry: "tv" | "fade";
+  /** Líneas de pantalla sobre la portada. */
+  scanlines: boolean;
 }
 
 export const DEFAULT_MUSIC_PREFS: MusicPrefs = {
@@ -36,6 +44,10 @@ export const DEFAULT_MUSIC_PREFS: MusicPrefs = {
   damping: 0.7,
   color: "vibe",
   fallback: "neutral",
+  screen: "two-phase",
+  screenSeconds: 4,
+  screenEntry: "tv",
+  scanlines: true,
 };
 
 /** Pulso por defecto de las vibes sin BPM (podcast, sin datos): no se usa, el
@@ -56,10 +68,16 @@ export function amplitude(fatigueLevel: number, damping: number): number {
   return 1 - fatigueLevel * d;
 }
 
-/** `cover` cae a la vibe hasta que haya color de portada (#64): sacarlo exige
- * leer la imagen en un canvas, y eso depende del CORS del CDN de Spotify. */
-export function layerColor(vibe: Vibe, color: MusicPrefs["color"]): string {
-  return color === "teal" ? TEAL : VIBE_COLOR[vibe];
+/** `cover` usa el color de la portada si se pudo leer (canvas y CORS del CDN
+ * de Spotify, `useCoverArt`); si no, cae a la vibe. */
+export function layerColor(
+  vibe: Vibe,
+  color: MusicPrefs["color"],
+  coverColor: string | null = null,
+): string {
+  if (color === "teal") return TEAL;
+  if (color === "cover" && coverColor) return coverColor;
+  return VIBE_COLOR[vibe];
 }
 
 /** Lo que dura el fade-out de los cascos antes de desmontarlos. */

@@ -1,5 +1,6 @@
 import type { Listening, PetSnapshot, PetState, Vibe } from "@amnis/shared";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { useCoverArt } from "./coverArt.ts";
 import { Headphones } from "./Headphones.tsx";
 import { MusicFx } from "./MusicFx.tsx";
 import {
@@ -10,7 +11,9 @@ import {
   type MusicPrefs,
   useLayerPresence,
 } from "./musicLayer.ts";
+import { NowPlayingScreen } from "./NowPlayingScreen.tsx";
 import styles from "./Pet.module.css";
+import { useNowPlaying } from "./useNowPlaying.ts";
 
 export interface PetProps {
   state: PetSnapshot["state"];
@@ -71,12 +74,15 @@ function Scene({
   resetsAt,
   commitHash,
   music,
+  screen,
 }: {
   state: PetState;
   resetsAt?: string | null;
   commitHash?: string | null;
   /** `undefined` = sin capa de música. */
   music?: { vibe: Vibe; color: string; visible: boolean };
+  /** Pantalla "sonando" (#64): va al final de la cabeza, encima de la cara. */
+  screen?: ReactNode;
 }) {
   switch (state) {
     case "coding":
@@ -201,6 +207,7 @@ function Scene({
                 <rect x="53" y="56" width="4" height="2.6" />
                 <rect x="59" y="56" width="4" height="2.6" />
               </g>
+              {screen}
             </g>
           </g>
           <clipPath id="amnis-pet-lap-screen">
@@ -402,6 +409,7 @@ function Scene({
                 strokeWidth="2"
                 opacity=".6"
               />
+              {screen}
             </g>
           </g>
           <g
@@ -531,6 +539,7 @@ function Scene({
               strokeLinecap="round"
               opacity=".65"
             />
+            {screen}
           </g>
           <g transform="rotate(-4 120 62)">
             <rect
@@ -737,6 +746,7 @@ function Scene({
                 fill="#39E0C8"
                 opacity=".45"
               />
+              {screen}
             </g>
           </g>
           <ellipse cx="118" cy="92" rx="26" ry="2.4" fill="rgba(23,29,38,.1)" />
@@ -879,6 +889,7 @@ function Scene({
                 fill="#FFB020"
                 opacity=".7"
               />
+              {screen}
             </g>
           </g>
           <g
@@ -1044,6 +1055,7 @@ function Scene({
                 strokeLinecap="round"
                 opacity=".75"
               />
+              {screen}
             </g>
           </g>
           <g
@@ -1227,6 +1239,7 @@ function Scene({
                 strokeLinecap="round"
                 opacity=".25"
               />
+              {screen}
             </g>
           </g>
           <g>
@@ -1366,6 +1379,7 @@ function Scene({
                   animation: `${styles["pet-cursor"]} calc(var(--t)*.8) step-end infinite`,
                 }}
               />
+              {screen}
             </g>
           </g>
           <g
@@ -1598,6 +1612,7 @@ function Scene({
                 strokeLinecap="round"
                 opacity=".7"
               />
+              {screen}
             </g>
           </g>
           <g
@@ -1860,6 +1875,7 @@ function Scene({
                 fill="#39E0C8"
                 opacity=".55"
               />
+              {screen}
             </g>
           </g>
           <g
@@ -2032,6 +2048,7 @@ function Scene({
                 strokeLinecap="round"
                 opacity=".75"
               />
+              {screen}
             </g>
           </g>
           <g
@@ -2261,6 +2278,7 @@ function Scene({
                 strokeLinecap="round"
                 opacity=".7"
               />
+              {screen}
             </g>
           </g>
           <rect x="88" y="30" width="58" height="62" fill="#E4D9D6" />
@@ -2451,8 +2469,24 @@ export function Pet({
     allowed ? listening : null,
     allowed,
   );
+  const nowPlaying = useNowPlaying({
+    trackId: listening?.track.id ?? null,
+    allowed,
+    mode: musicPrefs.screen,
+    seconds: musicPrefs.screenSeconds,
+  });
+  // La portada solo se lee en un canvas para el modo pixelado y el color de
+  // la portada; si el CDN no lo permite, `useCoverArt` devuelve `null` y se cae
+  // a la portada nítida y al color de la vibe.
+  const art = useCoverArt(
+    shown?.track.imageUrl ?? null,
+    musicPrefs.screen === "pixel" || musicPrefs.color === "cover",
+  );
   const music = shown
-    ? { vibe: shown.vibe, color: layerColor(shown.vibe, musicPrefs.color) }
+    ? {
+        vibe: shown.vibe,
+        color: layerColor(shown.vibe, musicPrefs.color, art.color),
+      }
     : undefined;
   if (shown) {
     // La vibe pone el estilo, el BPM la velocidad y la fatiga la amplitud:
@@ -2463,6 +2497,18 @@ export function Pet({
       "--mx-color": music?.color,
     });
   }
+  const screen =
+    shown && nowPlaying.active ? (
+      <NowPlayingScreen
+        track={shown.track}
+        phase={nowPlaying.phase}
+        closing={nowPlaying.closing}
+        entry={musicPrefs.screenEntry}
+        scanlines={musicPrefs.scanlines}
+        pixelUrl={art.pixel}
+        textSeconds={nowPlaying.textSeconds}
+      />
+    ) : undefined;
 
   return (
     <svg
@@ -2485,6 +2531,7 @@ export function Pet({
         resetsAt={resetsAt}
         commitHash={commitHash}
         music={music && { ...music, visible }}
+        screen={screen}
       />
       {shown &&
         !(shown.vibe === "neutral" && musicPrefs.fallback === "quiet") && (
