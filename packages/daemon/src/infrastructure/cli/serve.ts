@@ -15,6 +15,7 @@ import {
   VERSION,
 } from "../../config.ts";
 import { derivePetState } from "../../domain/petState.ts";
+import { currentPlan } from "../currentPlan.ts";
 import { readCommitHash } from "../git.ts";
 import { createEventBroadcaster } from "../http/events.ts";
 import { createDashboardRoute } from "../http/routes/dashboard.ts";
@@ -80,8 +81,9 @@ function makeStateDeps(
   listening: GetStateDeps["listening"],
   settings: GetStateDeps["settings"],
 ): GetStateDeps {
+  const plan = () => currentPlan(settings().plan);
   const quotaSamplers = providers.map((provider) =>
-    createQuotaSampler(db, accountId, provider),
+    createQuotaSampler(db, accountId, provider, () => plan()?.id ?? null),
   );
   return {
     version: VERSION,
@@ -93,6 +95,7 @@ function makeStateDeps(
     media,
     listening,
     settings,
+    plan,
     readCommitHash,
   };
 }
@@ -154,7 +157,12 @@ export function runServeCli(args: readonly string[] = []): void {
       broadcaster.broadcast({ event: "state", data: snapshot }),
   });
 
-  const sample = createQuotaSampler(db, accountId, anthropicProvider);
+  const sample = createQuotaSampler(
+    db,
+    accountId,
+    anthropicProvider,
+    () => currentPlan(settings.plan)?.id ?? null,
+  );
   const poller = startQuotaPoller({
     sample,
     onSample: (snapshot) => {

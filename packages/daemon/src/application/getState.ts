@@ -1,8 +1,9 @@
 import type {
+  AmnisSettings,
   Listening,
   MediaSnapshot,
-  MusicPrefs,
   PetState,
+  PlanInfo,
   QuotaSnapshot,
   StateResponse,
 } from "@amnis/shared";
@@ -39,8 +40,10 @@ export interface GetStateDeps {
   media(): Promise<MediaSnapshot>;
   /** El eje `listening` ya derivado (petStateWatcher.ts). */
   listening(): Listening | null;
-  /** Preferencias de la capa de música (`~/.amnis/settings.json`). */
-  settings(): MusicPrefs;
+  /** Ajustes del usuario (`~/.amnis/settings.json`). */
+  settings(): AmnisSettings;
+  /** El plan ya resuelto: detectado de las credenciales, o el manual. */
+  plan(): PlanInfo | null;
   /** `HEAD` corto del repo en `project` — solo se llama en `pushing`
    * (infrastructure/git.ts). */
   readCommitHash(project: string): string | null;
@@ -166,6 +169,7 @@ export async function getState(
     quotas,
     media,
     settings: deps.settings(),
+    plan: deps.plan(),
     daemon: {
       version: deps.version,
       startedAt: deps.startedAt,

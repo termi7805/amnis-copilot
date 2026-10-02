@@ -1,5 +1,5 @@
 import {
-  DEFAULT_MUSIC_PREFS,
+  DEFAULT_SETTINGS,
   type QuotaSnapshot,
   type StateResponse,
 } from "@amnis/shared";
@@ -60,7 +60,8 @@ const fakeState: StateResponse = {
     vibe: "neutral",
     bpm: null,
   },
-  settings: DEFAULT_MUSIC_PREFS,
+  settings: DEFAULT_SETTINGS,
+  plan: null,
   quotas: [],
   daemon: {
     version: "0.0.1",

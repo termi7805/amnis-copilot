@@ -1,6 +1,6 @@
 import type {
+  AmnisSettings,
   MediaSnapshot,
-  MusicPrefs,
   PetSnapshot,
   QuotaSnapshot,
   StateResponse,
@@ -71,7 +71,7 @@ export function useAmnisStream(): AmnisStream {
     // Las preferencias de la capa de música viven en el daemon: un cambio
     // hecho en el dashboard llega aquí y se aplica en vivo (#65).
     source.addEventListener("settings", (e: MessageEvent<string>) => {
-      const settings = JSON.parse(e.data) as MusicPrefs;
+      const settings = JSON.parse(e.data) as AmnisSettings;
       setState((current) => (current ? { ...current, settings } : current));
     });
 

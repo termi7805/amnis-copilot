@@ -6,20 +6,20 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname } from "node:path";
-import { DEFAULT_MUSIC_PREFS, type MusicPrefs } from "@amnis/shared";
+import { type AmnisSettings, DEFAULT_SETTINGS } from "@amnis/shared";
 import { SETTINGS_PATH } from "../../config.ts";
-import { sanitizeMusicPrefs } from "../../domain/musicPrefs.ts";
+import { sanitizeSettings } from "../../domain/settings.ts";
 
 /**
- * Lee las preferencias. Un fichero ausente, ilegible o corrupto da los valores
+ * Lee los ajustes. Un fichero ausente, ilegible o corrupto da los valores
  * por defecto y nunca lanza: tus ajustes no pueden impedir que el daemon
  * arranque. Con campos sueltos inválidos se conservan los buenos.
  */
-export function readSettings(path: string = SETTINGS_PATH): MusicPrefs {
+export function readSettings(path: string = SETTINGS_PATH): AmnisSettings {
   try {
-    return sanitizeMusicPrefs(JSON.parse(readFileSync(path, "utf8")));
+    return sanitizeSettings(JSON.parse(readFileSync(path, "utf8")));
   } catch {
-    return { ...DEFAULT_MUSIC_PREFS };
+    return { ...DEFAULT_SETTINGS };
   }
 }
 
@@ -28,7 +28,7 @@ export function readSettings(path: string = SETTINGS_PATH): MusicPrefs {
  * donde estaban los ajustes buenos.
  */
 export function writeSettings(
-  prefs: MusicPrefs,
+  prefs: AmnisSettings,
   path: string = SETTINGS_PATH,
 ): void {
   const dir = dirname(path);

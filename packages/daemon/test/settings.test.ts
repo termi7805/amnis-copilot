@@ -10,7 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { DEFAULT_MUSIC_PREFS } from "@amnis/shared";
+import { DEFAULT_SETTINGS } from "@amnis/shared";
 import { DB_PATH, SETTINGS_PATH } from "../src/config.ts";
 import {
   readSettings,
@@ -30,7 +30,7 @@ test("sin fichero: valores por defecto", () => {
   withDir((dir) => {
     assert.deepEqual(
       readSettings(join(dir, "settings.json")),
-      DEFAULT_MUSIC_PREFS,
+      DEFAULT_SETTINGS,
     );
   });
 });
@@ -48,7 +48,7 @@ test("un settings.json corrupto arranca con los valores por defecto, sin lanzar"
       writeFileSync(path, contents);
       assert.deepEqual(
         readSettings(path),
-        DEFAULT_MUSIC_PREFS,
+        DEFAULT_SETTINGS,
         JSON.stringify(contents),
       );
     }
@@ -65,7 +65,7 @@ test("campos sueltos inválidos: solo esos vuelven a su valor por defecto", () =
     const prefs = readSettings(path);
     assert.equal(prefs.enabled, false);
     assert.equal(prefs.screen, "text");
-    assert.equal(prefs.damping, DEFAULT_MUSIC_PREFS.damping);
+    assert.equal(prefs.damping, DEFAULT_SETTINGS.damping);
   });
 });
 
@@ -73,7 +73,7 @@ test("ida y vuelta, y sobrevive a 'reiniciar' (releer del disco)", () => {
   withDir((dir) => {
     const path = join(dir, "settings.json");
     const prefs = {
-      ...DEFAULT_MUSIC_PREFS,
+      ...DEFAULT_SETTINGS,
       enabled: false,
       screenSeconds: 3.5,
       color: "teal" as const,
@@ -87,16 +87,16 @@ test("ida y vuelta, y sobrevive a 'reiniciar' (releer del disco)", () => {
 test("crea el directorio si no existe", () => {
   withDir((dir) => {
     const path = join(dir, "nuevo", "dentro", "settings.json");
-    writeSettings(DEFAULT_MUSIC_PREFS, path);
-    assert.deepEqual(readSettings(path), DEFAULT_MUSIC_PREFS);
+    writeSettings(DEFAULT_SETTINGS, path);
+    assert.deepEqual(readSettings(path), DEFAULT_SETTINGS);
   });
 });
 
 test("escribir no deja temporales y el fichero es JSON válido", () => {
   withDir((dir) => {
     const path = join(dir, "settings.json");
-    writeSettings(DEFAULT_MUSIC_PREFS, path);
-    writeSettings({ ...DEFAULT_MUSIC_PREFS, enabled: false }, path);
+    writeSettings(DEFAULT_SETTINGS, path);
+    writeSettings({ ...DEFAULT_SETTINGS, enabled: false }, path);
     assert.deepEqual(readdirSync(dir), ["settings.json"]);
     JSON.parse(readFileSync(path, "utf8"));
   });
@@ -107,7 +107,7 @@ test("escribir sobre un fichero corrupto lo repara", () => {
     const path = join(dir, "settings.json");
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, "{ roto");
-    writeSettings({ ...DEFAULT_MUSIC_PREFS, enabled: false }, path);
+    writeSettings({ ...DEFAULT_SETTINGS, enabled: false }, path);
     assert.equal(readSettings(path).enabled, false);
   });
 });

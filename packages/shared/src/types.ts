@@ -225,11 +225,37 @@ export const DEFAULT_MUSIC_PREFS: MusicPrefs = {
   scanlines: true,
 };
 
+/**
+ * Todos los ajustes de `~/.amnis/settings.json`: las preferencias de la capa
+ * de música más el plan elegido a mano (#84). `plan` es solo el respaldo: lo
+ * detectado de las credenciales de Claude siempre gana (`StateResponse.plan`).
+ */
+export interface AmnisSettings extends MusicPrefs {
+  /** Id de un plan conocido, o `null` si no se ha elegido ninguno. */
+  plan: string | null;
+}
+
+export const DEFAULT_SETTINGS: AmnisSettings = {
+  ...DEFAULT_MUSIC_PREFS,
+  plan: null,
+};
+
+/** El plan de la suscripción, ya resuelto (detectado > manual). */
+export interface PlanInfo {
+  id: string;
+  label: string;
+  /** USD al mes: lo que se compara con el coste equivalente de API. */
+  monthlyUsd: number;
+  source: "detected" | "manual";
+}
+
 export interface StateResponse {
   pet: PetSnapshot;
   quotas: QuotaSnapshot[];
   media: MediaSnapshot;
-  settings: MusicPrefs;
+  settings: AmnisSettings;
+  /** `null` si no se detecta ni hay uno manual. */
+  plan: PlanInfo | null;
   daemon: {
     version: string;
     startedAt: string;
@@ -248,7 +274,7 @@ export type AmnisEvent =
   | { event: "state"; data: PetSnapshot }
   | { event: "quota"; data: QuotaSnapshot[] }
   | { event: "media"; data: MediaSnapshot }
-  | { event: "settings"; data: MusicPrefs };
+  | { event: "settings"; data: AmnisSettings };
 
 /** Evento de hook ya normalizado por el `Provider`. */
 export interface NormalizedHookEvent {

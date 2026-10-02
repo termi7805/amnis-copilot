@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   type AmnisEvent,
-  DEFAULT_MUSIC_PREFS,
+  DEFAULT_SETTINGS,
   type StateResponse,
 } from "@amnis/shared";
 import { createEventBroadcaster } from "../src/infrastructure/http/events.ts";
@@ -22,7 +22,8 @@ const HELLO_STATE: StateResponse = {
   },
   quotas: [],
   media: emptyMedia("not-configured", "2026-01-01T00:00:00.000Z"),
-  settings: DEFAULT_MUSIC_PREFS,
+  settings: DEFAULT_SETTINGS,
+  plan: null,
   daemon: {
     version: "0.0.1",
     startedAt: "2026-01-01T00:00:00.000Z",

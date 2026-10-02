@@ -1,4 +1,4 @@
-import { DEFAULT_MUSIC_PREFS, type StateResponse } from "@amnis/shared";
+import { DEFAULT_SETTINGS, type StateResponse } from "@amnis/shared";
 import {
   act,
   cleanup,
@@ -65,7 +65,8 @@ const fakeState: StateResponse = {
     vibe: "neutral",
     bpm: null,
   },
-  settings: DEFAULT_MUSIC_PREFS,
+  settings: DEFAULT_SETTINGS,
+  plan: null,
   quotas: [],
   daemon: {
     version: "0.0.1",
@@ -266,19 +267,19 @@ describe("PetWindow", () => {
 
     // Solo el accesorio: la cabeza deja de cabecear, los cascos siguen.
     act(() =>
-      source?.emit("settings", { ...DEFAULT_MUSIC_PREFS, motion: "accessory" }),
+      source?.emit("settings", { ...DEFAULT_SETTINGS, motion: "accessory" }),
     );
     expect(pet().dataset.motion).toBe("accessory");
     expect(screen.getByTestId("headphones")).toBeInTheDocument();
 
     // Interruptor general apagado: Amnis se quita los cascos.
     act(() =>
-      source?.emit("settings", { ...DEFAULT_MUSIC_PREFS, enabled: false }),
+      source?.emit("settings", { ...DEFAULT_SETTINGS, enabled: false }),
     );
     expect(screen.queryByTestId("headphones")).toBeNull();
 
     // Y encendido otra vez, vuelven.
-    act(() => source?.emit("settings", DEFAULT_MUSIC_PREFS));
+    act(() => source?.emit("settings", DEFAULT_SETTINGS));
     expect(screen.getByTestId("headphones")).toBeInTheDocument();
     vi.useRealTimers();
   });

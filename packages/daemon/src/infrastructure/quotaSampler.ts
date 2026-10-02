@@ -22,6 +22,8 @@ export function createQuotaSampler(
   db: DatabaseSync,
   accountId: number,
   provider: Provider,
+  /** Plan vigente (#84): solo da el valor inicial del techo. */
+  planId: () => string | null = () => null,
 ): () => Promise<QuotaSnapshot> {
   return async (now: Date = new Date()) => {
     const snapshot = await sampleQuota(
@@ -36,11 +38,13 @@ export function createQuotaSampler(
         getPlanWindowTokens: () => getPlanWindowTokens(db, accountId),
         savePlanWindowTokens: (tokens) =>
           savePlanWindowTokens(db, accountId, tokens),
-        // "pro" como valor inicial: nada sabe todavía qué plan tiene la
-        // cuenta (accounts.plan nace nulo), y el techo se autocalibra.
-        // El `?? 44_000` solo satisface noUncheckedIndexedAccess: la
-        // clave "pro" siempre existe en PLAN_WINDOW_TOKENS.
-        defaultPlanWindowTokens: PLAN_WINDOW_TOKENS.pro ?? 44_000,
+        // Valor inicial del techo, hasta que se calibre solo: el del plan
+        // vigente si se conoce, y "pro" si no. El `?? 44_000` solo satisface
+        // noUncheckedIndexedAccess: la clave "pro" siempre existe.
+        defaultPlanWindowTokens:
+          PLAN_WINDOW_TOKENS[planId() ?? "pro"] ??
+          PLAN_WINDOW_TOKENS.pro ??
+          44_000,
         insertQuotaSample: (sample) =>
           insertQuotaSample(db, { accountId, ...sample }),
       },

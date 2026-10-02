@@ -160,17 +160,30 @@ ventana rodante da un número que nunca coincide con el del endpoint.
 
 ### El techo del plan se calibra solo
 
-`PLAN_WINDOW_TOKENS` (pro ≈44k, max_5x ≈88k, max_20x ≈220k) son aproximaciones, y **nada en el
-sistema sabe qué plan tienes**: `accounts.plan` nace nulo y ninguna fuente lo dice.
+`PLAN_WINDOW_TOKENS` (pro ≈44k, max_5x ≈88k, max_20x ≈220k) son aproximaciones. **El plan sí se
+sabe** (#84): `.credentials.json` trae `subscriptionType` (`"pro"`, `"max"`…) y `rateLimitTier`,
+y `detectPlanId()` (`domain/plans.ts`) lo traduce a un plan de la tabla `PLANS`, con su precio
+mensual y fecha como `cost.ts`. `rateLimitTier` solo distingue Max 5x de Max 20x (en una cuenta
+Pro vale `default_claude_ai`, poco descriptivo): si no es concluyente se devuelve `null`, no se
+adivina.
 
-No hace falta preguntarlo. **Cada muestra trae la respuesta**: el endpoint da el `%` real y el
+- **Lo detectado siempre gana a lo manual.** Si no, una elección antigua taparía un cambio real
+  de plan.
+- El selector manual (`plan` en `~/.amnis/settings.json`, aceptado por `PUT /api/settings`) es
+  solo el respaldo para lo que no se puede leer: Keychain de macOS, `CLAUDE_CODE_OAUTH_TOKEN`, o
+  un valor que la tabla no conoce (Team, Enterprise, un plan nuevo). Vive en el fichero de
+  ajustes, nunca en la BD: `--rebuild` no puede llevarse un ajuste del usuario.
+- `GET /api/state` expone `plan: { id, label, monthlyUsd, source: "detected" | "manual" } | null`.
+- El plan resuelto da el **valor inicial** de `PLAN_WINDOW_TOKENS`; `accounts.plan` sigue sin usarse.
+
+El techo, en cambio, **no hace falta preguntarlo**: cada muestra trae la respuesta. El endpoint da el `%` real y el
 parseo local da los tokens del mismo instante, así que `techo ≈ tokens / (utilization / 100)`.
 Con unas cuantas muestras por encima de un uso mínimo, el techo se estima solo y mejora con el uso.
 
 - Se persiste en `accounts.plan_window_tokens`, no en el código.
 - Solo se calibra con muestras autoritativas y con `utilization` suficiente (por debajo del ~10%
   el cociente es ruido).
-- `PLAN_WINDOW_TOKENS` queda como **valor inicial** hasta que haya calibración, no como verdad.
+- `PLAN_WINDOW_TOKENS` (del plan detectado) queda como **valor inicial** hasta que haya calibración, no como verdad.
 
 Es el mejor uso posible de la doble vía: las dos fuentes no solo se comparan, **una enseña a la otra**.
 

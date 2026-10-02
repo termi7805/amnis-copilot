@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   type AmnisEvent,
-  DEFAULT_MUSIC_PREFS,
-  type MusicPrefs,
+  type AmnisSettings,
+  DEFAULT_SETTINGS,
 } from "@amnis/shared";
 import { createEventBroadcaster } from "../src/infrastructure/http/events.ts";
 import { createSettingsRoutes } from "../src/infrastructure/http/routes/settings.ts";
@@ -12,12 +12,16 @@ import { createHttpServer } from "../src/infrastructure/http/server.ts";
 async function withSettings(
   fn: (ctx: {
     base: string;
-    state: { prefs: MusicPrefs; saves: MusicPrefs[]; events: AmnisEvent[] };
+    state: {
+      prefs: AmnisSettings;
+      saves: AmnisSettings[];
+      events: AmnisEvent[];
+    };
   }) => Promise<void>,
 ): Promise<void> {
   const state = {
-    prefs: { ...DEFAULT_MUSIC_PREFS },
-    saves: [] as MusicPrefs[],
+    prefs: { ...DEFAULT_SETTINGS },
+    saves: [] as AmnisSettings[],
     events: [] as AmnisEvent[],
   };
   const broadcaster = createEventBroadcaster(60_000);
@@ -57,7 +61,7 @@ test("GET devuelve las preferencias actuales", async () => {
   await withSettings(async ({ base }) => {
     const res = await fetch(`${base}/api/settings`);
     assert.equal(res.status, 200);
-    assert.deepEqual(await res.json(), DEFAULT_MUSIC_PREFS);
+    assert.deepEqual(await res.json(), DEFAULT_SETTINGS);
   });
 });
 
@@ -68,7 +72,7 @@ test("PUT válido cambia, persiste y avisa por SSE; responde con el resultado", 
       JSON.stringify({ enabled: false, damping: 0.4 }),
     );
     assert.equal(res.status, 200);
-    const expected = { ...DEFAULT_MUSIC_PREFS, enabled: false, damping: 0.4 };
+    const expected = { ...DEFAULT_SETTINGS, enabled: false, damping: 0.4 };
     assert.deepEqual(await res.json(), expected);
     assert.deepEqual(state.saves, [expected]);
     assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
@@ -83,7 +87,7 @@ test("PUT parcial conserva lo no enviado entre cambios", async () => {
     await put(base, JSON.stringify({ enabled: false }));
     const res = await put(base, JSON.stringify({ screenSeconds: 3 }));
     assert.deepEqual(await res.json(), {
-      ...DEFAULT_MUSIC_PREFS,
+      ...DEFAULT_SETTINGS,
       enabled: false,
       screenSeconds: 3,
     });
@@ -102,7 +106,7 @@ test("PUT inválido: 400 con el campo, y no guarda ni avisa", async () => {
     assert.match(body.error, /screenSeconds/);
     assert.deepEqual(state.saves, []);
     assert.deepEqual(state.events, []);
-    assert.deepEqual(state.prefs, DEFAULT_MUSIC_PREFS);
+    assert.deepEqual(state.prefs, DEFAULT_SETTINGS);
   });
 });
 

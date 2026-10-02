@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { MusicPrefs } from "@amnis/shared";
-import { validateMusicPrefs } from "../../../domain/musicPrefs.ts";
+import type { AmnisSettings } from "@amnis/shared";
+import { validateSettings } from "../../../domain/settings.ts";
 import type { RouteHandler } from "../server.ts";
 
 /**
@@ -10,9 +10,9 @@ import type { RouteHandler } from "../server.ts";
 
 export interface SettingsRoutesDeps {
   /** Las preferencias actuales (en memoria). */
-  get(): MusicPrefs;
+  get(): AmnisSettings;
   /** Guarda en disco, actualiza la copia en memoria y avisa por SSE. */
-  save(prefs: MusicPrefs): void;
+  save(settings: AmnisSettings): void;
 }
 
 /** Un body de preferencias son unas decenas de bytes; esto es solo un tope. */
@@ -65,13 +65,13 @@ export function createSettingsRoutes(
         });
         return;
       }
-      const result = validateMusicPrefs(body, deps.get());
+      const result = validateSettings(body, deps.get());
       if (!result.ok) {
         sendJson(res, 400, { error: result.message, field: result.field });
         return;
       }
-      deps.save(result.prefs);
-      sendJson(res, 200, result.prefs);
+      deps.save(result.settings);
+      sendJson(res, 200, result.settings);
     },
   };
 }

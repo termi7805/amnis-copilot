@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_MUSIC_PREFS, type QuotaSnapshot } from "@amnis/shared";
+import { DEFAULT_SETTINGS, type QuotaSnapshot } from "@amnis/shared";
 import {
   commitHashFrom,
   type GetStateDeps,
@@ -39,7 +39,8 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     sampleQuotas: () => Promise.resolve([makeQuota()]),
     media: () => Promise.resolve(emptyMedia("not-configured", STARTED_AT)),
     listening: () => null,
-    settings: () => DEFAULT_MUSIC_PREFS,
+    settings: () => DEFAULT_SETTINGS,
+    plan: () => null,
     readCommitHash: () => {
       throw new Error("readCommitHash no debería llamarse en este test");
     },
@@ -311,7 +312,18 @@ test("pet.listening sale de deps.listening()", async () => {
 });
 
 test("settings: las preferencias de deps.settings() viajan en el hello", async () => {
-  const prefs = { ...DEFAULT_MUSIC_PREFS, enabled: false, screenSeconds: 3 };
+  const prefs = { ...DEFAULT_SETTINGS, enabled: false, screenSeconds: 3 };
   const state = await getState(makeDeps({ settings: () => prefs }), NOW);
   assert.deepEqual(state.settings, prefs);
+});
+
+test("plan: el plan resuelto de deps.plan() viaja en la respuesta", async () => {
+  const plan = {
+    id: "pro",
+    label: "Pro",
+    monthlyUsd: 20,
+    source: "detected" as const,
+  };
+  const state = await getState(makeDeps({ plan: () => plan }), NOW);
+  assert.deepEqual(state.plan, plan);
 });

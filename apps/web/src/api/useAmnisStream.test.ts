@@ -1,5 +1,5 @@
 import {
-  DEFAULT_MUSIC_PREFS,
+  DEFAULT_SETTINGS,
   type MediaSnapshot,
   type PetSnapshot,
   type QuotaSnapshot,
@@ -62,7 +62,8 @@ const hello: StateResponse = {
     vibe: "neutral",
     bpm: null,
   },
-  settings: DEFAULT_MUSIC_PREFS,
+  settings: DEFAULT_SETTINGS,
+  plan: null,
   quotas: [
     {
       provider: "anthropic",
@@ -115,9 +116,9 @@ describe("useAmnisStream", () => {
     const [source] = FakeEventSource.instances;
 
     act(() => source?.emit("hello", hello));
-    expect(result.current.state?.settings).toEqual(DEFAULT_MUSIC_PREFS);
+    expect(result.current.state?.settings).toEqual(DEFAULT_SETTINGS);
 
-    const next = { ...DEFAULT_MUSIC_PREFS, enabled: false, screenSeconds: 3 };
+    const next = { ...DEFAULT_SETTINGS, enabled: false, screenSeconds: 3 };
     act(() => source?.emit("settings", next));
 
     expect(result.current.state?.settings).toEqual(next);
@@ -128,7 +129,7 @@ describe("useAmnisStream", () => {
   it("un settings antes del hello no rompe nada", () => {
     const { result } = renderHook(() => useAmnisStream());
     const [source] = FakeEventSource.instances;
-    act(() => source?.emit("settings", DEFAULT_MUSIC_PREFS));
+    act(() => source?.emit("settings", DEFAULT_SETTINGS));
     expect(result.current.state).toBeNull();
   });
 
