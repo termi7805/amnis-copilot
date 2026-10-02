@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { apiEquivalent } from "../../domain/cost.ts";
+import { apiEquivalent, isPriced, type PriceTable } from "../../domain/cost.ts";
 
 /**
  * Suma de tokens en la ventana. Las cuatro columnas, no solo input/output:
@@ -51,6 +51,13 @@ export interface UsageAggregateRow {
   costUsd: number;
 }
 
+export interface UsageAggregate {
+  rows: UsageAggregateRow[];
+  /** Modelos con tokens en el rango y sin precio: su coste cuenta 0, y
+   * eso tiene que verse en vez de pasar por "barato". */
+  unpricedModels: string[];
+}
+
 const GROUP_KEY_SQL: Record<UsageGroupBy, string> = {
   day: "date(ts)",
   project: "COALESCE(project, '')",
@@ -69,7 +76,8 @@ export function aggregate(
   db: DatabaseSync,
   accountId: number,
   options: AggregateOptions,
-): UsageAggregateRow[] {
+  prices: PriceTable,
+): UsageAggregate {
   const keyExpr = GROUP_KEY_SQL[options.groupBy];
   const conditions = ["account_id = ?"];
   const params: (string | number)[] = [accountId];
@@ -106,7 +114,16 @@ export function aggregate(
   }[];
 
   const byKey = new Map<string, UsageAggregateRow>();
+  const unpriced = new Set<string>();
   for (const row of rows) {
+    const tokens =
+      row.inputTokens +
+      row.outputTokens +
+      row.cacheCreationTokens +
+      row.cacheReadTokens;
+    if (row.model && tokens > 0 && !isPriced(row.model, prices)) {
+      unpriced.add(row.model);
+    }
     const acc = byKey.get(row.key) ?? {
       key: row.key,
       inputTokens: 0,
@@ -119,15 +136,21 @@ export function aggregate(
     acc.outputTokens += row.outputTokens;
     acc.cacheCreationTokens += row.cacheCreationTokens;
     acc.cacheReadTokens += row.cacheReadTokens;
-    acc.costUsd += apiEquivalent({
-      model: row.model,
-      inputTokens: row.inputTokens,
-      outputTokens: row.outputTokens,
-      cacheCreationTokens: row.cacheCreationTokens,
-      cacheReadTokens: row.cacheReadTokens,
-    });
+    acc.costUsd += apiEquivalent(
+      {
+        model: row.model,
+        inputTokens: row.inputTokens,
+        outputTokens: row.outputTokens,
+        cacheCreationTokens: row.cacheCreationTokens,
+        cacheReadTokens: row.cacheReadTokens,
+      },
+      prices,
+    );
     byKey.set(row.key, acc);
   }
 
-  return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+  return {
+    rows: [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key)),
+    unpricedModels: [...unpriced].sort(),
+  };
 }

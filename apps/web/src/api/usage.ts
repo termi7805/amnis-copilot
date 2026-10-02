@@ -20,8 +20,11 @@ export interface UsageAggregateRow {
 
 export interface UsageResponse {
   groupBy: UsageGroupBy;
-  /** Cuándo se actualizó la tabla de precios por última vez (domain/cost.ts). */
+  /** Fecha de la última descarga buena de la tabla de precios oficial, o
+   * la de la semilla de domain/cost.ts si nunca se ha podido descargar. */
   pricesUpdatedAt: string;
+  /** Modelos con tokens en el rango y sin precio: su coste cuenta 0. */
+  unpricedModels: string[];
   rows: UsageAggregateRow[];
 }
 

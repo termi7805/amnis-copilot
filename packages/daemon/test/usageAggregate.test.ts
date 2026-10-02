@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { SEED_PRICES } from "../src/domain/cost.ts";
 import { ensureAccount } from "../src/infrastructure/persistence/accounts.ts";
 import { openDb } from "../src/infrastructure/persistence/db.ts";
 import { aggregate } from "../src/infrastructure/persistence/usage.ts";
@@ -64,7 +65,12 @@ test("los totales por proyecto cuadran con la suma de los eventos crudos", () =>
     output: 0,
   });
 
-  const rows = aggregate(db, accountId, { groupBy: "project" });
+  const { rows } = aggregate(
+    db,
+    accountId,
+    { groupBy: "project" },
+    SEED_PRICES,
+  );
 
   const repoA = rows.find((r) => r.key === "/repo/a");
   assert.ok(repoA);
@@ -99,9 +105,9 @@ test("group by model combina el coste correcto cuando un grupo mezcla modelos co
 
   // Agrupado por día (misma fecha, dos modelos): el coste debe ser la suma
   // de cada modelo a SU precio, no los 2M tokens al precio de uno solo.
-  const rows = aggregate(db, accountId, { groupBy: "day" });
+  const { rows } = aggregate(db, accountId, { groupBy: "day" }, SEED_PRICES);
   assert.equal(rows.length, 1);
-  assert.equal(rows[0]?.costUsd, 3.0 + 5.0);
+  assert.equal(rows[0]?.costUsd, 2.0 + 5.0);
 });
 
 test("el filtro from/to excluye lo que queda fuera del rango", () => {
@@ -133,11 +139,16 @@ test("el filtro from/to excluye lo que queda fuera del rango", () => {
     output: 0,
   });
 
-  const rows = aggregate(db, accountId, {
-    groupBy: "project",
-    from: new Date("2026-01-02T00:00:00.000Z"),
-    to: new Date("2026-01-08T00:00:00.000Z"),
-  });
+  const { rows } = aggregate(
+    db,
+    accountId,
+    {
+      groupBy: "project",
+      from: new Date("2026-01-02T00:00:00.000Z"),
+      to: new Date("2026-01-08T00:00:00.000Z"),
+    },
+    SEED_PRICES,
+  );
 
   assert.equal(rows.length, 1);
   assert.equal(rows[0]?.inputTokens, 100);
@@ -156,8 +167,45 @@ test("modelo null no se descarta: aparece agrupado bajo su propia clave con cost
     output: 50,
   });
 
-  const rows = aggregate(db, accountId, { groupBy: "model" });
+  const { rows, unpricedModels } = aggregate(
+    db,
+    accountId,
+    { groupBy: "model" },
+    SEED_PRICES,
+  );
   assert.equal(rows.length, 1);
   assert.equal(rows[0]?.inputTokens, 100);
   assert.equal(rows[0]?.costUsd, 0);
+  // null no es un modelo sin precio: no hay nombre que listar.
+  assert.deepEqual(unpricedModels, []);
+});
+
+test("un modelo con tokens y sin precio sale en unpricedModels en vez de pasar por barato", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+
+  insertEvent(db, accountId, {
+    dedupeKey: "nuevo",
+    ts: "2026-01-01T00:00:00.000Z",
+    project: "/repo",
+    model: "claude-modelo-futuro",
+    input: 100,
+    output: 0,
+  });
+  insertEvent(db, accountId, {
+    dedupeKey: "haiku",
+    ts: "2026-01-01T00:00:00.000Z",
+    project: "/repo",
+    model: "claude-haiku-4-5-20251001",
+    input: 100,
+    output: 0,
+  });
+
+  const { unpricedModels } = aggregate(
+    db,
+    accountId,
+    { groupBy: "day" },
+    SEED_PRICES,
+  );
+  assert.deepEqual(unpricedModels, ["claude-modelo-futuro"]);
 });

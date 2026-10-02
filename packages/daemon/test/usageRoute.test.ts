@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { PRICES_UPDATED_AT } from "../src/domain/cost.ts";
+import { SEED_PRICES } from "../src/domain/cost.ts";
 import { createUsageRoute } from "../src/infrastructure/http/routes/usage.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
 import { ensureAccount } from "../src/infrastructure/persistence/accounts.ts";
 import { openDb } from "../src/infrastructure/persistence/db.ts";
+import { savePrices } from "../src/infrastructure/persistence/prices.ts";
 import { insertUsageEvent } from "../src/infrastructure/persistence/usageEvents.ts";
 
 test("GET /api/usage responde tipado y con el coste calculado", async () => {
@@ -24,6 +25,29 @@ test("GET /api/usage responde tipado y con el coste calculado", async () => {
     cacheReadTokens: 0,
     serviceTier: null,
   });
+  insertUsageEvent(db, {
+    accountId,
+    provider: "anthropic",
+    dedupeKey: "b",
+    sessionId: null,
+    project: "/repo",
+    ts: "2026-01-01T00:00:00.000Z",
+    model: "claude-modelo-futuro",
+    inputTokens: 10,
+    outputTokens: 0,
+    cacheCreationTokens: 0,
+    cacheReadTokens: 0,
+    serviceTier: null,
+  });
+  // Precio descargado distinto del de la semilla: la ruta usa la tabla
+  // guardada, no la constante.
+  const sonnet = SEED_PRICES["claude-sonnet-5"];
+  assert.ok(sonnet);
+  savePrices(
+    db,
+    { "claude-sonnet-5": { ...sonnet, input: 7 } },
+    "2026-11-01T12:00:00.000Z",
+  );
 
   const server = createHttpServer({
     routes: { "GET /api/usage": createUsageRoute(db, accountId) },
@@ -37,11 +61,13 @@ test("GET /api/usage responde tipado y con el coste calculado", async () => {
     const body = (await response.json()) as {
       groupBy: string;
       pricesUpdatedAt: string;
+      unpricedModels: string[];
       rows: { costUsd: number }[];
     };
     assert.equal(body.groupBy, "project");
-    assert.equal(body.rows[0]?.costUsd, 3.0);
-    assert.equal(body.pricesUpdatedAt, PRICES_UPDATED_AT);
+    assert.equal(body.rows[0]?.costUsd, 7.0);
+    assert.equal(body.pricesUpdatedAt, "2026-11-01");
+    assert.deepEqual(body.unpricedModels, ["claude-modelo-futuro"]);
   } finally {
     await server.close();
   }

@@ -22,6 +22,7 @@ describe("Usage", () => {
     stubFetch({
       groupBy: "project",
       pricesUpdatedAt: "2026-07-27",
+      unpricedModels: [],
       rows: [
         {
           key: "",
@@ -50,6 +51,7 @@ describe("Usage", () => {
     stubFetch({
       groupBy: "model",
       pricesUpdatedAt: "2026-07-27",
+      unpricedModels: [],
       rows: [
         {
           key: "claude-sonnet-5",
@@ -75,7 +77,12 @@ describe("Usage", () => {
   });
 
   it("muestra la fecha de actualización de precios", async () => {
-    stubFetch({ groupBy: "day", pricesUpdatedAt: "2026-07-27", rows: [] });
+    stubFetch({
+      groupBy: "day",
+      pricesUpdatedAt: "2026-07-27",
+      unpricedModels: [],
+      rows: [],
+    });
 
     render(<Usage />);
 
@@ -88,6 +95,7 @@ describe("Usage", () => {
     const fetchMock = stubFetch({
       groupBy: "day",
       pricesUpdatedAt: "2026-07-27",
+      unpricedModels: [],
       rows: [],
     });
 
@@ -104,5 +112,36 @@ describe("Usage", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const secondUrl = fetchMock.mock.calls[1]?.[0] as string;
     expect(secondUrl).not.toBe(firstUrl);
+  });
+
+  it("los modelos sin precio se nombran en vez de sumar 0 $ en silencio", async () => {
+    stubFetch({
+      groupBy: "day",
+      pricesUpdatedAt: "2026-10-02",
+      unpricedModels: ["claude-modelo-futuro"],
+      rows: [],
+    });
+    render(<Usage />);
+    await waitFor(() =>
+      expect(
+        screen.getByText("Sin precio (cuentan 0 $): claude-modelo-futuro"),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("sin modelos sin precio no aparece el aviso", async () => {
+    stubFetch({
+      groupBy: "day",
+      pricesUpdatedAt: "2026-10-02",
+      unpricedModels: [],
+      rows: [],
+    });
+    render(<Usage />);
+    await waitFor(() =>
+      expect(
+        screen.getByText("Precios actualizados: 2026-10-02"),
+      ).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Sin precio/)).not.toBeInTheDocument();
   });
 });

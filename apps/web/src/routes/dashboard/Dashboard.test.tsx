@@ -86,7 +86,12 @@ describe("Dashboard", () => {
             Promise.resolve(
               url.includes("/api/media/devices")
                 ? { devices: [] }
-                : { groupBy: "day", pricesUpdatedAt: "", rows: [] },
+                : {
+                    groupBy: "day",
+                    pricesUpdatedAt: "",
+                    unpricedModels: [],
+                    rows: [],
+                  },
             ),
         }),
       ),

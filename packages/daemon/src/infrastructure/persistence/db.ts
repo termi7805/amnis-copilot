@@ -92,6 +92,19 @@ function migrate(db: DatabaseSync): void {
       error                 TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_quota_ts ON quota_samples (ts);
+
+    -- Última tabla de precios buena descargada (providers/anthropic/pricing.ts).
+    -- No es derivada de los JSONL, pero sí reconstruible: se vuelve a
+    -- descargar, y mientras tanto vale la semilla de domain/cost.ts.
+    CREATE TABLE IF NOT EXISTS model_prices (
+      model           TEXT PRIMARY KEY,
+      input           REAL NOT NULL,
+      output          REAL NOT NULL,
+      cache_write_5m  REAL NOT NULL,
+      cache_write_1h  REAL NOT NULL,
+      cache_read      REAL NOT NULL,
+      fetched_at      TEXT NOT NULL
+    );
   `);
 
   // ALTER TABLE ADD COLUMN no es idempotente con IF NOT EXISTS en SQLite:

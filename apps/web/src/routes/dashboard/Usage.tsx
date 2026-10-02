@@ -104,6 +104,11 @@ export function Usage() {
           Precios actualizados: {data.pricesUpdatedAt}
         </p>
       )}
+      {data && data.unpricedModels.length > 0 && (
+        <p className={styles.pricesUpdatedAt}>
+          Sin precio (cuentan 0 $): {data.unpricedModels.join(", ")}
+        </p>
+      )}
     </section>
   );
 }

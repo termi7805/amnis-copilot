@@ -6,6 +6,7 @@ import {
   quotaExhausted,
 } from "../../application/getState.ts";
 import type { RecordHookDeps } from "../../application/recordHook.ts";
+import { refreshPrices } from "../../application/refreshPrices.ts";
 import {
   DB_PATH,
   PORT,
@@ -36,6 +37,7 @@ import {
   insertHookEvent,
   lastKnownStateEvent,
 } from "../persistence/hookEvents.ts";
+import { savePrices } from "../persistence/prices.ts";
 import { readSettings, writeSettings } from "../persistence/settings.ts";
 import {
   readSpotifyConfig,
@@ -44,7 +46,9 @@ import {
 import { countUsageEvents } from "../persistence/usageEvents.ts";
 import { startPetStateWatcher } from "../petStateWatcher.ts";
 import { startQuotaPoller } from "../poller.ts";
+import { startPricesRefresher } from "../pricesRefresher.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
+import { fetchPrices } from "../providers/anthropic/pricing.ts";
 import { providers } from "../providers/index.ts";
 import { fetchFeatures } from "../providers/reccobeats/features.ts";
 import { createMediaControl } from "../providers/spotify/control.ts";
@@ -165,6 +169,20 @@ export function runServeCli(args: readonly string[] = []): void {
     onError: (err) => console.error("Fallo muestreando cuota:", err.message),
   });
 
+  // Un fallo no toca la tabla guardada: siguen valiendo los últimos
+  // precios buenos (o la semilla de domain/cost.ts).
+  const pricesRefresher = startPricesRefresher({
+    refresh: () =>
+      refreshPrices(
+        {
+          fetchPrices: () => fetchPrices(),
+          savePrices: (prices, fetchedAt) => savePrices(db, prices, fetchedAt),
+        },
+        new Date(),
+      ),
+    onError: (message) => console.error("Fallo actualizando precios:", message),
+  });
+
   const server = createHttpServer({
     routes: {
       "GET /debug": createDashboardRoute(),
@@ -213,6 +231,7 @@ export function runServeCli(args: readonly string[] = []): void {
     if (shuttingDown) return;
     shuttingDown = true;
     poller.stop();
+    pricesRefresher.stop();
     watcher.stop();
     mediaPoller.stop();
     broadcaster.stop();

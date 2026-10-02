@@ -99,6 +99,9 @@ export const INSTALLED_HOOK_SCRIPT = join(AMNIS_DIR, "hooks", "amnis-hook.sh");
 /** Intervalo seguro del endpoint OAuth. Menos que esto arriesga 429. */
 export const QUOTA_POLL_MS = 180_000;
 
+/** Refresco de la tabla de precios: cambia con cada lanzamiento de modelo. */
+export const PRICES_REFRESH_MS = 24 * 60 * 60_000;
+
 /** Sin eventos durante este tiempo, la mascota se duerme. */
 export const SLEEP_AFTER_MS = 10 * 60_000;
 

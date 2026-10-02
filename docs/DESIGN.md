@@ -151,8 +151,19 @@ En una tarifa plana el coste por token no existe. Lo que sí responde a una preg
 compensa la suscripción?*— es **cuánto habría costado ese consumo pagando la API pública**.
 
 Se muestra siempre etiquetado como *equivalente*, junto al precio del plan. Presentarlo como
-dinero gastado sería mentir. La tabla de precios vive en `domain/cost.ts`, versionada y con fecha:
-es un dato que envejece, y tiene que verse cuándo se actualizó por última vez.
+dinero gastado sería mentir. Los precios son un dato que envejece con cada lanzamiento de modelo,
+así que no se escriben a mano: el daemon descarga la página de precios oficial
+(`platform.claude.com/docs/en/about-claude/pricing.md`; la Models API no expone precios) al
+arrancar y cada 24 h, y la guarda en SQLite. La tabla de `domain/cost.ts` es solo la semilla para
+un primer arranque sin red. Dos reglas:
+
+- **Nunca se sustituye una tabla buena por una peor.** Si la página no responde o su formato no se
+  reconoce (falta una columna, algún precio ilegible), se descarta entera y siguen valiendo los
+  últimos precios buenos. Se hace upsert sin borrar: un modelo retirado de la página conserva su
+  último precio.
+- **Un modelo sin precio se ve.** Su coste cuenta 0, pero la API lo lista en `unpricedModels` y el
+  dashboard lo nombra; si no, "no lo sé" pasaría por "barato". Junto al coste se muestra la fecha
+  de la última descarga buena.
 
 ### Parseo de JSONL — la trampa del doble conteo
 

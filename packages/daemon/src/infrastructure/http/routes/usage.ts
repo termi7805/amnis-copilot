@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import { PRICES_UPDATED_AT } from "../../../domain/cost.ts";
+import { currentPrices } from "../../persistence/prices.ts";
 import { aggregate, type UsageGroupBy } from "../../persistence/usage.ts";
 import type { RouteHandler } from "../server.ts";
 
@@ -52,10 +52,17 @@ export function createUsageRoute(
       return;
     }
 
-    const rows = aggregate(db, accountId, { groupBy: groupByParam, from, to });
+    const { prices, updatedAt } = currentPrices(db);
+    const { rows, unpricedModels } = aggregate(
+      db,
+      accountId,
+      { groupBy: groupByParam, from, to },
+      prices,
+    );
     sendJson(res, 200, {
       groupBy: groupByParam,
-      pricesUpdatedAt: PRICES_UPDATED_AT,
+      pricesUpdatedAt: updatedAt,
+      unpricedModels,
       rows,
     });
   };
