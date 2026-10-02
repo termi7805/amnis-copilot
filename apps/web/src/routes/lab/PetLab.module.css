@@ -1,0 +1,47 @@
+/* `html, body, #root` llevan `overflow: hidden` (index.css, por la ventana
+   transparente de Tauri): el banco hace su propio scroll. */
+.lab {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  padding: 1rem;
+  font-family: system-ui, sans-serif;
+  font-size: 12px;
+  background: #f4f1ee;
+  color: #201e1d;
+}
+
+.lab[data-dark="true"] {
+  background: #14181f;
+  color: #e8e6e3;
+}
+
+.controls {
+  position: sticky;
+  left: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.grid {
+  border-collapse: separate;
+  border-spacing: 8px;
+}
+
+.grid th {
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.cell {
+  overflow: hidden;
+}
+
+.lab[data-paused="true"] .cell,
+.lab[data-paused="true"] .cell * {
+  animation-play-state: paused;
+}

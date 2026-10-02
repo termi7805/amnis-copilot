@@ -1,8 +1,16 @@
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { Dashboard } from "./routes/dashboard/Dashboard.tsx";
 import { PetWindow } from "./routes/pet/PetWindow.tsx";
+
+/** Solo en desarrollo: `import.meta.env.DEV` es `false` en el build, y Vite
+ * descarta el módulo entero. */
+const PetLab = import.meta.env.DEV
+  ? lazy(() =>
+      import("./routes/lab/PetLab.tsx").then((m) => ({ default: m.PetLab })),
+    )
+  : null;
 
 /**
  * Dos rutas estáticas sin navegación entre sí — viven en contextos
@@ -10,7 +18,15 @@ import { PetWindow } from "./routes/pet/PetWindow.tsx";
  * código, no menos (docs/STACK.md §2).
  */
 function App() {
-  return window.location.pathname === "/pet" ? <PetWindow /> : <Dashboard />;
+  const { pathname } = window.location;
+  if (pathname === "/lab" && PetLab) {
+    return (
+      <Suspense fallback={null}>
+        <PetLab />
+      </Suspense>
+    );
+  }
+  return pathname === "/pet" ? <PetWindow /> : <Dashboard />;
 }
 
 const root = document.getElementById("root");
