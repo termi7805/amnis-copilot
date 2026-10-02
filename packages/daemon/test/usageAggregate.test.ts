@@ -209,3 +209,31 @@ test("un modelo con tokens y sin precio sale en unpricedModels en vez de pasar p
   );
   assert.deepEqual(unpricedModels, ["claude-modelo-futuro"]);
 });
+
+test("por modelo, el ID con fecha y sin fecha salen en una sola fila sin el sufijo", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+
+  insertEvent(db, accountId, {
+    dedupeKey: "dated",
+    ts: "2026-01-01T10:00:00.000Z",
+    project: "/repo",
+    model: "claude-haiku-4-5-20251001",
+    input: 1_000_000,
+    output: 0,
+  });
+  insertEvent(db, accountId, {
+    dedupeKey: "plain",
+    ts: "2026-01-01T11:00:00.000Z",
+    project: "/repo",
+    model: "claude-haiku-4-5",
+    input: 1_000_000,
+    output: 0,
+  });
+
+  const { rows } = aggregate(db, accountId, { groupBy: "model" }, SEED_PRICES);
+  assert.deepEqual(
+    rows.map((r) => [r.key, r.inputTokens, r.costUsd]),
+    [["claude-haiku-4-5", 2_000_000, 2.0]],
+  );
+});

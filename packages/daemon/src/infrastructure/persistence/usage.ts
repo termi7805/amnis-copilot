@@ -1,5 +1,10 @@
 import type { DatabaseSync } from "node:sqlite";
-import { apiEquivalent, isPriced, type PriceTable } from "../../domain/cost.ts";
+import {
+  apiEquivalent,
+  isPriced,
+  normalizeModelId,
+  type PriceTable,
+} from "../../domain/cost.ts";
 
 /**
  * Suma de tokens en la ventana. Las cuatro columnas, no solo input/output:
@@ -71,6 +76,10 @@ const GROUP_KEY_SQL: Record<UsageGroupBy, string> = {
  * El coste no se puede sumar sobre tokens ya agrupados por día/proyecto —
  * un grupo puede mezclar modelos con precios distintos. Se agrega primero
  * por (grupo, modelo) en SQL, y el coste por modelo se combina en JS.
+ *
+ * Por modelo, la clave va sin sufijo de fecha (`claude-haiku-4-5-20251001`
+ * → `claude-haiku-4-5`): es el mismo modelo, y con y sin fecha saldría
+ * en dos filas.
  */
 export function aggregate(
   db: DatabaseSync,
@@ -124,8 +133,10 @@ export function aggregate(
     if (row.model && tokens > 0 && !isPriced(row.model, prices)) {
       unpriced.add(row.model);
     }
-    const acc = byKey.get(row.key) ?? {
-      key: row.key,
+    const key =
+      options.groupBy === "model" ? normalizeModelId(row.key) : row.key;
+    const acc = byKey.get(key) ?? {
+      key,
       inputTokens: 0,
       outputTokens: 0,
       cacheCreationTokens: 0,
@@ -146,7 +157,7 @@ export function aggregate(
       },
       prices,
     );
-    byKey.set(row.key, acc);
+    byKey.set(key, acc);
   }
 
   return {
