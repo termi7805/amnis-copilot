@@ -58,11 +58,16 @@ para que exponerlo por túnel (Tailscale/Cloudflare) sea un día de trabajo el d
 **El daemon vive con la app de la mascota** (Tauri lo arranca como sidecar). Elegido por
 simplicidad sobre el servicio de sistema.
 
-Esto es seguro porque **los JSONL son la fuente de verdad y la BD es una caché derivada con
-offsets**: al abrir la mascota, el daemon reingiere todo lo que Claude Code escribió mientras
-estaba apagado. No se pierde uso, tokens, sesiones ni proyectos. Lo único irrecuperable es la
-serie temporal del endpoint OAuth y el estado en vivo — y ninguna importa cuando no estás
-mirando. Los hooks aportan **inmediatez, no datos exclusivos**.
+Esto es seguro porque **los JSONL son la fuente de verdad del uso y la BD lo guarda como caché
+derivada con offsets**: al abrir la mascota, el daemon reingiere todo lo que Claude Code escribió
+mientras estaba apagado. No se pierde uso, tokens, sesiones ni proyectos. Lo irrecuperable es la
+serie temporal del endpoint OAuth, los eventos de hook y el estado en vivo: **solo existen si el
+daemon estaba escuchando**. Al abrir la mascota no se pierde nada de lo que ya estaba guardado
+(el uso se reingiere; lo demás se conserva), pero lo ocurrido con el daemon apagado no se puede
+recuperar de ninguna fuente. Hasta E9 eso se aceptaba («ninguna importa cuando no estás mirando»);
+con el pico diario de Histórico (`quota_samples`) y la vista de Actividad (`hook_events`) sí
+importan, por eso `--rebuild` no los toca (§3). Los hooks aportan **inmediatez, no datos
+exclusivos del uso**.
 
 Migrar a servicio de sistema (systemd user unit / launchd / tarea programada) es más adelante
 cambiar quién lanza el proceso, nada más.
@@ -252,14 +257,25 @@ duplicarlo crea un fichero que si se filtra duele de verdad, y no sirve al objet
 **Eventos crudos + rollups derivados.** Filas de ~100 bytes: años de uso caben en decenas de MB,
 y cualquier pregunta nueva se puede responder hacia atrás.
 
-**La BD es reconstruible.** Se guarda por fichero el offset procesado. Si cambia el parseo:
-borrar la BD y reingerir. Nada se pierde porque el dato original no es nuestro.
+**La BD es reconstruible solo en parte, y `--rebuild` nunca borra.** Se guarda por fichero el
+offset procesado. Si cambia el parseo, `amnis ingest --rebuild` olvida los offsets y **reingiere
+todos los JSONL que sigan en disco, actualizando** (`ON CONFLICT(dedupe_key) DO UPDATE`, solo con la primera aparición de cada
+clave en la pasada, como una ingesta desde cero) lo que ya había. No borra nada, y la razón es medible: **Claude Code purga sus transcripts con el tiempo**
+(en esta máquina el más antiguo es del 7 de septiembre, y la BD guarda uso desde junio), así que
+para ese uso la BD es la única copia. Un `DELETE` + reingesta perdía 10.348 eventos.
 
-**Por eso lo que no se puede reconstruir no va en la BD.** Las preferencias del usuario viven en
-`~/.amnis/settings.json` y los tokens en sus propios ficheros 0600 (`token.json`,
-`spotify-token.json`): `amnis ingest --rebuild` borra la BD, y perder un ajuste al reconstruir
-datos es un bug difícil de atribuir. Tampoco va nada de Spotify: el estado de reproducción vive en
-memoria y viaja por SSE (§6).
+| Tabla | Naturaleza | `--rebuild` |
+|---|---|---|
+| `usage_events` | Sale de los JSONL **mientras existan** | La corrige; conserva los de transcripts purgados |
+| `ingest_offsets` | Derivada | La reinicia (releer todo) |
+| `quota_samples`, `hook_events` | Solo existen porque el daemon escuchaba | No la toca |
+| `accounts.plan_window_tokens` | Recalibrar exige muestras con uso suficiente y tarda días | No la toca |
+| `model_prices` | Se vuelve a descargar | No la toca |
+
+Reinicio de offsets y reingesta van en **una transacción**: si la reingesta falla, no cambia nada.
+Limitación asumida: si un cambio de parseo cambia las `dedupe_key`, las filas viejas no se
+actualizan y quedarían duplicadas; ese caso exige borrar `~/.amnis/amnis.sqlite` a mano (y eso sí
+pierde la serie de cuota y el uso de transcripts purgados).
 
 ### Esquema
 

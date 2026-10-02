@@ -17,8 +17,8 @@ import {
 /** Antes de esto, un pointerdown es un futuro clic, no un arrastre. */
 const DRAG_THRESHOLD_PX = 10;
 
-/** `localStorage`, no SQLite (issue #42): la BD se borra con
- * `amnis ingest --rebuild`, y perder un ajuste de UI al reconstruir
+/** `localStorage`, no SQLite (issue #42): la BD se reconstruye
+ * con `amnis ingest --rebuild`, y perder un ajuste de UI al reconstruir
  * datos es un bug difícil de atribuir. */
 const PANEL_KEY = "amnis-pet-panel";
 const LAST_PANEL_KEY = "amnis-pet-last-panel";

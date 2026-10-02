@@ -11,7 +11,9 @@ const HELP = `amnis <comando>
 
 Comandos:
   ingest [--rebuild]   Ingesta incremental de los transcripts de uso.
-                        --rebuild borra la BD y reingiere todo desde cero.
+                        --rebuild reingiere los JSONL corrigiendo lo ya guardado; no
+                        borra nada (ni uso de transcripts purgados, ni la serie
+                        de cuota, ni los hooks, ni la calibración).
   install-hooks         Registra los hooks de Amnis en ~/.claude/settings.json
                         (merge no destructivo; reinstalar reemplaza en su sitio).
   uninstall-hooks        Quita los hooks de Amnis de ~/.claude/settings.json,

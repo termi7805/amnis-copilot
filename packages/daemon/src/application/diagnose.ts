@@ -151,7 +151,7 @@ function checkDb(facts: DiagnoseFacts): Check {
     ok: false,
     message: facts.dbError,
     remedy:
-      "Revisa los permisos de ~/.amnis, o reconstruye con `amnis ingest --rebuild`.",
+      "Revisa los permisos de ~/.amnis. Si el fichero está corrupto, bórralo y reinicia (se pierden la serie de cuota y los eventos de hook).",
   };
 }
 

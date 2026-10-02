@@ -89,7 +89,7 @@ igual, sin redimensionar nada. Nunca un `import` de `@tauri-apps/api` en el cami
 diferida, y si falla, el panel sigue funcionando.
 
 La preferencia plegado/desplegado va en **`localStorage`, no en SQLite**: la BD es una caché
-derivada que se borra con `amnis ingest --rebuild`, y perder un ajuste de UI al reconstruir datos
+que se reconstruye con `amnis ingest --rebuild`, y perder un ajuste de UI al reconstruir datos
 sería un bug difícil de atribuir.
 
 ## 4. Rutas: la API bajo `/api`

@@ -2,8 +2,13 @@ import { DatabaseSync } from "node:sqlite";
 import { DB_PATH, ensureDirs } from "../../config.ts";
 
 /**
- * SQLite es una CACHÉ DERIVADA, no la fuente de verdad: los JSONL lo son.
- * Si cambia el parseo, se borra el fichero y se reingiere todo. Nada se pierde.
+ * El uso (`usage_events`) sale de los JSONL, pero Claude Code los purga con el
+ * tiempo: una vez purgados, la BD es la única copia. Por eso `amnis ingest
+ * --rebuild` reingiere y corrige filas, nunca borra.
+ *
+ * Tampoco se reconstruyen `quota_samples` y `hook_events` (solo existen porque
+ * el daemon estaba escuchando) ni `plan_window_tokens` (tarda días en
+ * recalibrarse). Las migraciones añaden columnas, nunca borran y recrean.
  *
  * Solo metadatos: nunca prompts ni código.
  */
@@ -12,6 +17,9 @@ export function openDb(path: string = DB_PATH): DatabaseSync {
   const db = new DatabaseSync(path);
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA foreign_keys = ON");
+  // `--rebuild` con el daemon vivo retiene el write lock unos segundos: el
+  // daemon espera en vez de fallar con SQLITE_BUSY.
+  db.exec("PRAGMA busy_timeout = 5000");
   migrate(db);
   return db;
 }

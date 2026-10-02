@@ -24,15 +24,28 @@ export interface IngestUsageDeps {
 }
 
 /**
- * Todo lo que `runIngest` necesita de fuera. Nada de `node:fs` ni
- * `node:sqlite` aquí: borrar el fichero y abrir la BD son detalles de
+ * Todo lo que `runIngest` necesita de fuera. Nada de `node:sqlite` aquí:
+ * abrir la BD, borrar lo derivado y la transacción son detalles de
  * `infrastructure/cli/ingest.ts`.
  */
 export interface RunIngestDeps {
   providers: readonly Provider[];
-  /** Borra la BD (`~/.amnis/amnis.sqlite`). Solo se llama si `rebuild`. */
-  resetDatabase(): void;
-  openStore(): { store: UsageStore; close(): void };
+  /**
+   * `rebuild` pide un store que **actualiza** los eventos que ya existen en
+   * vez de ignorarlos (ver `insertUsageEvent`).
+   */
+  openStore(options: { rebuild: boolean }): {
+    store: UsageStore;
+    /**
+     * Olvida los offsets de ingesta para releer todos los JSONL. No borra
+     * eventos: Claude Code purga transcripts viejos, y el uso de los que ya
+     * no existen no se puede reconstruir de ningún sitio.
+     */
+    resetOffsets(): void;
+    /** Ejecuta `fn` en una transacción: si lanza, no se aplica nada. */
+    transaction<T>(fn: () => T): T;
+    close(): void;
+  };
 }
 
 export interface RunIngestOptions {
@@ -42,19 +55,25 @@ export interface RunIngestOptions {
 /**
  * `amnis ingest` / `amnis ingest --rebuild`.
  *
- * `--rebuild` es el botón que hace barato equivocarse en el parseo: como
- * el JSONL es la fuente de verdad, la BD siempre se puede recalcular
- * entera desde cero.
+ * `--rebuild` es el botón que hace barato equivocarse en el parseo: relee todos
+ * los JSONL que sigan en disco y **corrige** lo que ya había, sin borrar nada
+ * (los JSONL son la fuente de verdad solo mientras Claude Code no los purgue).
+ * Reinicio de offsets y reingesta van en **una** transacción: si falla, ni los
+ * offsets ni los eventos cambian.
  */
 export function runIngest(
   deps: RunIngestDeps,
   options: RunIngestOptions,
 ): IngestResult {
-  if (options.rebuild) deps.resetDatabase();
-
-  const { store, close } = deps.openStore();
+  const { store, resetOffsets, transaction, close } = deps.openStore({
+    rebuild: options.rebuild,
+  });
   try {
-    return ingestAllProviders(deps.providers, store);
+    if (!options.rebuild) return ingestAllProviders(deps.providers, store);
+    return transaction(() => {
+      resetOffsets();
+      return ingestAllProviders(deps.providers, store);
+    });
   } finally {
     close();
   }

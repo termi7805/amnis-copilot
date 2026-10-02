@@ -163,11 +163,13 @@ test("endpoint con error falla con el mensaje del error", () => {
   assert.equal(check.message, "401 no autorizado");
 });
 
-test("BD con error falla con remedio de permisos o rebuild", () => {
+test("BD con error falla con remedio de permisos o fichero corrupto", () => {
   const checks = diagnose(makeFacts({ dbError: "EACCES" }), NOW);
   const check = find(checks, "base de datos");
   assert.equal(check.ok, false);
-  assert.ok(check.remedy?.includes("ingest --rebuild"));
+  assert.ok(check.remedy?.includes("permisos"));
+  // --rebuild ya no arregla una BD ilegible: no se ofrece como remedio.
+  assert.ok(!check.remedy?.includes("--rebuild"));
 });
 
 test("invariante: todo chequeo que falla trae un remedio no nulo", () => {
