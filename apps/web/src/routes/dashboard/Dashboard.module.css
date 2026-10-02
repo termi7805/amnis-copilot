@@ -1,5 +1,6 @@
 .dashboard {
-  font-family: system-ui, sans-serif;
+  font-family: var(--f-body);
+  color: var(--ink);
   padding: 1rem;
 }
 
@@ -8,8 +9,9 @@
 .petCard {
   width: 200px;
   height: 150px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--line);
   border-radius: 8px;
+  background: var(--stage);
 }
 
 .overview {
@@ -30,12 +32,53 @@
 .mediaCard {
   flex: 1 1 340px;
   max-width: 440px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--line);
   border-radius: 8px;
+  background: var(--surface);
   overflow: hidden;
 }
 
 .quotaError {
-  color: #b3261e;
+  color: var(--crit);
   font-size: 0.85rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.logo {
+  margin: 0;
+  font: 400 1.1rem / 1 var(--f-display);
+  letter-spacing: 0.04em;
+}
+
+.themeSwitch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.themeSwitch button {
+  border: 0;
+  background: none;
+  padding: 5px 11px;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.themeSwitch button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 500;
 }

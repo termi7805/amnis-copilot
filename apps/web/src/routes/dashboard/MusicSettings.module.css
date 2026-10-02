@@ -1,8 +1,9 @@
 .panel {
   margin-top: 1.5rem;
   padding: 1rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--line);
   border-radius: 8px;
+  background: var(--surface);
 }
 
 .panel h2 {
@@ -52,8 +53,9 @@
 .stage {
   width: 260px;
   height: 195px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--line);
   border-radius: 8px;
+  background: var(--stage);
 }
 
 .sample {
@@ -65,11 +67,11 @@
 .note {
   margin: 0;
   font-size: 0.85rem;
-  color: #666;
+  color: var(--ink-3);
 }
 
 .error {
   margin: 0;
-  color: #b3261e;
+  color: var(--crit);
   font-size: 0.85rem;
 }

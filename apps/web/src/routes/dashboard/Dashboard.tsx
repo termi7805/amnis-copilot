@@ -4,6 +4,7 @@ import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
 import { useNow } from "../../lib/countdown.ts";
 import { MediaPlayer } from "../../lib/MediaPlayer/MediaPlayer.tsx";
 import { Pet } from "../../lib/Pet/Pet.tsx";
+import { type ThemePref, useTheme } from "../../lib/theme.ts";
 import styles from "./Dashboard.module.css";
 import { MusicSettings } from "./MusicSettings.tsx";
 import { QuotaRing } from "./QuotaRing.tsx";
@@ -13,12 +14,34 @@ import { Usage } from "./Usage.tsx";
  * Envoltura del dashboard: tarjeta ~160px junto a los anillos de cuota
  * (docs/STACK.md §2), la tarjeta del reproductor (#58) y la vista histórica de tokens/coste debajo (#31).
  */
+const THEME_OPTIONS: { pref: ThemePref; label: string }[] = [
+  { pref: "system", label: "Sistema" },
+  { pref: "light", label: "Claro" },
+  { pref: "dark", label: "Oscuro" },
+];
+
 export function Dashboard() {
+  const [theme, setTheme] = useTheme();
   const { state, status } = useAmnisStream();
   const now = useNow();
 
   return (
     <main className={styles.dashboard}>
+      <header className={styles.header}>
+        <h1 className={styles.logo}>Amnis</h1>
+        <div className={styles.themeSwitch} role="group" aria-label="Tema">
+          {THEME_OPTIONS.map(({ pref, label }) => (
+            <button
+              key={pref}
+              type="button"
+              aria-pressed={theme === pref}
+              onClick={() => setTheme(pref)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </header>
       <div className={styles.petCard}>
         {state ? (
           <Pet

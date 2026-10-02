@@ -4,6 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Amnis</title>
+<script>
+  // Antes del primer render, o se ve un destello del tema equivocado (#80).
+  // La ventana flotante (/pet) no tiene tema oscuro todavía: siempre clara.
+  try {
+    const t = location.pathname === "/pet" ? "light" : localStorage.getItem("amnis-theme");
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  } catch {}
+</script>
 </head>
 <body>
 <div id="root"></div>

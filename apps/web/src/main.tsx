@@ -1,5 +1,8 @@
 import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
+import "@fontsource/silkscreen/400.css";
 import "./index.css";
 import { Dashboard } from "./routes/dashboard/Dashboard.tsx";
 import { PetWindow } from "./routes/pet/PetWindow.tsx";

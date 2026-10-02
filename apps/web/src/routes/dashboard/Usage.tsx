@@ -138,25 +138,25 @@ function UsageChart({ rows }: { rows: UsageAggregateRow[] }) {
             dataKey="inputTokens"
             stackId="tokens"
             name="input"
-            fill="#3a7d44"
+            className={styles.seriesInput}
           />
           <Bar
             dataKey="outputTokens"
             stackId="tokens"
             name="output"
-            fill="#7fd88f"
+            className={styles.seriesOutput}
           />
           <Bar
             dataKey="cacheCreationTokens"
             stackId="tokens"
             name="cache write"
-            fill="#d8b56a"
+            className={styles.seriesCacheWrite}
           />
           <Bar
             dataKey="cacheReadTokens"
             stackId="tokens"
             name="cache read"
-            fill="#c9c9c9"
+            className={styles.seriesCacheRead}
           />
         </BarChart>
       </ResponsiveContainer>

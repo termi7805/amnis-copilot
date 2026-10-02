@@ -1,0 +1,150 @@
+/*
+ * Tokens de tema (#80). Cada token se define primero en :root (claro) y el
+ * oscuro solo lo redefine, dos veces: bajo la preferencia del sistema (salvo
+ * que se fuerce claro) y bajo data-theme="dark". Un color definido solo en el
+ * bloque oscuro desaparecería en claro sin avisar.
+ */
+:root {
+  color-scheme: light;
+  --bg: #eef2f5;
+  --surface: #ffffff;
+  --raised: #f6f8fa;
+  --line: #d6dde4;
+  --line-soft: #e6ebf0;
+  --ink: #171d26;
+  --ink-2: #4a5563;
+  --ink-3: #6f7c8b;
+  --accent: #0e8f7d;
+  --accent-mark: #12a08b;
+  --accent-soft: #d5f3ee;
+  --ok: #1f8a5b;
+  --ok-soft: #dcf2e7;
+  --warn: #9a6400;
+  --warn-mark: #e09a00;
+  --warn-soft: #fbecc8;
+  --crit: #c4260f;
+  --crit-soft: #fbe0da;
+  --s1: #2a78d6;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #b7c1cb;
+  --src-code: #12a08b;
+  --src-chat: #eb6834;
+  --src-cowork: #6a5bd0;
+  --src-other: #b7c1cb;
+  --act-work: #12a08b;
+  --act-explore: #6a5bd0;
+  --act-wait: #e09a00;
+  --act-idle: #c9d1d9;
+  --heat-0: #eef2f5;
+  --heat-1: #c8ece5;
+  --heat-2: #8fd8cb;
+  --heat-3: #3fb9a4;
+  --heat-4: #0e8f7d;
+  --stage: radial-gradient(
+    ellipse 70% 80% at 50% 62%,
+    #ffffff 0%,
+    #e6edf2 70%,
+    #dbe3ea 100%
+  );
+  --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
+  --f-display: "Silkscreen", ui-monospace, monospace;
+  --f-body: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:
+    "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11161d;
+    --surface: #1a212b;
+    --raised: #212a35;
+    --line: #2f3a47;
+    --line-soft: #26303b;
+    --ink: #e8edf2;
+    --ink-2: #b4c0cc;
+    --ink-3: #8597a9;
+    --accent: #39e0c8;
+    --accent-mark: #1aa893;
+    --accent-soft: #163a37;
+    --ok: #4fd194;
+    --ok-soft: #173327;
+    --warn: #ffb020;
+    --warn-mark: #c98500;
+    --warn-soft: #3a2c10;
+    --crit: #ff6a52;
+    --crit-soft: #3d1c17;
+    --s1: #3987e5;
+    --s2: #d95926;
+    --s3: #199e70;
+    --s4: #4a5665;
+    --src-code: #1aa893;
+    --src-chat: #d95926;
+    --src-cowork: #9085e9;
+    --src-other: #4a5665;
+    --act-work: #1aa893;
+    --act-explore: #9085e9;
+    --act-wait: #c98500;
+    --act-idle: #3a4654;
+    --heat-0: #1f2832;
+    --heat-1: #173d3a;
+    --heat-2: #1b6158;
+    --heat-3: #22927f;
+    --heat-4: #39e0c8;
+    --stage: radial-gradient(
+      ellipse 70% 80% at 50% 62%,
+      #8b9bac 0%,
+      #5d6a7a 55%,
+      #3a4552 100%
+    );
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11161d;
+  --surface: #1a212b;
+  --raised: #212a35;
+  --line: #2f3a47;
+  --line-soft: #26303b;
+  --ink: #e8edf2;
+  --ink-2: #b4c0cc;
+  --ink-3: #8597a9;
+  --accent: #39e0c8;
+  --accent-mark: #1aa893;
+  --accent-soft: #163a37;
+  --ok: #4fd194;
+  --ok-soft: #173327;
+  --warn: #ffb020;
+  --warn-mark: #c98500;
+  --warn-soft: #3a2c10;
+  --crit: #ff6a52;
+  --crit-soft: #3d1c17;
+  --s1: #3987e5;
+  --s2: #d95926;
+  --s3: #199e70;
+  --s4: #4a5665;
+  --src-code: #1aa893;
+  --src-chat: #d95926;
+  --src-cowork: #9085e9;
+  --src-other: #4a5665;
+  --act-work: #1aa893;
+  --act-explore: #9085e9;
+  --act-wait: #c98500;
+  --act-idle: #3a4654;
+  --heat-0: #1f2832;
+  --heat-1: #173d3a;
+  --heat-2: #1b6158;
+  --heat-3: #22927f;
+  --heat-4: #39e0c8;
+  --stage: radial-gradient(
+    ellipse 70% 80% at 50% 62%,
+    #8b9bac 0%,
+    #5d6a7a 55%,
+    #3a4552 100%
+  );
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
+}

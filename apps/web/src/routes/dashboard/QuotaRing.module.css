@@ -12,13 +12,13 @@
 
 .track {
   fill: none;
-  stroke: #e5e5e5;
+  stroke: var(--line-soft);
   stroke-width: 6;
 }
 
 .authoritative {
   fill: none;
-  stroke: #3a7d44;
+  stroke: var(--accent-mark);
   stroke-width: 6;
   stroke-linecap: round;
   transition: stroke-dasharray 0.3s ease;
@@ -26,7 +26,7 @@
 
 .estimated {
   fill: none;
-  stroke: #3a7d44;
+  stroke: var(--accent-mark);
   stroke-width: 3;
   stroke-linecap: round;
   opacity: 0.4;
@@ -47,11 +47,13 @@
 }
 
 .value {
+  font-family: var(--f-mono);
   font-size: 1.1rem;
   font-weight: bold;
 }
 
 .countdown {
+  font-family: var(--f-mono);
   font-size: 0.75rem;
   opacity: 0.7;
   min-height: 1em;
@@ -72,9 +74,9 @@
 
 /* Jerarquía visual (5h manda, 7d acompaña) sin tocar el dato. */
 .ring[data-tone="muted"] .authoritative {
-  stroke: #8b857e;
+  stroke: var(--ink-3);
 }
 
 .ring[data-tone="muted"] .value {
-  color: #6b6660;
+  color: var(--ink-2);
 }
