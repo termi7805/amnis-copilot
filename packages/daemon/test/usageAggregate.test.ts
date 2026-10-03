@@ -18,13 +18,14 @@ function insertEvent(
     output: number;
     cacheCreation?: number;
     cacheRead?: number;
+    sessionId?: string;
   },
 ): void {
   insertUsageEvent(db, {
     accountId,
     provider: "anthropic",
     dedupeKey: opts.dedupeKey,
-    sessionId: null,
+    sessionId: opts.sessionId ?? null,
     project: opts.project,
     ts: opts.ts,
     model: opts.model,
@@ -236,5 +237,136 @@ test("por modelo, el ID con fecha y sin fecha salen en una sola fila sin el sufi
   assert.deepEqual(
     rows.map((r) => [r.key, r.inputTokens, r.costUsd]),
     [["claude-haiku-4-5", 2_000_000, 2.0]],
+  );
+});
+
+test("day,model separa los modelos dentro del día y une el mismo modelo con y sin sufijo de fecha", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+
+  const base = { project: "/repo", output: 0 };
+  insertEvent(db, accountId, {
+    ...base,
+    dedupeKey: "h1",
+    ts: "2026-01-01T10:00:00.000Z",
+    model: "claude-haiku-4-5-20251001",
+    input: 100,
+  });
+  insertEvent(db, accountId, {
+    ...base,
+    dedupeKey: "h2",
+    ts: "2026-01-01T11:00:00.000Z",
+    model: "claude-haiku-4-5",
+    input: 200,
+  });
+  insertEvent(db, accountId, {
+    ...base,
+    dedupeKey: "s1",
+    ts: "2026-01-01T12:00:00.000Z",
+    model: "claude-sonnet-5",
+    input: 1_000_000,
+  });
+
+  const { rows } = aggregate(
+    db,
+    accountId,
+    { groupBy: "day,model" },
+    SEED_PRICES,
+  );
+  assert.deepEqual(
+    rows.map((r) => [r.key, r.model, r.inputTokens]),
+    [
+      ["2026-01-01", "claude-haiku-4-5", 300],
+      ["2026-01-01", "claude-sonnet-5", 1_000_000],
+    ],
+  );
+});
+
+test("la suma del coste cuadra por día, por proyecto y por día y modelo, con un modelo sin precio", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+
+  const events: [string, string, string, string | null, number][] = [
+    ["a", "2026-01-01T10:00:00.000Z", "/repo/a", "claude-sonnet-5", 700_000],
+    ["b", "2026-01-01T11:00:00.000Z", "/repo/b", "claude-opus-5", 300_000],
+    ["c", "2026-01-02T10:00:00.000Z", "/repo/a", "claude-opus-5", 500_000],
+    ["d", "2026-01-02T11:00:00.000Z", "/repo/b", "modelo-sin-precio", 900_000],
+    ["e", "2026-01-03T11:00:00.000Z", "/repo/a", null, 100_000],
+  ];
+  for (const [dedupeKey, ts, project, model, input] of events) {
+    insertEvent(db, accountId, {
+      dedupeKey,
+      ts,
+      project,
+      model,
+      input,
+      output: 0,
+    });
+  }
+
+  const total = (groupBy: "day" | "project" | "day,model") =>
+    aggregate(db, accountId, { groupBy }, SEED_PRICES).rows.reduce(
+      (sum, r) => sum + r.costUsd,
+      0,
+    );
+  const expected = total("day");
+  assert.ok(expected > 0);
+  assert.ok(Math.abs(total("project") - expected) < 1e-9);
+  assert.ok(Math.abs(total("day,model") - expected) < 1e-9);
+});
+
+test("las sesiones se cuentan distintas por fila; una con dos modelos es una, y sin session_id no cuenta", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+
+  const base = { project: "/repo/a", input: 10, output: 0 };
+  insertEvent(db, accountId, {
+    ...base,
+    dedupeKey: "1",
+    ts: "2026-01-01T10:00:00.000Z",
+    model: "claude-sonnet-5",
+    sessionId: "s1",
+  });
+  insertEvent(db, accountId, {
+    ...base,
+    dedupeKey: "2",
+    ts: "2026-01-01T10:01:00.000Z",
+    model: "claude-opus-5",
+    sessionId: "s1",
+  });
+  insertEvent(db, accountId, {
+    ...base,
+    dedupeKey: "3",
+    ts: "2026-01-01T10:02:00.000Z",
+    model: "claude-opus-5",
+    sessionId: "s2",
+  });
+  insertEvent(db, accountId, {
+    ...base,
+    dedupeKey: "4",
+    ts: "2026-01-01T10:03:00.000Z",
+    model: "claude-opus-5",
+  });
+
+  const byProject = aggregate(
+    db,
+    accountId,
+    { groupBy: "project" },
+    SEED_PRICES,
+  );
+  assert.equal(byProject.rows[0]?.sessions, 2);
+
+  const byDayModel = aggregate(
+    db,
+    accountId,
+    { groupBy: "day,model" },
+    SEED_PRICES,
+  );
+  assert.deepEqual(
+    byDayModel.rows.map((r) => [r.model, r.sessions]),
+    [
+      ["claude-opus-5", 1 + 1],
+      ["claude-sonnet-5", 1],
+    ],
   );
 });

@@ -3,7 +3,12 @@ import { currentPrices } from "../../persistence/prices.ts";
 import { aggregate, type UsageGroupBy } from "../../persistence/usage.ts";
 import type { RouteHandler } from "../server.ts";
 
-const VALID_GROUP_BY: readonly UsageGroupBy[] = ["day", "project", "model"];
+const VALID_GROUP_BY: readonly UsageGroupBy[] = [
+  "day",
+  "project",
+  "model",
+  "day,model",
+];
 
 function isValidGroupBy(value: string): value is UsageGroupBy {
   return (VALID_GROUP_BY as readonly string[]).includes(value);
@@ -19,7 +24,7 @@ function sendJson(
 }
 
 /**
- * GET /api/usage?groupBy=day|project|model&from=&to=
+ * GET /api/usage?groupBy=day|project|model|day,model&from=&to=
  *
  * Los rollups se calculan en cada consulta desde usage_events, nunca desde
  * una tabla mantenida a parte: aggregate() en persistence/usage.ts.
@@ -32,7 +37,7 @@ export function createUsageRoute(
     const groupByParam = url.searchParams.get("groupBy") ?? "day";
     if (!isValidGroupBy(groupByParam)) {
       sendJson(res, 400, {
-        error: `groupBy inválido: "${groupByParam}". Debe ser day, project o model.`,
+        error: `groupBy inválido: "${groupByParam}". Debe ser day, project, model o day,model.`,
       });
       return;
     }

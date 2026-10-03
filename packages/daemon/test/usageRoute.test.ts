@@ -109,3 +109,41 @@ test("un from inválido responde 400 en vez de un rango vacío silencioso", asyn
     await server.close();
   }
 });
+
+test("GET /api/usage acepta groupBy=day,model y devuelve el modelo en cada fila", async () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insertUsageEvent(db, {
+    accountId,
+    provider: "anthropic",
+    dedupeKey: "x",
+    sessionId: "s1",
+    gitBranch: null,
+    project: "/repo",
+    ts: "2026-01-01T10:00:00.000Z",
+    model: "claude-sonnet-5",
+    inputTokens: 10,
+    outputTokens: 0,
+    cacheCreationTokens: 0,
+    cacheReadTokens: 0,
+    serviceTier: null,
+  });
+  const server = createHttpServer({
+    routes: { "GET /api/usage": createUsageRoute(db, accountId) },
+  });
+  const port = await server.listen(0);
+  try {
+    const response = await fetch(
+      `http://127.0.0.1:${port}/api/usage?groupBy=day,model`,
+    );
+    assert.equal(response.status, 200);
+    const body = (await response.json()) as {
+      rows: { key: string; model: string; sessions: number }[];
+    };
+    assert.equal(body.rows[0]?.key, "2026-01-01");
+    assert.equal(body.rows[0]?.model, "claude-sonnet-5");
+    assert.equal(body.rows[0]?.sessions, 1);
+  } finally {
+    await server.close();
+  }
+});

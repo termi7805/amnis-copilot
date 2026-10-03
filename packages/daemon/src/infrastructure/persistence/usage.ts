@@ -39,7 +39,15 @@ export function usageTimestamps(db: DatabaseSync, accountId: number): Date[] {
   return rows.map((r) => new Date(r.ts));
 }
 
-export type UsageGroupBy = "day" | "project" | "model" | "session";
+/** `day,model` cruza las dos dimensiones en el propio SQL: la gráfica de coste
+ * por día y modelo no puede salir de cruzar dos respuestas en el cliente,
+ * que no cuadra en los días con modelos sin precio. */
+export type UsageGroupBy =
+  | "day"
+  | "project"
+  | "model"
+  | "session"
+  | "day,model";
 
 export interface AggregateOptions {
   groupBy: UsageGroupBy;
@@ -49,6 +57,11 @@ export interface AggregateOptions {
 
 export interface UsageAggregateRow {
   key: string;
+  /** Solo con `groupBy=day,model`: el modelo sin sufijo de fecha, `""` si el
+   * evento no lo tenía. `key` es entonces el día. */
+  model?: string;
+  /** Sesiones distintas con eventos en el grupo. */
+  sessions: number;
   inputTokens: number;
   outputTokens: number;
   cacheCreationTokens: number;
@@ -68,6 +81,7 @@ const GROUP_KEY_SQL: Record<UsageGroupBy, string> = {
   project: "COALESCE(project, '')",
   model: "COALESCE(model, '')",
   session: "COALESCE(session_id, '')",
+  "day,model": "date(ts)",
 };
 
 /**
@@ -89,6 +103,7 @@ export function aggregate(
   prices: PriceTable,
 ): UsageAggregate {
   const keyExpr = GROUP_KEY_SQL[options.groupBy];
+  const byDayModel = options.groupBy === "day,model";
   const conditions = ["account_id = ?"];
   const params: (string | number)[] = [accountId];
 
@@ -134,10 +149,14 @@ export function aggregate(
     if (row.model && tokens > 0 && !isPriced(row.model, prices)) {
       unpriced.add(row.model);
     }
+    const model = byDayModel ? normalizeModelId(row.model ?? "") : undefined;
     const key =
       options.groupBy === "model" ? normalizeModelId(row.key) : row.key;
-    const acc = byKey.get(key) ?? {
+    const bucket = byDayModel ? `${key}\u0000${model}` : key;
+    const acc = byKey.get(bucket) ?? {
       key,
+      ...(byDayModel ? { model } : {}),
+      sessions: 0,
       inputTokens: 0,
       outputTokens: 0,
       cacheCreationTokens: 0,
@@ -158,11 +177,44 @@ export function aggregate(
       },
       prices,
     );
-    byKey.set(key, acc);
+    byKey.set(bucket, acc);
+  }
+
+  // Las sesiones se cuentan aparte y con un Set por fila: una sesión que usa
+  // dos modelos (o el mismo con y sin sufijo de fecha) es una sola, y sumar
+  // COUNT(DISTINCT) por modelo la contaría dos veces.
+  const sessionRows = db
+    .prepare(`
+      SELECT DISTINCT ${keyExpr} AS key, model, session_id AS sessionId
+      FROM usage_events
+      WHERE ${conditions.join(" AND ")} AND session_id IS NOT NULL
+    `)
+    .all(...params) as {
+    key: string;
+    model: string | null;
+    sessionId: string;
+  }[];
+  const sessionSets = new Map<string, Set<string>>();
+  for (const row of sessionRows) {
+    const key =
+      options.groupBy === "model" ? normalizeModelId(row.key) : row.key;
+    const bucket = byDayModel
+      ? `${key}\u0000${normalizeModelId(row.model ?? "")}`
+      : key;
+    const set = sessionSets.get(bucket) ?? new Set<string>();
+    set.add(row.sessionId);
+    sessionSets.set(bucket, set);
+  }
+  for (const [bucket, acc] of byKey) {
+    acc.sessions = sessionSets.get(bucket)?.size ?? 0;
   }
 
   return {
-    rows: [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key)),
+    rows: [...byKey.values()].sort(
+      (a, b) =>
+        a.key.localeCompare(b.key) ||
+        (a.model ?? "").localeCompare(b.model ?? ""),
+    ),
     unpricedModels: [...unpriced].sort(),
   };
 }

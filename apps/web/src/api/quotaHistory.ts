@@ -1,4 +1,4 @@
-import type { QuotaHistoryResponse } from "@amnis/shared";
+import type { QuotaHistoryResponse, QuotaPeak } from "@amnis/shared";
 import { useEffect, useState } from "react";
 import { daemonUrl } from "./config.ts";
 
@@ -13,6 +13,21 @@ export async function fetchQuotaHistory(
   const response = await fetch(`${daemonUrl()}/api/quota/history?${query}`);
   if (!response.ok) {
     throw new Error(`GET /api/quota/history → ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function fetchQuotaPeaks(
+  from: Date,
+  to: Date,
+): Promise<QuotaPeak[]> {
+  const query = new URLSearchParams({
+    from: from.toISOString(),
+    to: to.toISOString(),
+  });
+  const response = await fetch(`${daemonUrl()}/api/quota/peaks?${query}`);
+  if (!response.ok) {
+    throw new Error(`GET /api/quota/peaks → ${response.status}`);
   }
   return response.json();
 }

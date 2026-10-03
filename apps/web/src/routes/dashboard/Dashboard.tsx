@@ -56,7 +56,7 @@ export function Dashboard() {
       </nav>
       <main className={styles.main}>
         {view === "ahora" && <NowView state={state} />}
-        {view === "historico" && <HistoryView />}
+        {view === "historico" && <HistoryView state={state} />}
         {view === "actividad" && <ActivityView />}
         {view === "ajustes" && <SettingsView state={state} />}
       </main>

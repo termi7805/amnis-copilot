@@ -5,11 +5,15 @@ import { daemonUrl } from "./config.ts";
  * `/api/usage` no vive en `@amnis/shared` (a diferencia de `StateResponse`),
  * es la primera vez que un cliente lo consume.
  */
-export type UsageGroupBy = "day" | "project" | "model";
+export type UsageGroupBy = "day" | "project" | "model" | "day,model";
 
 export interface UsageAggregateRow {
   /** Fecha, proyecto o modelo según `groupBy`. Cadena vacía si el evento no lo tenía. */
   key: string;
+  /** Solo con `groupBy=day,model`: el modelo sin sufijo de fecha; `key` es el día. */
+  model?: string;
+  /** Sesiones distintas con eventos en el grupo. */
+  sessions: number;
   inputTokens: number;
   outputTokens: number;
   cacheCreationTokens: number;
