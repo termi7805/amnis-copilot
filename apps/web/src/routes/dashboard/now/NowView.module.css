@@ -4,6 +4,13 @@
   gap: 1.1rem;
 }
 
+.eyebrow {
+  color: var(--ink-3);
+  font: 500 0.62rem / 1 var(--f-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .pageHead h1 {
   margin: 0;
   font: 600 1.5rem / 1.2 var(--f-body);
@@ -48,32 +55,73 @@
   }
 }
 
-.overview {
+/* Cada fila reparte sus tarjetas a partes iguales (`--cols` lo decide
+   `cardRows`): con 3 o con N no queda una sola ni hay huecos. */
+.cards {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 1.5rem;
+  flex-direction: column;
+  gap: 1.1rem;
 }
 
-.quotas {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
+.cardRow {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 1.1rem;
 }
 
-/* Sin altura fija: sin login el estado vacío ocupa poco y la cuota no se
-   mueve de sitio. */
-.mediaCard {
-  flex: 1 1 340px;
-  max-width: 440px;
+.lower {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+
+.player {
+  grid-column: span 7;
   min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--r);
   background: var(--surface);
+  box-shadow: var(--shadow);
   overflow: hidden;
 }
 
-.quotaError {
-  color: var(--crit);
-  font-size: 0.85rem;
+.playerHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  /* 16 px: el mismo margen lateral que el layout ancho del reproductor. */
+  padding: 1.1rem 16px 0;
+}
+
+.playerHead h2 {
+  margin: 0;
+  font: 600 0.9rem / 1.3 var(--f-body);
+}
+
+.events {
+  grid-column: span 5;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .cardRow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* La última de una fila impar ocupa las dos columnas en vez de quedar sola. */
+  .cardRow > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .player,
+  .events {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 760px) {
+  .cardRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

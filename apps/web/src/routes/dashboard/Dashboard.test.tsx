@@ -90,12 +90,20 @@ describe("Dashboard", () => {
                 ? { devices: [] }
                 : url.includes("/api/quota/history")
                   ? { samples: [] }
-                  : {
-                      groupBy: "day",
-                      pricesUpdatedAt: "",
-                      unpricedModels: [],
-                      rows: [],
-                    },
+                  : url.includes("/api/activity")
+                    ? {
+                        day: "2026-01-01",
+                        sessions: [],
+                        segments: [],
+                        byState: {},
+                        waiting: { minutes: 0, count: 0 },
+                      }
+                    : {
+                        groupBy: "day",
+                        pricesUpdatedAt: "",
+                        unpricedModels: [],
+                        rows: [],
+                      },
             ),
         }),
       ),
@@ -134,7 +142,7 @@ describe("Dashboard", () => {
     );
   });
 
-  it("sin endpoint OAuth, el anillo de 7d dice 'sin dato' en vez de un 0%", () => {
+  it("sin endpoint OAuth, la tarjeta de 7 d lo dice en vez de un 0 %", () => {
     const quota: QuotaSnapshot = {
       provider: "anthropic",
       authoritative: null,
@@ -155,8 +163,11 @@ describe("Dashboard", () => {
     act(() => source?.emit("hello", { ...fakeState, quotas: [quota] }));
 
     expect(screen.getByTestId("five-hour-value")).toHaveTextContent("~30%");
-    expect(screen.getByTestId("quota-value")).toHaveTextContent("sin dato");
-    expect(screen.getByText("endpoint caído")).toBeInTheDocument();
+    expect(screen.getByTestId("card-weekly")).toHaveTextContent(
+      "Sin el endpoint de Anthropic no hay dato de la semana.",
+    );
+    expect(screen.getByTestId("card-weekly")).not.toHaveTextContent("0%");
+    expect(screen.getByText(/estimación local · endpoint caído/)).toBeVisible();
   });
 
   const quota: QuotaSnapshot = {

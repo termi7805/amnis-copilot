@@ -1,9 +1,18 @@
 /* Sin tamaño de ventana ni fondo propios: eso vive en las envolturas
    (docs/STACK.md §2). Solo ocupa el ancho de su contenedor. Mismo
    vocabulario visual que QuotaPanel. */
+/* Paleta propia del panel de la mascota; el layout ancho del dashboard la
+   remapea a los tokens del tema (más abajo), así el compacto no cambia. */
 .root {
+  --mp-ink: #201e1d;
+  --mp-ink-hover: #3a3735;
+  --mp-on-ink: #fff;
+  --mp-muted: #6b6660;
+  --mp-line: #c9c6c2;
+  --mp-raised: #edf1f5;
+  --mp-error: #b3261e;
   font-family: system-ui, sans-serif;
-  color: #201e1d;
+  color: var(--mp-ink);
   width: 100%;
   box-sizing: border-box;
 }
@@ -20,9 +29,9 @@
   width: 64px;
   height: 64px;
   object-fit: cover;
-  border: 2px solid #201e1d;
+  border: 2px solid var(--mp-ink);
   box-sizing: border-box;
-  background: #edf1f5;
+  background: var(--mp-raised);
 }
 
 .info {
@@ -42,14 +51,14 @@
   font:
     600 13px / 1.25 Archivo,
     sans-serif;
-  color: #201e1d;
+  color: var(--mp-ink);
 }
 
 .artists {
   margin-top: 2px;
   font-size: 11px;
   line-height: 1.2;
-  color: #6b6660;
+  color: var(--mp-muted);
 }
 
 .controls {
@@ -65,23 +74,23 @@
   width: 28px;
   height: 28px;
   padding: 0;
-  border: 2px solid #201e1d;
+  border: 2px solid var(--mp-ink);
   background: none;
-  color: #201e1d;
+  color: var(--mp-ink);
   cursor: pointer;
 }
 
 .control:hover:not(:disabled) {
-  background: #edf1f5;
+  background: var(--mp-raised);
 }
 
 .control[data-primary="true"] {
-  background: #201e1d;
-  color: #fff;
+  background: var(--mp-ink);
+  color: var(--mp-on-ink);
 }
 
 .control[data-primary="true"]:hover:not(:disabled) {
-  background: #3a3735;
+  background: var(--mp-ink-hover);
 }
 
 .controlGap {
@@ -89,12 +98,12 @@
 }
 
 .control[data-toggle="true"][aria-pressed="true"] {
-  background: #201e1d;
-  color: #fff;
+  background: var(--mp-ink);
+  color: var(--mp-on-ink);
 }
 
 .control[data-toggle="true"][aria-pressed="true"]:hover:not(:disabled) {
-  background: #3a3735;
+  background: var(--mp-ink-hover);
 }
 
 .control:disabled {
@@ -116,7 +125,7 @@
     400 10px / 1 ui-monospace,
     Menlo,
     monospace;
-  color: #6b6660;
+  color: var(--mp-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -129,9 +138,9 @@
   position: relative;
   flex: 1;
   height: 10px;
-  border: 2px solid #201e1d;
+  border: 2px solid var(--mp-ink);
   box-sizing: border-box;
-  background: #edf1f5;
+  background: var(--mp-raised);
   cursor: pointer;
   touch-action: none;
 }
@@ -142,13 +151,13 @@
 }
 
 .progressTrack:focus-visible {
-  outline: 2px solid #201e1d;
+  outline: 2px solid var(--mp-ink);
   outline-offset: 2px;
 }
 
 .progressFill {
   height: 100%;
-  background: #201e1d;
+  background: var(--mp-ink);
 }
 
 .devices {
@@ -163,9 +172,9 @@
   width: 100%;
   box-sizing: border-box;
   padding: 5px 8px;
-  border: 2px solid #201e1d;
+  border: 2px solid var(--mp-ink);
   background: none;
-  color: #201e1d;
+  color: var(--mp-ink);
   font:
     600 11px / 1.2 system-ui,
     sans-serif;
@@ -175,7 +184,7 @@
 
 .deviceTrigger:hover:not(:disabled),
 .deviceRow:hover:not(:disabled) {
-  background: #edf1f5;
+  background: var(--mp-raised);
 }
 
 .deviceTrigger:disabled,
@@ -207,8 +216,8 @@
 
 /* El restringido se atenúa pero se lee: debe verse por qué no se puede elegir. */
 .deviceRow[data-active="true"] {
-  background: #201e1d;
-  color: #fff;
+  background: var(--mp-ink);
+  color: var(--mp-on-ink);
 }
 
 .deviceRow:disabled:not([data-active="true"]) {
@@ -233,7 +242,7 @@
   font:
     600 13px / 1.25 Archivo,
     sans-serif;
-  color: #201e1d;
+  color: var(--mp-ink);
 }
 
 .hint {
@@ -243,7 +252,7 @@
   gap: 6px;
   font-size: 11px;
   line-height: 1.35;
-  color: #6b6660;
+  color: var(--mp-muted);
 }
 
 .command {
@@ -251,21 +260,21 @@
   /* Un clic selecciona todo el comando, listo para copiar. */
   user-select: all;
   padding: 6px 8px;
-  border: 1px solid #c9c6c2;
-  background: #edf1f5;
+  border: 1px solid var(--mp-line);
+  background: var(--mp-raised);
   font:
     400 10px / 1.4 ui-monospace,
     Menlo,
     monospace;
-  color: #201e1d;
+  color: var(--mp-ink);
   word-break: break-all;
 }
 
 .connect {
   padding: 6px 10px;
-  border: 2px solid #201e1d;
-  background: #201e1d;
-  color: #fff;
+  border: 2px solid var(--mp-ink);
+  background: var(--mp-ink);
+  color: var(--mp-on-ink);
   font:
     600 11px / 1 system-ui,
     sans-serif;
@@ -273,7 +282,7 @@
 }
 
 .connect:hover:not(:disabled) {
-  background: #3a3735;
+  background: var(--mp-ink-hover);
 }
 
 .connect:disabled {
@@ -287,12 +296,24 @@
   gap: 6px;
   margin: 0;
   padding: 0 12px 10px;
-  color: #b3261e;
+  color: var(--mp-error);
   font-size: 11px;
   line-height: 1.35;
 }
 
-/* Layout ancho (tarjeta del dashboard, #58): portada grande y todo a la vista. */
+/* Layout ancho (tarjeta del dashboard, #58): portada grande y todo a la vista,
+   con los tokens del tema para seguir el claro/oscuro del dashboard (#92). */
+.root[data-layout="wide"] {
+  --mp-ink: var(--ink);
+  --mp-ink-hover: var(--ink-2);
+  --mp-on-ink: var(--surface);
+  --mp-muted: var(--ink-3);
+  --mp-line: var(--line);
+  --mp-raised: var(--raised);
+  --mp-error: var(--crit);
+  font-family: var(--f-body);
+}
+
 .root[data-layout="wide"] .player {
   gap: 16px;
   padding: 14px 16px;

@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { daemonUrl } from "./config.ts";
 
 /**
@@ -50,4 +51,48 @@ export async function fetchUsage(
     throw new Error(`GET /api/usage → ${response.status}`);
   }
   return response.json();
+}
+
+export interface TodayUsage {
+  /** Equivalente de API, nunca dinero gastado. */
+  costUsd: number;
+  tokens: number;
+}
+
+/**
+ * Lo consumido desde la medianoche local. `refreshKey` vuelve a pedirlo (ver
+ * `useTodayActivity`). `null` mientras no hay respuesta; un fallo deja lo
+ * anterior, porque la tarjeta es un acompañante, no el dato principal.
+ */
+export function useTodayUsage(refreshKey: string): TodayUsage | null {
+  const [usage, setUsage] = useState<TodayUsage | null>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshKey solo dispara el refetch
+  useEffect(() => {
+    let cancelled = false;
+    const midnight = new Date();
+    midnight.setHours(0, 0, 0, 0);
+    fetchUsage({ groupBy: "day", from: midnight })
+      .then((r) => {
+        if (cancelled) return;
+        setUsage({
+          costUsd: r.rows.reduce((sum, row) => sum + row.costUsd, 0),
+          tokens: r.rows.reduce(
+            (sum, row) =>
+              sum +
+              row.inputTokens +
+              row.outputTokens +
+              row.cacheCreationTokens +
+              row.cacheReadTokens,
+            0,
+          ),
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  return usage;
 }

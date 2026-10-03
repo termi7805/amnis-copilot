@@ -1,0 +1,237 @@
+/* Tarjetas pequeñas de la segunda mitad de Ahora (#92): acompañan a la
+   ventana de 5 h sin competir con ella, de ahí el `%` a 30 px y no a 56. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.row h2 {
+  margin: 0;
+  font: 600 0.9rem / 1.3 var(--f-body);
+}
+
+.pct {
+  font: 500 1.9rem / 1 var(--f-mono);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pct small {
+  margin-left: 0.2rem;
+  color: var(--ink-2);
+  font-size: 0.95rem;
+  letter-spacing: 0;
+}
+
+.note {
+  color: var(--ink-3);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.mono {
+  color: var(--ink-2);
+  font: 400 0.78rem / 1.4 var(--f-mono);
+}
+
+.link {
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.pill {
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--raised);
+  color: var(--ink-2);
+  font: 600 0.7rem / 1 var(--f-body);
+  white-space: nowrap;
+}
+
+.track {
+  position: relative;
+  height: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background: var(--raised);
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--accent-mark);
+}
+
+.now {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 0;
+  border-left: 2px dashed var(--ink-3);
+}
+
+/* Reparto por origen: la barra solo lleva los > 0, la lista los lleva todos
+   y atenúa los de 0 % para que se vea qué orígenes existen. */
+.origin {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.originHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--ink-2);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.originHead span:last-child {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.originBar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+
+.originBar i {
+  display: block;
+  min-width: 3px;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.originBar i:first-child {
+  border-radius: 4px 2px 2px 4px;
+}
+
+.originBar i:last-child {
+  border-radius: 2px 4px 4px 2px;
+}
+
+.originList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.75rem;
+}
+
+.originList li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.originList li span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.originList li b {
+  margin-left: auto;
+  color: var(--ink);
+  font: 500 0.75rem / 1 var(--f-mono);
+}
+
+.originList li[data-zero] {
+  color: var(--ink-3);
+}
+
+.originList li[data-zero] b {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.originList i {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+/* Últimos eventos */
+.feed {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feed li {
+  display: grid;
+  grid-template-columns: 3.25rem 10px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-top: 1px solid var(--line-soft);
+  font-size: 0.82rem;
+}
+
+.feed li:first-child {
+  border-top: 0;
+}
+
+.feed time {
+  color: var(--ink-3);
+  font: 400 0.75rem / 1 var(--f-mono);
+}
+
+.sw {
+  align-self: center;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.what {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.what em {
+  color: var(--ink-3);
+  font: normal 0.75rem var(--f-mono);
+}
+
+.eyebrow {
+  color: var(--ink-3);
+  font: 500 0.62rem / 1 var(--f-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
