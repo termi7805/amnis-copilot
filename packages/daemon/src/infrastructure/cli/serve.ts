@@ -5,6 +5,7 @@ import {
   getState,
   quotaExhausted,
 } from "../../application/getState.ts";
+import { repairHooks } from "../../application/installHooks.ts";
 import type { RecordHookDeps } from "../../application/recordHook.ts";
 import { refreshPrices } from "../../application/refreshPrices.ts";
 import {
@@ -16,6 +17,7 @@ import {
   VERSION,
 } from "../../config.ts";
 import { derivePetState } from "../../domain/petState.ts";
+import { makeRepairHooksDeps } from "../claudeSettings.ts";
 import { currentPlan } from "../currentPlan.ts";
 import { gatherDiagnoseFacts } from "../doctorFacts.ts";
 import { readCommitHash } from "../git.ts";
@@ -25,6 +27,8 @@ import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
 import { createHealthRoute } from "../http/routes/health.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
+import { createHooksRoutes } from "../http/routes/hooks.ts";
+import { createIngestRoutes } from "../http/routes/ingest.ts";
 import { createMediaRoutes } from "../http/routes/media.ts";
 import { createQuotaHistoryRoutes } from "../http/routes/quotaHistory.ts";
 import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
@@ -46,6 +50,7 @@ import {
 import { savePrices } from "../persistence/prices.ts";
 import { readSettings, writeSettings } from "../persistence/settings.ts";
 import {
+  deleteSpotifyToken,
   readSpotifyConfig,
   writeSpotifyToken,
 } from "../persistence/spotifyToken.ts";
@@ -61,6 +66,7 @@ import { createMediaControl } from "../providers/spotify/control.ts";
 import { exchangeCode } from "../providers/spotify/oauth.ts";
 import { readMedia } from "../providers/spotify/player.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
+import { spawnRebuild } from "../rebuildProcess.ts";
 import { createTrackVibes } from "../trackVibe.ts";
 
 function makeHookDeps(
@@ -231,6 +237,11 @@ export function runServeCli(args: readonly string[] = []): void {
           eventsReceived: countHookEvents(db, accountId),
         }),
       }),
+      ...createHooksRoutes(() => repairHooks(makeRepairHooksDeps())),
+      ...createIngestRoutes({
+        rebuild: spawnRebuild,
+        broadcast: (data) => broadcaster.broadcast({ event: "rebuild", data }),
+      }),
       "POST /api/quota/refresh": createQuotaRefreshRoute(poller.pollNow),
       "GET /api/events": createEventsRoute({
         broadcaster,
@@ -245,6 +256,12 @@ export function runServeCli(args: readonly string[] = []): void {
           writeSpotifyToken(token);
           // Recién conectado: que la UI vea qué suena ya, no en 30 s.
           mediaPoller.pollNow();
+        },
+        logout: () => {
+          deleteSpotifyToken();
+          // Una lectura en vuelo es anterior al logout: la siguiente, ya, da
+          // `not-logged-in` y llega a la UI por SSE sin reiniciar.
+          mediaPoller.pollSoon(0);
         },
       }),
       ...createSettingsRoutes({

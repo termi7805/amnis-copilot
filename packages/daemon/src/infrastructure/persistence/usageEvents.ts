@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync, StatementSync } from "node:sqlite";
 
 export interface UsageEventRecord {
   accountId: number;
@@ -20,6 +20,49 @@ const INSERT_COLUMNS = `
   account_id, provider, dedupe_key, session_id, project, ts, model,
   input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens,
   service_tier, git_branch`;
+
+interface InsertStatements {
+  ignore: StatementSync;
+  exists: StatementSync;
+  upsert: StatementSync;
+}
+
+/**
+ * Preparadas una vez por conexión (#90): `--rebuild` inserta decenas de miles
+ * de eventos dentro de una transacción que retiene el write lock, y preparar
+ * dos sentencias por evento era buena parte de lo que duraba.
+ */
+const statementsByDb = new WeakMap<DatabaseSync, InsertStatements>();
+
+function insertStatements(db: DatabaseSync): InsertStatements {
+  const cached = statementsByDb.get(db);
+  if (cached) return cached;
+  const placeholders = INSERT_COLUMNS.split(",")
+    .map(() => "?")
+    .join(", ");
+  const statements: InsertStatements = {
+    ignore: db.prepare(
+      `INSERT OR IGNORE INTO usage_events (${INSERT_COLUMNS}) VALUES (${placeholders})`,
+    ),
+    exists: db.prepare("SELECT 1 FROM usage_events WHERE dedupe_key = ?"),
+    upsert: db.prepare(
+      `INSERT INTO usage_events (${INSERT_COLUMNS}) VALUES (${placeholders})
+       ON CONFLICT(dedupe_key) DO UPDATE SET
+         session_id = excluded.session_id,
+         project = excluded.project,
+         ts = excluded.ts,
+         model = excluded.model,
+         input_tokens = excluded.input_tokens,
+         output_tokens = excluded.output_tokens,
+         cache_creation_tokens = excluded.cache_creation_tokens,
+         cache_read_tokens = excluded.cache_read_tokens,
+         service_tier = excluded.service_tier,
+         git_branch = excluded.git_branch`,
+    ),
+  };
+  statementsByDb.set(db, statements);
+  return statements;
+}
 
 /**
  * Inserta un evento de uso. Devuelve `false` si `dedupe_key` ya existía
@@ -52,35 +95,12 @@ export function insertUsageEvent(
     event.serviceTier,
     event.gitBranch,
   ];
-  const placeholders = values.map(() => "?").join(", ");
+  const statements = insertStatements(db);
 
-  if (!options.replace) {
-    const info = db
-      .prepare(
-        `INSERT OR IGNORE INTO usage_events (${INSERT_COLUMNS}) VALUES (${placeholders})`,
-      )
-      .run(...values);
-    return info.changes > 0;
-  }
+  if (!options.replace) return statements.ignore.run(...values).changes > 0;
 
-  const existed =
-    db
-      .prepare("SELECT 1 FROM usage_events WHERE dedupe_key = ?")
-      .get(event.dedupeKey) !== undefined;
-  db.prepare(
-    `INSERT INTO usage_events (${INSERT_COLUMNS}) VALUES (${placeholders})
-     ON CONFLICT(dedupe_key) DO UPDATE SET
-       session_id = excluded.session_id,
-       project = excluded.project,
-       ts = excluded.ts,
-       model = excluded.model,
-       input_tokens = excluded.input_tokens,
-       output_tokens = excluded.output_tokens,
-       cache_creation_tokens = excluded.cache_creation_tokens,
-       cache_read_tokens = excluded.cache_read_tokens,
-       service_tier = excluded.service_tier,
-       git_branch = excluded.git_branch`,
-  ).run(...values);
+  const existed = statements.exists.get(event.dedupeKey) !== undefined;
+  statements.upsert.run(...values);
   return !existed;
 }
 

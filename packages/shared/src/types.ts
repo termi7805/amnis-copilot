@@ -310,6 +310,20 @@ export interface HealthResponse {
   };
 }
 
+/** `POST /api/hooks/install`: qué se reparó y dónde quedó la copia. */
+export interface RepairHooksResponse {
+  /** Eventos que no tenían hook de Amnis y ahora sí. */
+  added: string[];
+  /** Copia de seguridad del settings.json; `null` si no hubo que escribir. */
+  backup: string | null;
+}
+
+/** Evento SSE `rebuild`: fin de `POST /api/ingest/rebuild`. */
+export interface RebuildEvent {
+  status: "done" | "error";
+  error?: string;
+}
+
 /**
  * Contrato de `GET /api/events` (SSE). Se declara una vez aquí porque hay
  * tres consumidores (mascota, su panel de cuota, dashboard) — si cada uno
@@ -320,7 +334,8 @@ export type AmnisEvent =
   | { event: "state"; data: PetSnapshot }
   | { event: "quota"; data: QuotaSnapshot[] }
   | { event: "media"; data: MediaSnapshot }
-  | { event: "settings"; data: AmnisSettings };
+  | { event: "settings"; data: AmnisSettings }
+  | { event: "rebuild"; data: RebuildEvent };
 
 /** Evento de hook ya normalizado por el `Provider`. */
 export interface NormalizedHookEvent {

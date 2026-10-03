@@ -1,40 +1,23 @@
-import { readFileSync } from "node:fs";
-
-/** Marca de identidad: cualquier hook cuyo `command` contenga esto es de Amnis. */
-export const IDENTITY_MARK = "amnis-hook";
-
-interface HookCommand {
-  type: "command";
-  command: string;
-  timeout?: number;
-}
-
-export interface HookMatcher {
-  matcher?: string;
-  hooks: HookCommand[];
-}
-
-/** Forma parcial de settings.json: solo lo que install-hooks toca. Cualquier
- * otra clave o hook ya presente pasa intacto por `...`, sin importar quién
- * lo haya puesto ahí. */
-export interface ClaudeSettings {
-  hooks?: Record<string, HookMatcher[]>;
-  [key: string]: unknown;
-}
-
-/** Tolerante a entradas mal formadas: cualquier otra herramienta pudo haber
- * dejado el fichero en una forma inesperada, y eso no debe tumbar el merge.
- * Compartido con uninstall-hooks (#21) y doctor (#35): reconocer lo propio
- * es el mismo criterio en los tres sitios. */
-export function isAmnisMatcher(m: HookMatcher): boolean {
-  return (
-    Array.isArray(m?.hooks) &&
-    m.hooks.some(
-      (h) =>
-        typeof h?.command === "string" && h.command.includes(IDENTITY_MARK),
-    )
-  );
-}
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
+import type {
+  ClaudeSettings,
+  RepairHooksDeps,
+} from "../application/installHooks.ts";
+import {
+  AMNIS_DIR,
+  CLAUDE_SETTINGS,
+  INSTALLED_HOOK_SCRIPT,
+  RESOURCES,
+} from "../config.ts";
 
 /** Cualquier JSON que no sea un objeto (array, primitivo, null, o fichero
  * inexistente/corrupto) se trata como "sin configuración previa", nunca
@@ -53,4 +36,47 @@ export function readSettings(path: string): ClaudeSettings {
   } catch {
     return {};
   }
+}
+
+export function backupSettings(path: string): string | null {
+  if (!existsSync(path)) return null;
+  const backupPath = join(AMNIS_DIR, `settings.backup.${Date.now()}.json`);
+  mkdirSync(AMNIS_DIR, { recursive: true });
+  writeFileSync(backupPath, readFileSync(path));
+  return backupPath;
+}
+
+/** Escritura atómica: tmp + rename, para no dejar el settings.json de otra
+ * aplicación a medio escribir si el proceso muere a mitad de camino. */
+export function writeSettingsAtomic(
+  path: string,
+  settings: ClaudeSettings,
+): void {
+  const dir = dirname(path);
+  mkdirSync(dir, { recursive: true });
+  const tmpPath = `${path}.amnis-tmp-${process.pid}`;
+  writeFileSync(tmpPath, `${JSON.stringify(settings, null, 2)}\n`);
+  renameSync(tmpPath, path);
+}
+
+/** Copia el script a ~/.amnis/hooks en vez de apuntar a él donde esté:
+ * settings.json necesita una ruta que no cambie, y ni la del repo (se puede
+ * mover) ni la de los recursos de la app (una AppImage se monta en una ruta
+ * distinta en cada arranque) lo garantizan. Reinstalar la sobrescribe. */
+export function installHookScript(from: string, to: string): void {
+  mkdirSync(dirname(to), { recursive: true });
+  copyFileSync(from, to);
+  chmodSync(to, 0o755);
+}
+
+/** Las dependencias reales de `repairHooks`: el CLI y la ruta HTTP usan estas. */
+export function makeRepairHooksDeps(): RepairHooksDeps {
+  return {
+    installScript: () =>
+      installHookScript(RESOURCES.hookScript, INSTALLED_HOOK_SCRIPT),
+    command: `/bin/sh '${INSTALLED_HOOK_SCRIPT}'`,
+    read: () => readSettings(CLAUDE_SETTINGS),
+    backup: () => backupSettings(CLAUDE_SETTINGS),
+    write: (settings) => writeSettingsAtomic(CLAUDE_SETTINGS, settings),
+  };
 }

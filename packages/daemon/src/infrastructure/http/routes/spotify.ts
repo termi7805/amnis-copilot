@@ -22,6 +22,8 @@ export interface SpotifyRoutesDeps {
     redirectUri: string;
   }) => Promise<SpotifyTokenOutcome>;
   saveToken: (token: SpotifyToken) => void;
+  /** Borra el token (conserva el Client ID) y avisa al poller de media. */
+  logout: () => void;
   now?: () => number;
 }
 
@@ -50,7 +52,8 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 }
 
 /**
- * `POST /api/spotify/login` y `GET /api/spotify/callback`. El verifier PKCE
+ * `POST /api/spotify/login`, `GET /api/spotify/callback` y
+ * `POST /api/spotify/logout`. El verifier PKCE
  * vive solo en memoria entre las dos: si el daemon se reinicia a mitad, el
  * callback cae en "state desconocido" y da un error legible, no un 500.
  */
@@ -88,6 +91,11 @@ export function createSpotifyRoutes(
       });
       deps.openBrowser(url);
       sendJson(res, 200, { url });
+    },
+
+    "POST /api/spotify/logout": ({ res }) => {
+      deps.logout();
+      sendJson(res, 200, {});
     },
 
     "GET /api/spotify/callback": async ({ res, url }) => {

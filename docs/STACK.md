@@ -106,6 +106,9 @@ El daemon sirve dos cosas por el mismo puerto, así que se separan por prefijo:
 | `POST /api/hook/claude` | Receptor de hooks, fire-and-forget |
 | `POST /api/spotify/login` | Inicia el OAuth PKCE de Spotify: el daemon abre el navegador |
 | `GET /api/spotify/callback` | Redirect de Spotify: valida `state`, guarda el token |
+| `POST /api/spotify/logout` | Borra el token de Spotify (conserva el Client ID); `media` pasa a `not-logged-in` sin reiniciar (escritura) |
+| `POST /api/hooks/install` | Repara los hooks de Amnis en `~/.claude/settings.json`: merge no destructivo con copia de seguridad → `{ added, backup }` (escritura) |
+| `POST /api/ingest/rebuild` | Reconstruye la caché de uso en un proceso aparte: `202` y evento SSE `rebuild` `{ status: "done" \| "error" }` al terminar; `409` si ya hay una (escritura) |
 | `POST /api/media/{play,pause,next,previous}` | Transporte de la reproducción de Spotify (escritura) |
 | `POST /api/media/{seek,shuffle,repeat,transfer}` | Ajustes y transferencia entre dispositivos, con body JSON (escritura) |
 | `GET /api/media/devices` | Dispositivos Spotify Connect, bajo demanda (no entra en el polling) |

@@ -1,10 +1,13 @@
-import { CLAUDE_SETTINGS } from "../../config.ts";
 import {
   type ClaudeSettings,
   isAmnisMatcher,
+} from "../../application/installHooks.ts";
+import { CLAUDE_SETTINGS } from "../../config.ts";
+import {
+  backupSettings,
   readSettings,
+  writeSettingsAtomic,
 } from "../claudeSettings.ts";
-import { backupSettings, writeSettingsAtomic } from "./installHooks.ts";
 
 /**
  * Espejo de `mergeHooks`: quita **exactamente** las entradas de Amnis y deja

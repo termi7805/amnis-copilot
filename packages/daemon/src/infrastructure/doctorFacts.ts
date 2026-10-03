@@ -1,7 +1,11 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { DiagnoseFacts } from "../application/diagnose.ts";
+import {
+  EXPECTED_HOOK_EVENTS,
+  isAmnisMatcher,
+} from "../application/installHooks.ts";
 import { CLAUDE_SETTINGS, DB_PATH, SPOTIFY_REDIRECT_URI } from "../config.ts";
-import { isAmnisMatcher, readSettings } from "./claudeSettings.ts";
+import { readSettings } from "./claudeSettings.ts";
 import { openDb } from "./persistence/db.ts";
 import { lastIngestAt } from "./persistence/ingestOffsets.ts";
 import {
@@ -9,8 +13,6 @@ import {
   readSpotifyToken,
 } from "./persistence/spotifyToken.ts";
 import { readCredentials } from "./providers/anthropic/credentials.ts";
-
-const EXPECTED_HOOK_EVENTS = ["PreToolUse", "Notification", "Stop"];
 
 /**
  * Lo que cada puerta aporta por su cuenta (#89): el CLI y el daemon saben

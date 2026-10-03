@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { ClaudeSettings } from "../src/infrastructure/claudeSettings.ts";
 import {
+  type ClaudeSettings,
   type HookEntry,
   mergeHooks,
-} from "../src/infrastructure/cli/installHooks.ts";
+} from "../src/application/installHooks.ts";
 import { removeHooks } from "../src/infrastructure/cli/uninstallHooks.ts";
 
 const ORCA_COMMAND =

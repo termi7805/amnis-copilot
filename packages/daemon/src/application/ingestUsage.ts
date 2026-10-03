@@ -58,8 +58,15 @@ export interface RunIngestOptions {
  * `--rebuild` es el botón que hace barato equivocarse en el parseo: relee todos
  * los JSONL que sigan en disco y **corrige** lo que ya había, sin borrar nada
  * (los JSONL son la fuente de verdad solo mientras Claude Code no los purgue).
- * Reinicio de offsets y reingesta van en **una** transacción: si falla, ni los
- * offsets ni los eventos cambian.
+ * Reinicio de offsets y reingesta se **aplican** en una transacción: si falla,
+ * ni los offsets ni los eventos cambian.
+ *
+ * Leer y parsear los JSONL es lo que tarda (~18 s con 850 MB); escribir en
+ * SQLite, no. Con el daemon vivo (#90), una transacción que abarcara la lectura
+ * retendría el write lock todo ese tiempo y el daemon se bloquearía en cada
+ * escritura. Por eso el rebuild lee **fuera** de la transacción contra un
+ * store que solo anota lo que se escribiría, y la transacción lo reproduce
+ * sobre el store real: el lock dura lo que dura la escritura.
  */
 export function runIngest(
   deps: RunIngestDeps,
@@ -70,13 +77,63 @@ export function runIngest(
   });
   try {
     if (!options.rebuild) return ingestAllProviders(deps.providers, store);
+
+    const recorder = createRecordingStore();
+    const read = ingestAllProviders(deps.providers, recorder.store);
     return transaction(() => {
       resetOffsets();
-      return ingestAllProviders(deps.providers, store);
+      const written = recorder.replayInto(store);
+      return {
+        filesScanned: read.filesScanned,
+        linesRead: read.linesRead,
+        eventsInserted: written.eventsInserted,
+        duplicatesSkipped: written.duplicatesSkipped,
+      };
     });
   } finally {
     close();
   }
+}
+
+/**
+ * `UsageStore` que no escribe: anota las llamadas en orden. Sus offsets
+ * siempre están "reseteados" (`getOffset` → `undefined`), que es lo que
+ * `resetOffsets()` hace en la BD, así que los providers releen todo.
+ */
+function createRecordingStore(): {
+  store: UsageStore;
+  replayInto(target: UsageStore): {
+    eventsInserted: number;
+    duplicatesSkipped: number;
+  };
+} {
+  const calls: Array<(target: UsageStore) => boolean | null> = [];
+  return {
+    store: {
+      getOffset: () => undefined,
+      saveOffset(filePath, size, offset) {
+        calls.push((target) => {
+          target.saveOffset(filePath, size, offset);
+          return null;
+        });
+      },
+      insertUsageEvent(providerId, event) {
+        calls.push((target) => target.insertUsageEvent(providerId, event));
+        // El resultado real lo da la reproducción; aquí no se sabe.
+        return true;
+      },
+    },
+    replayInto(target) {
+      let eventsInserted = 0;
+      let duplicatesSkipped = 0;
+      for (const call of calls) {
+        const inserted = call(target);
+        if (inserted === true) eventsInserted++;
+        else if (inserted === false) duplicatesSkipped++;
+      }
+      return { eventsInserted, duplicatesSkipped };
+    },
+  };
 }
 
 /** Recorre el registro de providers y suma sus resultados de ingesta. */

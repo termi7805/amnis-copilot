@@ -13,7 +13,7 @@ import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { runIngest } from "../src/application/ingestUsage.ts";
-import type { Provider } from "../src/domain/Provider.ts";
+import type { Provider, UsageStore } from "../src/domain/Provider.ts";
 
 const CLI = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
 const FIXTURE = fileURLToPath(
@@ -267,6 +267,129 @@ test("runIngest --rebuild es atómico: si la reingesta falla, los offsets no se 
   };
 
   assert.throws(() => runIngest(deps, { rebuild: true }), /fallo a mitad/);
+  assert.equal(count(db, "ingest_offsets"), 1);
+  db.close();
+});
+
+/** Provider que lee dos eventos de un fichero y los entrega al store. */
+function readingProvider(): Provider {
+  return {
+    id: "anthropic",
+    ingestHistorical: (store: UsageStore) => {
+      assert.equal(store.getOffset("/x.jsonl"), undefined);
+      const event = {
+        dedupeKey: "k",
+        sessionId: null,
+        project: null,
+        gitBranch: null,
+        ts: "2026-01-01T00:00:00Z",
+        model: null,
+        inputTokens: 1,
+        outputTokens: 1,
+        cacheCreationTokens: 0,
+        cacheReadTokens: 0,
+        serviceTier: null,
+      };
+      store.insertUsageEvent("anthropic", event);
+      store.insertUsageEvent("anthropic", { ...event, dedupeKey: "j" });
+      store.saveOffset("/x.jsonl", 10, 10);
+      return {
+        filesScanned: 1,
+        linesRead: 2,
+        eventsInserted: 2,
+        duplicatesSkipped: 0,
+      };
+    },
+  } as unknown as Provider;
+}
+
+test("runIngest --rebuild lee fuera de la transacción y escribe dentro (#90)", () => {
+  const log: string[] = [];
+  const store = {
+    getOffset: () => {
+      throw new Error("el store real no se lee en rebuild");
+    },
+    saveOffset: () => log.push("saveOffset"),
+    insertUsageEvent: (_p: string, e: { dedupeKey: string }) => {
+      log.push(`insert:${e.dedupeKey}`);
+      // El segundo es un duplicado según la BD real.
+      return e.dedupeKey === "k";
+    },
+  };
+  const deps = {
+    providers: [
+      {
+        ...readingProvider(),
+        ingestHistorical: (s: UsageStore) => {
+          log.push("read");
+          return readingProvider().ingestHistorical(s);
+        },
+      } as Provider,
+    ],
+    openStore: () => ({
+      store: store as never,
+      resetOffsets: () => log.push("resetOffsets"),
+      transaction: <T>(fn: () => T): T => {
+        log.push("begin");
+        const result = fn();
+        log.push("commit");
+        return result;
+      },
+      close: () => {},
+    }),
+  };
+
+  const result = runIngest(deps, { rebuild: true });
+
+  assert.deepEqual(log, [
+    "read",
+    "begin",
+    "resetOffsets",
+    "insert:k",
+    "insert:j",
+    "saveOffset",
+    "commit",
+  ]);
+  // Lectura de la primera fase, inserciones de la segunda.
+  assert.deepEqual(result, {
+    filesScanned: 1,
+    linesRead: 2,
+    eventsInserted: 1,
+    duplicatesSkipped: 1,
+  });
+});
+
+test("runIngest --rebuild: si falla la escritura, se deshace todo", () => {
+  const db = new DatabaseSync(":memory:");
+  db.exec(
+    "CREATE TABLE ingest_offsets (f TEXT); INSERT INTO ingest_offsets VALUES ('a');",
+  );
+  const deps = {
+    providers: [readingProvider()],
+    openStore: () => ({
+      store: {
+        saveOffset: () => {},
+        insertUsageEvent: () => {
+          throw new Error("disco lleno");
+        },
+      } as never,
+      resetOffsets: () => db.exec("DELETE FROM ingest_offsets"),
+      transaction: <T>(fn: () => T): T => {
+        db.exec("BEGIN IMMEDIATE");
+        try {
+          const result = fn();
+          db.exec("COMMIT");
+          return result;
+        } catch (err) {
+          db.exec("ROLLBACK");
+          throw err;
+        }
+      },
+      close: () => {},
+    }),
+  };
+
+  assert.throws(() => runIngest(deps, { rebuild: true }), /disco lleno/);
   assert.equal(count(db, "ingest_offsets"), 1);
   db.close();
 });

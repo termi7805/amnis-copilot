@@ -5,11 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import type { ClaudeSettings } from "../src/infrastructure/claudeSettings.ts";
 import {
+  type ClaudeSettings,
   type HookEntry,
   mergeHooks,
-} from "../src/infrastructure/cli/installHooks.ts";
+  type RepairHooksDeps,
+  repairHooks,
+} from "../src/application/installHooks.ts";
 
 const ORCA_COMMAND =
   "if [ -f '/home/termi/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/home/termi/.orca/agent-hooks/claude-hook.sh'; fi";
@@ -163,4 +165,99 @@ test("amnis install-hooks copia el script a AMNIS_DIR/hooks y lo registra desde 
     rmSync(claudeDir, { recursive: true, force: true });
     rmSync(amnisDir, { recursive: true, force: true });
   }
+});
+
+const AMNIS_COMMAND = "/bin/sh '/x/amnis-hook.sh'";
+
+/** Deps en memoria: `writes` y `backups` cuentan qué tocó `repairHooks`. */
+function fakeRepairDeps(initial: ClaudeSettings) {
+  const state = {
+    settings: initial,
+    writes: 0,
+    backups: 0,
+    scripts: 0,
+  };
+  const deps: RepairHooksDeps = {
+    installScript: () => {
+      state.scripts++;
+    },
+    command: AMNIS_COMMAND,
+    read: () => state.settings,
+    backup: () => {
+      state.backups++;
+      return "/x/settings.backup.1.json";
+    },
+    write: (next) => {
+      state.writes++;
+      state.settings = next;
+    },
+  };
+  return { state, deps };
+}
+
+test("mergeHooks sustituye la entrada de Amnis en su sitio y no reordena a Orca", () => {
+  const settings: ClaudeSettings = {
+    hooks: {
+      Stop: [
+        { hooks: [{ type: "command", command: AMNIS_COMMAND }] },
+        { hooks: [{ type: "command", command: ORCA_COMMAND }] },
+      ],
+    },
+  };
+
+  const merged = mergeHooks(settings, AMNIS_ENTRIES);
+
+  const stop = merged.hooks?.Stop ?? [];
+  assert.equal(stop.length, 2);
+  assert.ok(stop[0]?.hooks[0]?.command.includes("amnis-hook"));
+  assert.equal(stop[1]?.hooks[0]?.command, ORCA_COMMAND);
+});
+
+test("repairHooks sin la entrada Notification solo añade esa, con copia de seguridad", () => {
+  const complete = mergeHooks(
+    {
+      model: "opusplan",
+      hooks: {
+        Notification: [{ hooks: [{ type: "command", command: ORCA_COMMAND }] }],
+      },
+    },
+    AMNIS_ENTRIES,
+  );
+  const broken: ClaudeSettings = {
+    ...complete,
+    hooks: {
+      ...complete.hooks,
+      Notification: (complete.hooks?.Notification ?? []).filter(
+        (m) => !m.hooks[0]?.command.includes("amnis-hook"),
+      ),
+    },
+  };
+  const { state, deps } = fakeRepairDeps(broken);
+
+  const result = repairHooks(deps);
+
+  assert.deepEqual(result.added, ["Notification"]);
+  assert.equal(result.backup, "/x/settings.backup.1.json");
+  assert.equal(state.writes, 1);
+  assert.deepEqual(state.settings, complete);
+});
+
+test("repairHooks con todo instalado no escribe ni hace copia", () => {
+  const { state, deps } = fakeRepairDeps(mergeHooks({}, AMNIS_ENTRIES));
+
+  const result = repairHooks(deps);
+
+  assert.deepEqual(result, { added: [], backup: null });
+  assert.equal(state.writes, 0);
+  assert.equal(state.backups, 0);
+  assert.equal(state.scripts, 1);
+});
+
+test("repairHooks sobre un settings.json vacío instala los tres eventos", () => {
+  const { state, deps } = fakeRepairDeps({});
+
+  const result = repairHooks(deps);
+
+  assert.deepEqual(result.added, ["PreToolUse", "Notification", "Stop"]);
+  assert.equal(state.writes, 1);
 });

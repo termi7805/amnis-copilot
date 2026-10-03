@@ -17,11 +17,13 @@ async function withSpotify(
     opened: string[];
     exchanges: { code: string; verifier: string; clientId: string }[];
     saved: SpotifyToken[];
+    logouts: { count: number };
   }) => Promise<void>,
 ): Promise<void> {
   const opened: string[] = [];
   const exchanges: { code: string; verifier: string; clientId: string }[] = [];
   const saved: SpotifyToken[] = [];
+  const logouts = { count: 0 };
   const server = createHttpServer({
     routes: createSpotifyRoutes({
       readClientId: () => "cid",
@@ -42,12 +44,21 @@ async function withSpotify(
         };
       },
       saveToken: (t) => saved.push(t),
+      logout: () => {
+        logouts.count++;
+      },
       ...overrides,
     }),
   });
   const port = await server.listen(0);
   try {
-    await fn({ base: `http://127.0.0.1:${port}`, opened, exchanges, saved });
+    await fn({
+      base: `http://127.0.0.1:${port}`,
+      opened,
+      exchanges,
+      saved,
+      logouts,
+    });
   } finally {
     await server.close();
   }
@@ -157,4 +168,16 @@ test("si el intercambio falla, 502 con el mensaje y sin guardar", async () => {
       assert.equal(saved.length, 0);
     },
   );
+});
+
+test("logout: POST borra la sesión y responde 200; GET no está permitido (#90)", async () => {
+  await withSpotify({}, async ({ base, logouts }) => {
+    const get = await fetch(`${base}/api/spotify/logout`);
+    assert.equal(get.status, 405);
+    assert.equal(logouts.count, 0);
+
+    const res = await fetch(`${base}/api/spotify/logout`, { method: "POST" });
+    assert.equal(res.status, 200);
+    assert.equal(logouts.count, 1);
+  });
 });
