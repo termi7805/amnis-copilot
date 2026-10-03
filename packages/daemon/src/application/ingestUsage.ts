@@ -64,9 +64,18 @@ export interface RunIngestOptions {
  * Leer y parsear los JSONL es lo que tarda (~18 s con 850 MB); escribir en
  * SQLite, no. Con el daemon vivo (#90), una transacción que abarcara la lectura
  * retendría el write lock todo ese tiempo y el daemon se bloquearía en cada
- * escritura. Por eso el rebuild lee **fuera** de la transacción contra un
- * store que solo anota lo que se escribiría, y la transacción lo reproduce
- * sobre el store real: el lock dura lo que dura la escritura.
+ * escritura. Por eso se lee **fuera** de la transacción contra un store que
+ * solo anota lo que se escribiría, y la transacción lo reproduce sobre el store
+ * real: el lock dura lo que dura la escritura.
+ *
+ * La pasada incremental hace lo mismo (#98): el daemon la lanza antes de cada
+ * muestra de cuota, y escribir cada `INSERT` y cada offset en autocommit
+ * intercalaría cientos de escrituras con las suyas. La diferencia con el
+ * rebuild es solo que la lectura parte de los offsets reales.
+ *
+ * Dos pasadas a la vez (el daemon y un `amnis ingest` a mano) son inofensivas:
+ * leen los mismos offsets, la segunda en escribir choca con `UNIQUE(dedupe_key)`
+ * y los offsets convergen al mismo valor.
  */
 export function runIngest(
   deps: RunIngestDeps,
@@ -76,12 +85,12 @@ export function runIngest(
     rebuild: options.rebuild,
   });
   try {
-    if (!options.rebuild) return ingestAllProviders(deps.providers, store);
-
-    const recorder = createRecordingStore();
+    const recorder = createRecordingStore(
+      options.rebuild ? undefined : store.getOffset.bind(store),
+    );
     const read = ingestAllProviders(deps.providers, recorder.store);
     return transaction(() => {
-      resetOffsets();
+      if (options.rebuild) resetOffsets();
       const written = recorder.replayInto(store);
       return {
         filesScanned: read.filesScanned,
@@ -96,11 +105,12 @@ export function runIngest(
 }
 
 /**
- * `UsageStore` que no escribe: anota las llamadas en orden. Sus offsets
- * siempre están "reseteados" (`getOffset` → `undefined`), que es lo que
- * `resetOffsets()` hace en la BD, así que los providers releen todo.
+ * `UsageStore` que no escribe: anota las llamadas en orden. Con `getOffset`
+ * lee los offsets reales (pasada incremental); sin él siempre están
+ * "reseteados" (`getOffset` → `undefined`), que es lo que `resetOffsets()` hace
+ * en la BD, así que los providers releen todo (rebuild).
  */
-function createRecordingStore(): {
+function createRecordingStore(getOffset?: UsageStore["getOffset"]): {
   store: UsageStore;
   replayInto(target: UsageStore): {
     eventsInserted: number;
@@ -110,7 +120,7 @@ function createRecordingStore(): {
   const calls: Array<(target: UsageStore) => boolean | null> = [];
   return {
     store: {
-      getOffset: () => undefined,
+      getOffset: getOffset ?? (() => undefined),
       saveOffset(filePath, size, offset) {
         calls.push((target) => {
           target.saveOffset(filePath, size, offset);
@@ -159,10 +169,10 @@ export function ingestAllProviders(
 }
 
 /**
- * Ingesta incremental de los transcripts de uso.
- *
- * Al arrancar reingiere todo lo escrito mientras el daemon estaba apagado:
- * por eso "el daemon vive con la mascota" no pierde datos de uso.
+ * Ingesta incremental de los transcripts de uso: lee desde el offset de cada
+ * fichero. La dispara `amnis ingest`, y el daemon antes de cada muestra de
+ * cuota y al arrancar (#98), así que "el daemon vive con la mascota" no pierde
+ * datos de uso ni deja la estimación local atrasada.
  */
 export function ingestAll(deps: IngestUsageDeps): IngestResult {
   const result: IngestResult = {

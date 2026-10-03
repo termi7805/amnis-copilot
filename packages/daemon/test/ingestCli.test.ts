@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import {
   mkdirSync,
   mkdtempSync,
@@ -392,4 +392,153 @@ test("runIngest --rebuild: si falla la escritura, se deshace todo", () => {
   assert.throws(() => runIngest(deps, { rebuild: true }), /disco lleno/);
   assert.equal(count(db, "ingest_offsets"), 1);
   db.close();
+});
+
+test("runIngest incremental (#98): lee con los offsets reales fuera de la transacción y escribe dentro, sin resetear offsets", () => {
+  const log: string[] = [];
+  const provider = {
+    id: "anthropic",
+    ingestHistorical: (store: UsageStore) => {
+      log.push("read");
+      assert.deepEqual(store.getOffset("/x.jsonl"), { size: 5, offset: 5 });
+      store.insertUsageEvent("anthropic", {
+        dedupeKey: "k",
+        sessionId: null,
+        project: null,
+        gitBranch: null,
+        ts: "2026-01-01T00:00:00Z",
+        model: null,
+        inputTokens: 1,
+        outputTokens: 1,
+        cacheCreationTokens: 0,
+        cacheReadTokens: 0,
+        serviceTier: null,
+      });
+      store.saveOffset("/x.jsonl", 10, 10);
+      return {
+        filesScanned: 1,
+        linesRead: 1,
+        eventsInserted: 1,
+        duplicatesSkipped: 0,
+      };
+    },
+  } as unknown as Provider;
+
+  const result = runIngest(
+    {
+      providers: [provider],
+      openStore: () => ({
+        store: {
+          getOffset: () => ({ size: 5, offset: 5 }),
+          saveOffset: () => log.push("saveOffset"),
+          insertUsageEvent: () => {
+            log.push("insert");
+            return true;
+          },
+        },
+        resetOffsets: () => log.push("resetOffsets"),
+        transaction: <T>(fn: () => T): T => {
+          log.push("begin");
+          const out = fn();
+          log.push("commit");
+          return out;
+        },
+        close: () => {},
+      }),
+    },
+    { rebuild: false },
+  );
+
+  assert.deepEqual(log, ["read", "begin", "insert", "saveOffset", "commit"]);
+  assert.equal(result.eventsInserted, 1);
+});
+
+test("runIngest incremental: si falla la escritura, no se guarda ningún offset", () => {
+  const db = new DatabaseSync(":memory:");
+  db.exec("CREATE TABLE ingest_offsets (f TEXT)");
+  const deps = {
+    providers: [
+      {
+        id: "anthropic",
+        ingestHistorical: (store: UsageStore) => {
+          store.saveOffset("/x.jsonl", 10, 10);
+          return {
+            filesScanned: 1,
+            linesRead: 0,
+            eventsInserted: 0,
+            duplicatesSkipped: 0,
+          };
+        },
+      } as unknown as Provider,
+    ],
+    openStore: () => ({
+      store: {
+        getOffset: () => undefined,
+        saveOffset: () => {
+          db.exec("INSERT INTO ingest_offsets VALUES ('/x.jsonl')");
+          throw new Error("database is locked");
+        },
+        insertUsageEvent: () => true,
+      } as never,
+      resetOffsets: () => {},
+      transaction: <T>(fn: () => T): T => {
+        db.exec("BEGIN IMMEDIATE");
+        try {
+          const result = fn();
+          db.exec("COMMIT");
+          return result;
+        } catch (err) {
+          db.exec("ROLLBACK");
+          throw err;
+        }
+      },
+      close: () => {},
+    }),
+  };
+
+  assert.throws(
+    () => runIngest(deps, { rebuild: false }),
+    /database is locked/,
+  );
+  assert.equal(count(db, "ingest_offsets"), 0);
+  db.close();
+});
+
+test("dos amnis ingest a la vez (el daemon y uno a mano) no duplican nada", async () => {
+  const claudeDir = makeFakeClaudeDir();
+  const amnisDir = mkdtempSync(join(tmpdir(), "amnis-cli-concurrent-"));
+  const env = {
+    ...process.env,
+    CLAUDE_CONFIG_DIR: claudeDir,
+    AMNIS_DIR: amnisDir,
+  };
+  const run = () =>
+    new Promise<void>((resolve, reject) => {
+      execFile("node", [CLI, "ingest"], { env }, (err) =>
+        err ? reject(err) : resolve(),
+      );
+    });
+
+  try {
+    // La primera vez también crea la BD: se hace antes para no competir por ella.
+    execFileSync("node", [CLI, "ingest"], { env });
+    const before = totals(join(amnisDir, "amnis.sqlite"));
+    writeFileSync(
+      join(claudeDir, "projects", "fake-project", "nuevo.jsonl"),
+      `${assistantLine("msg_a", 5)}\n${assistantLine("msg_b", 7)}\n`,
+    );
+    await Promise.all([run(), run(), run()]);
+
+    const after = totals(join(amnisDir, "amnis.sqlite"));
+    assert.equal(after.events, before.events + 2);
+    assert.equal(after.tokens, before.tokens + 5 + 7);
+    const third = execFileSync("node", [CLI, "ingest"], {
+      env,
+      encoding: "utf8",
+    });
+    assert.match(third, /Eventos insertados:\s+0/);
+  } finally {
+    rmSync(claudeDir, { recursive: true, force: true });
+    rmSync(amnisDir, { recursive: true, force: true });
+  }
 });

@@ -3,7 +3,10 @@ import { test } from "node:test";
 import type { RebuildEvent } from "@amnis/shared";
 import { createIngestRoutes } from "../src/infrastructure/http/routes/ingest.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
-import { rebuildCommand } from "../src/infrastructure/rebuildProcess.ts";
+import {
+  ingestCommand,
+  summarizeStderr,
+} from "../src/infrastructure/ingestProcess.ts";
 
 async function withIngest(
   rebuild: () => Promise<void>,
@@ -86,9 +89,10 @@ test("un rebuild que falla avisa `error` con el motivo y libera el cerrojo", asy
   );
 });
 
-test("rebuildCommand: con node pasa execArgv y script; en SEA solo los argumentos", () => {
+test("ingestCommand: con node pasa execArgv y script; en SEA solo los argumentos", () => {
   assert.deepEqual(
-    rebuildCommand({
+    ingestCommand({
+      rebuild: true,
       sea: false,
       execPath: "/usr/bin/node",
       execArgv: ["--no-warnings"],
@@ -105,7 +109,8 @@ test("rebuildCommand: con node pasa execArgv y script; en SEA solo los argumento
     },
   );
   assert.deepEqual(
-    rebuildCommand({
+    ingestCommand({
+      rebuild: true,
       sea: true,
       execPath: "/opt/amnis/amnis-daemon",
       execArgv: [],
@@ -113,4 +118,49 @@ test("rebuildCommand: con node pasa execArgv y script; en SEA solo los argumento
     }),
     { command: "/opt/amnis/amnis-daemon", args: ["ingest", "--rebuild"] },
   );
+});
+
+test("ingestCommand sin rebuild lanza la pasada incremental (#98)", () => {
+  assert.deepEqual(
+    ingestCommand({
+      rebuild: false,
+      sea: false,
+      execPath: "/usr/bin/node",
+      execArgv: [],
+      script: "/repo/packages/daemon/src/cli.ts",
+    }),
+    {
+      command: "/usr/bin/node",
+      args: ["/repo/packages/daemon/src/cli.ts", "ingest"],
+    },
+  );
+  assert.deepEqual(
+    ingestCommand({
+      rebuild: false,
+      sea: true,
+      execPath: "/opt/amnis/amnis-daemon",
+      execArgv: [],
+      script: "serve",
+    }),
+    { command: "/opt/amnis/amnis-daemon", args: ["ingest"] },
+  );
+});
+
+test("summarizeStderr deja el motivo y no el árbol de llamadas", () => {
+  const stderr = [
+    "file:///repo/accounts.ts:11",
+    "  ).run(provider, label);",
+    "    ^",
+    "",
+    "Error: database is locked",
+    "    at ensureAccount (file:///repo/accounts.ts:11:5)",
+    "    at main (file:///repo/cli.ts:40:7) {",
+    "  code: 'ERR_SQLITE_ERROR',",
+    "}",
+    "",
+    "Node.js v24.15.0",
+  ].join("\n");
+  assert.equal(summarizeStderr(stderr), "Error: database is locked");
+  assert.equal(summarizeStderr("algo raro\n"), "algo raro");
+  assert.equal(summarizeStderr(""), "");
 });

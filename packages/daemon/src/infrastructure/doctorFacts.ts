@@ -1,5 +1,8 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { DiagnoseFacts } from "../application/diagnose.ts";
+import type {
+  AutoIngestFacts,
+  DiagnoseFacts,
+} from "../application/diagnose.ts";
 import {
   EXPECTED_HOOK_EVENTS,
   isAmnisMatcher,
@@ -24,6 +27,8 @@ export interface DoctorFactsDeps {
   daemonAlive(): Promise<boolean>;
   /** CLI: un poll en vivo. Daemon: el último error del poller, en memoria. */
   quotaError(): Promise<string | null>;
+  /** Daemon: cómo fue su última ingesta automática (#98). El CLI no la tiene. */
+  autoIngest?(): AutoIngestFacts;
   /** Conexión ya abierta (daemon). Sin ella se abre y cierra `DB_PATH`. */
   db?: DatabaseSync;
 }
@@ -98,6 +103,7 @@ export async function gatherDiagnoseFacts(
     quotaError,
     dbError,
     lastIngestAt: lastIngest,
+    ...(deps.autoIngest && { autoIngest: deps.autoIngest() }),
     spotify: spotifyFacts(now),
   };
 }

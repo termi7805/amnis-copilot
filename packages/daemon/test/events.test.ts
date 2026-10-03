@@ -75,7 +75,10 @@ test("heartbeat escribe un comentario SSE a cada cliente en cada intervalo", asy
   const { res, chunks } = fakeClient();
   broadcaster.register(res);
 
-  await sleep(35);
+  // Se espera a que haya varios en vez de dormir un tiempo fijo: con la CPU
+  // ocupada (otros tests en paralelo) un temporizador de 10 ms llega tarde.
+  const deadline = Date.now() + 2_000;
+  while (chunks.length < 2 && Date.now() < deadline) await sleep(5);
   broadcaster.stop();
 
   assert.ok(

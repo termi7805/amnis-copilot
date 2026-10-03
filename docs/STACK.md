@@ -108,7 +108,7 @@ El daemon sirve dos cosas por el mismo puerto, así que se separan por prefijo:
 | `GET /api/spotify/callback` | Redirect de Spotify: valida `state`, guarda el token |
 | `POST /api/spotify/logout` | Borra el token de Spotify (conserva el Client ID); `media` pasa a `not-logged-in` sin reiniciar (escritura) |
 | `POST /api/hooks/install` | Repara los hooks de Amnis en `~/.claude/settings.json`: merge no destructivo con copia de seguridad → `{ added, backup }` (escritura) |
-| `POST /api/ingest/rebuild` | Reconstruye la caché de uso en un proceso aparte: `202` y evento SSE `rebuild` `{ status: "done" \| "error" }` al terminar; `409` si ya hay una (escritura) |
+| `POST /api/ingest/rebuild` | Reconstruye la caché de uso en un proceso aparte: `202` y evento SSE `rebuild` `{ status: "done" \| "error" }` al terminar; `409` si ya hay una (escritura). Comparte ejecutor con la ingesta automática (§7) |
 | `POST /api/media/{play,pause,next,previous}` | Transporte de la reproducción de Spotify (escritura) |
 | `POST /api/media/{seek,shuffle,repeat,transfer}` | Ajustes y transferencia entre dispositivos, con body JSON (escritura) |
 | `GET /api/media/devices` | Dispositivos Spotify Connect, bajo demanda (no entra en el polling) |
@@ -329,6 +329,18 @@ de en medio; si vive en el adaptador desde ahora, no hay nada que mover.
 **`shared/` no puede tener build ni lógica.** Solo tipos y constantes puras. Es lo que permite
 que el daemon lo importe como TypeScript directo *y* que Vite lo transpile sin ceremonia. En
 cuanto ahí entra una función con dependencias de runtime, se rompen los dos lados a la vez.
+
+**La ingesta del daemon va siempre en un proceso aparte (#98).** El daemon lanza el mismo binario
+con `ingest` antes de cada muestra de cuota y con `ingest --rebuild` desde Ajustes
+(`infrastructure/ingestProcess.ts`), con un único ejecutor (`ingestRunner.ts`) que garantiza una
+sola ingesta a la vez. Una pasada sin nada nuevo cuesta ~60 ms, pero ponerse al día tras horas
+apagado lee a ~20 ms/MB de CPU síncrona: dentro del daemon congelaría el bucle de eventos y
+retrasaría el `200` del hook, que está en la ruta crítica de Claude Code. El proceso hijo lee los
+JSONL **fuera** de la transacción y escribe dentro de una `BEGIN IMMEDIATE` corta, para no
+intercalar cientos de escrituras con las del daemon. Descartados: un temporizador propio (dos
+relojes, la muestra puede emparejarse con tokens viejos), dispararla desde los hooks (depende de
+que estén instalados y el dashboard solo refresca con `quota`) y `fs.watch` recursivo (un evento
+por línea escrita y límites de inotify).
 
 **`providers/anthropic/` existe desde el primer día aunque solo haya un provider.** Es la costura
 que `DESIGN.md` §6 exige para que Antigravity sea aditivo. Hoy `'anthropic'` está hardcodeado en

@@ -20,6 +20,7 @@ function makeDeps(overrides: Partial<SampleQuotaDeps> = {}): {
   const deps: SampleQuotaDeps = {
     pollQuota: () => Promise.resolve({ authoritative: null, error: null }),
     tokensInWindow: () => 0,
+    localFresh: true,
     usageTimestamps: () => [],
     lastKnownReset: () => null,
     getPlanWindowTokens: () => null,
@@ -142,6 +143,31 @@ test("utilización autoritativa suficiente calibra el techo del plan", async () 
   await sampleQuota(deps, NOW);
 
   assert.deepEqual(savedCeilings, [44_000]);
+});
+
+test("sin la caché de uso al día la muestra se guarda pero no calibra el techo (#98)", async () => {
+  const reading: QuotaReading = {
+    authoritative: {
+      fiveHour: { utilization: 98, resetsAt: "2026-01-01T15:00:00.000Z" },
+      sevenDay: { utilization: 20, resetsAt: "2026-01-08T00:00:00.000Z" },
+      limits: [],
+      weeklyBreakdown: null,
+    },
+    error: null,
+  };
+  // El caso real del 2026-10-02: 37,6 M de tokens congelados contra un 98 %.
+  const { deps, saved, savedCeilings } = makeDeps({
+    pollQuota: () => Promise.resolve(reading),
+    tokensInWindow: () => 37_600_000,
+    localFresh: false,
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.deepEqual(savedCeilings, []);
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0]?.fiveHourUtil, 98);
+  assert.notEqual(snapshot.divergence, null);
 });
 
 test("proyección: con endpoint y muestras previas da el valor al reset; sin endpoint, null", async () => {

@@ -13,6 +13,16 @@ export const STALE_INGEST_MS = 24 * 60 * 60_000;
 
 export type Check = HealthCheck;
 
+/**
+ * Lo que solo sabe el daemon (#98): cómo fue su última ingesta automática.
+ * `staleAfterMs` entra como dato (`application/` no importa `config.ts`).
+ */
+export interface AutoIngestFacts {
+  /** `null` mientras no ha terminado la primera pasada tras arrancar. */
+  lastRun: { at: Date; error: string | null } | null;
+  staleAfterMs: number;
+}
+
 export interface DiagnoseFacts {
   daemonAlive: boolean;
   /** Eventos donde hay al menos un matcher marcado como Amnis. */
@@ -25,6 +35,8 @@ export interface DiagnoseFacts {
   quotaError: string | null;
   dbError: string | null;
   lastIngestAt: Date | null;
+  /** Solo el daemon lo rellena; el CLI no ingiere solo y usa `lastIngestAt`. */
+  autoIngest?: AutoIngestFacts;
   spotify: {
     hasClientId: boolean;
     token: "none" | "valid" | "expired-refreshable";
@@ -151,7 +163,43 @@ function checkDb(facts: DiagnoseFacts): Check {
   };
 }
 
+function checkAutoIngest(auto: AutoIngestFacts, now: Date): Check {
+  const { lastRun, staleAfterMs } = auto;
+  if (lastRun === null) {
+    return {
+      name: "ingesta",
+      ok: true,
+      message: "La primera ingesta tras arrancar está en curso.",
+      remedy: null,
+    };
+  }
+  if (lastRun.error !== null) {
+    return {
+      name: "ingesta",
+      ok: false,
+      message: `La última ingesta automática falló: ${lastRun.error}`,
+      remedy:
+        "Ejecuta `amnis ingest` para ver el error completo; mientras tanto la estimación local queda atrasada.",
+    };
+  }
+  if (now.getTime() - lastRun.at.getTime() > staleAfterMs) {
+    return {
+      name: "ingesta",
+      ok: false,
+      message: `Hace más de ${Math.round(staleAfterMs / 60_000)} min que no se completa una ingesta automática.`,
+      remedy: "Reinicia el daemon; si persiste, ejecuta `amnis ingest`.",
+    };
+  }
+  return {
+    name: "ingesta",
+    ok: true,
+    message: "La ingesta automática está al día.",
+    remedy: null,
+  };
+}
+
 function checkIngest(facts: DiagnoseFacts, now: Date): Check {
+  if (facts.autoIngest) return checkAutoIngest(facts.autoIngest, now);
   if (facts.lastIngestAt === null) {
     return {
       name: "ingesta",

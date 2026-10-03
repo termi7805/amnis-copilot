@@ -3,6 +3,7 @@ import type { QuotaSnapshot } from "@amnis/shared";
 import { sampleQuota } from "../application/sampleQuota.ts";
 import { PLAN_WINDOW_TOKENS } from "../config.ts";
 import type { Provider } from "../domain/Provider.ts";
+import type { IngestOutcome } from "./ingestRunner.ts";
 import {
   getPlanWindowTokens,
   savePlanWindowTokens,
@@ -25,11 +26,20 @@ export function createQuotaSampler(
   provider: Provider,
   /** Plan vigente (#84): solo da el valor inicial del techo. */
   planId: () => string | null = () => null,
+  /**
+   * Deja la caché de uso al día antes de muestrear (#98). Sin él (tests, el
+   * CLI) se da por buena: es lo que pasaba antes de la ingesta automática.
+   */
+  ensureFresh: () => Promise<IngestOutcome> = () => Promise.resolve("fresh"),
 ): () => Promise<QuotaSnapshot> {
   return async (now: Date = new Date()) => {
+    // Antes del sondeo: el `%` real y los tokens locales deben ser del mismo
+    // instante (DESIGN §2), y la ingesta es lo que lo hace cierto.
+    const outcome = await ensureFresh();
     const snapshot = await sampleQuota(
       {
         pollQuota: () => provider.pollQuota(),
+        localFresh: outcome === "fresh",
         tokensInWindow: (since) => tokensInWindow(db, accountId, since),
         usageTimestamps: () => usageTimestamps(db, accountId),
         lastKnownReset: () => {

@@ -140,6 +140,80 @@ test("ingesta de hace 25h falla, de hace 1h no", () => {
   assert.equal(find(fresh, "ingesta").ok, true);
 });
 
+const STALE_AFTER_MS = 360_000;
+
+test("ingesta automática (daemon): sin primera pasada aún no es un fallo", () => {
+  const check = find(
+    diagnose(
+      makeFacts({
+        lastIngestAt: null,
+        autoIngest: { lastRun: null, staleAfterMs: STALE_AFTER_MS },
+      }),
+      NOW,
+    ),
+    "ingesta",
+  );
+  assert.equal(check.ok, true);
+});
+
+test("ingesta automática: una pasada reciente y correcta está bien, aunque ingest_offsets no cambie", () => {
+  const check = find(
+    diagnose(
+      makeFacts({
+        lastIngestAt: new Date(NOW.getTime() - 48 * 60 * 60_000),
+        autoIngest: {
+          lastRun: { at: new Date(NOW.getTime() - 60_000), error: null },
+          staleAfterMs: STALE_AFTER_MS,
+        },
+      }),
+      NOW,
+    ),
+    "ingesta",
+  );
+  assert.equal(check.ok, true);
+});
+
+test("ingesta automática: la última pasada falló, sale el error y un remedio", () => {
+  const check = find(
+    diagnose(
+      makeFacts({
+        autoIngest: {
+          lastRun: {
+            at: new Date(NOW.getTime() - 10_000),
+            error: "database is locked",
+          },
+          staleAfterMs: STALE_AFTER_MS,
+        },
+      }),
+      NOW,
+    ),
+    "ingesta",
+  );
+  assert.equal(check.ok, false);
+  assert.ok(check.message.includes("database is locked"));
+  assert.ok(check.remedy?.includes("amnis ingest"));
+});
+
+test("ingesta automática: sin pasada completada en más de 2 intervalos falla", () => {
+  const check = find(
+    diagnose(
+      makeFacts({
+        autoIngest: {
+          lastRun: {
+            at: new Date(NOW.getTime() - STALE_AFTER_MS - 1_000),
+            error: null,
+          },
+          staleAfterMs: STALE_AFTER_MS,
+        },
+      }),
+      NOW,
+    ),
+    "ingesta",
+  );
+  assert.equal(check.ok, false);
+  assert.ok(check.remedy);
+});
+
 test("daemon caído falla con remedio amnis serve", () => {
   const checks = diagnose(makeFacts({ daemonAlive: false }), NOW);
   const check = find(checks, "daemon");

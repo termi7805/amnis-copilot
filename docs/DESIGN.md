@@ -59,8 +59,10 @@ para que exponerlo por túnel (Tailscale/Cloudflare) sea un día de trabajo el d
 simplicidad sobre el servicio de sistema.
 
 Esto es seguro porque **los JSONL son la fuente de verdad del uso y la BD lo guarda como caché
-derivada con offsets**: al abrir la mascota, el daemon reingiere todo lo que Claude Code escribió
-mientras estaba apagado. No se pierde uso, tokens, sesiones ni proyectos. Lo irrecuperable es la
+derivada con offsets**: al arrancar, el daemon ingiere todo lo que Claude Code escribió mientras
+estaba apagado, y vuelve a ingerir justo antes de cada muestra de cuota (cada 180 s y al pedir
+una recarga; ver «El techo del plan se calibra solo»). Nadie tiene que ejecutar `amnis ingest`.
+No se pierde uso, tokens, sesiones ni proyectos. Lo irrecuperable es la
 serie temporal del endpoint OAuth, los eventos de hook y el estado en vivo: **solo existen si el
 daemon estaba escuchando**. Al abrir la mascota no se pierde nada de lo que ya estaba guardado
 (el uso se reingiere; lo demás se conserva), pero lo ocurrido con el daemon apagado no se puede
@@ -202,6 +204,10 @@ parseo local da los tokens del mismo instante, así que `techo ≈ tokens / (uti
 Con unas cuantas muestras por encima de un uso mínimo, el techo se estima solo y mejora con el uso.
 
 - Se persiste en `accounts.plan_window_tokens`, no en el código.
+- «Del mismo instante» lo hace cierto el daemon (#98): ingiere los JSONL nuevos **antes** de cada
+  muestra. Una muestra cuya ingesta falló, o que coincidió con una reconstrucción, se guarda pero
+  **no calibra**: con tokens parciales el cociente da un techo a la mitad (pasó el 2026-10-02: 37,6 M
+  de tokens congelados entre un 98 % dieron 38,4 M, frente a una mediana de 75,4 M).
 - Solo se calibra con muestras autoritativas y con `utilization` suficiente (por debajo del ~10%
   el cociente es ruido).
 - `PLAN_WINDOW_TOKENS` (del plan detectado) queda como **valor inicial** hasta que haya calibración, no como verdad.

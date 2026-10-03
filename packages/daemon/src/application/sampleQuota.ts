@@ -38,6 +38,13 @@ export interface QuotaSampleInput {
 export interface SampleQuotaDeps {
   pollQuota(): Promise<QuotaReading>;
   tokensInWindow(since: Date): number;
+  /**
+   * La caché de uso quedó al día justo antes de esta muestra (#98). Si no
+   * (ingesta fallida, o reconstrucción en curso), `localTokens` es parcial y
+   * dividirlo por el `%` real daría un techo a la mitad: la muestra se guarda,
+   * pero no calibra.
+   */
+  localFresh: boolean;
   usageTimestamps(): Date[];
   /** El `resets_at` no nulo más reciente de una muestra anterior. */
   lastKnownReset(): Date | null;
@@ -88,10 +95,9 @@ export async function sampleQuota(
 
     // Solo se calibra con muestra autoritativa y utilización suficiente:
     // por debajo del ~10% el cociente es ruido y envenenaría el techo.
-    const calibrated = calibrate(
-      localTokens,
-      authoritative.fiveHour.utilization,
-    );
+    const calibrated = deps.localFresh
+      ? calibrate(localTokens, authoritative.fiveHour.utilization)
+      : null;
     if (calibrated !== null) deps.savePlanWindowTokens(calibrated);
 
     // La ventana es fija: se proyecta desde `resets_at − 5 h` y se para en el

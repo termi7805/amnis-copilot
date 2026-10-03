@@ -12,6 +12,7 @@ import {
   AMNIS_DEV_ORIGIN,
   DB_PATH,
   PORT,
+  QUOTA_POLL_MS,
   RESOURCES,
   SPOTIFY_REDIRECT_URI,
   VERSION,
@@ -38,6 +39,8 @@ import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
 import { createHttpServer } from "../http/server.ts";
 import { createStaticRoute } from "../http/static.ts";
+import { spawnIngest } from "../ingestProcess.ts";
+import { createIngestRunner, type IngestRunner } from "../ingestRunner.ts";
 import { startMediaPoller } from "../mediaPoller.ts";
 import { openBrowser } from "../openBrowser.ts";
 import { ensureAccount } from "../persistence/accounts.ts";
@@ -66,7 +69,6 @@ import { createMediaControl } from "../providers/spotify/control.ts";
 import { exchangeCode } from "../providers/spotify/oauth.ts";
 import { readMedia } from "../providers/spotify/player.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
-import { spawnRebuild } from "../rebuildProcess.ts";
 import { createTrackVibes } from "../trackVibe.ts";
 
 function makeHookDeps(
@@ -91,10 +93,17 @@ function makeStateDeps(
   media: GetStateDeps["media"],
   listening: GetStateDeps["listening"],
   settings: GetStateDeps["settings"],
+  ingest: IngestRunner,
 ): GetStateDeps {
   const plan = () => currentPlan(settings().plan);
   const quotaSamplers = providers.map((provider) =>
-    createQuotaSampler(db, accountId, provider, () => plan()?.id ?? null),
+    createQuotaSampler(
+      db,
+      accountId,
+      provider,
+      () => plan()?.id ?? null,
+      ingest.ensureFresh,
+    ),
   );
   return {
     version: VERSION,
@@ -141,6 +150,9 @@ export function runServeCli(args: readonly string[] = []): void {
   broadcaster.onClientsChange((count) => {
     if (count > 0) mediaPoller.wake();
   });
+  // Un solo proceso de ingesta a la vez (#98): la pasada automática de antes de
+  // cada muestra de cuota y la reconstrucción comparten ejecutor.
+  const ingest = createIngestRunner({ spawn: spawnIngest });
   const stateDeps = makeStateDeps(
     db,
     accountId,
@@ -151,6 +163,7 @@ export function runServeCli(args: readonly string[] = []): void {
       return watcher.listening();
     },
     () => settings,
+    ingest,
   );
 
   // Cacheadas del último poll de cuota: un `state` disparado por hooks no
@@ -173,6 +186,7 @@ export function runServeCli(args: readonly string[] = []): void {
     accountId,
     anthropicProvider,
     () => currentPlan(settings.plan)?.id ?? null,
+    ingest.ensureFresh,
   );
   // Último error del poller, en memoria: `/api/health` lo da sin pagar un
   // poll en vivo (el CLI, que no lo tiene, sí lo hace).
@@ -227,6 +241,10 @@ export function runServeCli(args: readonly string[] = []): void {
               // Dentro del daemon, estar vivo es trivialmente cierto.
               daemonAlive: async () => true,
               quotaError: async () => lastQuotaError,
+              autoIngest: () => ({
+                lastRun: ingest.lastRun(),
+                staleAfterMs: 2 * QUOTA_POLL_MS,
+              }),
               db,
             },
             new Date(),
@@ -239,7 +257,7 @@ export function runServeCli(args: readonly string[] = []): void {
       }),
       ...createHooksRoutes(() => repairHooks(makeRepairHooksDeps())),
       ...createIngestRoutes({
-        rebuild: spawnRebuild,
+        rebuild: () => ingest.rebuild(),
         broadcast: (data) => broadcaster.broadcast({ event: "rebuild", data }),
       }),
       "POST /api/quota/refresh": createQuotaRefreshRoute(poller.pollNow),
