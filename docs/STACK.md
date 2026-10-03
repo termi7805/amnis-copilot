@@ -111,8 +111,22 @@ El daemon sirve dos cosas por el mismo puerto, así que se separan por prefijo:
 | `GET /api/media/devices` | Dispositivos Spotify Connect, bajo demanda (no entra en el polling) |
 | `POST /api/media/refresh` | La UI avisa de que alguien mira (foco de la ventana): lectura ya y sondeo rápido ~2 min |
 
-Sin auth: escucha en loopback y no hay dato de otra persona en juego. El día del túnel, el auth
-se añade en una sola capa delante de `/api`.
+Sin auth de usuario (no hay dato de otra persona en juego), pero **con protección de origen en
+las rutas de escritura** (#88). Escuchar en loopback impide que entre otra máquina, no que entre
+otra *web*: cualquier página abierta en tu navegador puede hacer `fetch("http://127.0.0.1:4747/api/media/pause",
+{method: "POST"})`, y con DNS rebinding incluso leer respuestas. Por eso todo método distinto de
+`GET`/`HEAD` pasa por `checkOrigin` antes de despachar, y responde 403 si no cumple:
+
+- `Host` tiene que ser `127.0.0.1:PORT` o `localhost:PORT`. Eso corta el DNS rebinding.
+- `Origin`, **si viene**, tiene que ser el propio daemon. Sin `Origin` (el `curl` del hook, la
+  CLI) se acepta: un navegador siempre lo manda en un POST cross-origin. La mascota de Tauri
+  carga la UI desde el daemon, así que su `Origin` ya es el del daemon.
+- En desarrollo el navegador habla con Vite; el origen del dev server se admite solo si
+  `AMNIS_DEV_ORIGIN` está definida, y únicamente la define el script `dev` del daemon.
+
+Los `GET` quedan fuera: leen datos propios y son seguros ante CSRF, pero un DNS rebinding
+podría leerlos. Es un límite conocido. El día del túnel, el auth se añade en una sola capa
+delante de `/api`.
 
 ### El contrato del SSE
 

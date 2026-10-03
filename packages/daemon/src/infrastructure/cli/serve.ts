@@ -8,6 +8,7 @@ import {
 import type { RecordHookDeps } from "../../application/recordHook.ts";
 import { refreshPrices } from "../../application/refreshPrices.ts";
 import {
+  AMNIS_DEV_ORIGIN,
   DB_PATH,
   PORT,
   RESOURCES,
@@ -194,6 +195,7 @@ export function runServeCli(args: readonly string[] = []): void {
   });
 
   const server = createHttpServer({
+    devOrigin: AMNIS_DEV_ORIGIN,
     routes: {
       "GET /debug": createDashboardRoute(),
       "POST /api/hook/claude": createHookRoute(

@@ -10,7 +10,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      "/api": "http://127.0.0.1:4747",
+      // changeOrigin reescribe `Host` a 127.0.0.1:4747 (el daemon exige el
+      // suyo, #88) y deja el `Origin` del navegador, que el daemon admite
+      // vía AMNIS_DEV_ORIGIN. No reescribir `Origin` aquí: abriría la
+      // escritura a cualquier web que llegue a este dev server.
+      "/api": { target: "http://127.0.0.1:4747", changeOrigin: true },
     },
   },
   test: {

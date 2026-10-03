@@ -1,6 +1,6 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer as createNodeServer } from "node:http";
-import { PORT } from "../../config.ts";
+import { type AllowedOrigins, allowedOrigins, PORT } from "../../config.ts";
 
 export interface RouteContext {
   req: IncomingMessage;
@@ -24,6 +24,8 @@ export interface HttpServerDeps {
    * daemon sirve por el mismo puerto (routes/static.ts, #38).
    */
   fallback?: RouteHandler;
+  /** Origen del dev server de Vite, admitido solo en `pnpm dev` (#88). */
+  devOrigin?: string;
 }
 
 export interface AmnisHttpServer {
@@ -36,6 +38,31 @@ export interface AmnisHttpServer {
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(body));
+}
+
+/**
+ * Protección de origen (#88). Loopback impide que entre otra máquina, no que
+ * entre otra *web*: cualquier página abierta en el navegador puede mandar un
+ * POST a 127.0.0.1, y con DNS rebinding hasta leer la respuesta. Devuelve el
+ * motivo del rechazo, o `null` si la petición pasa.
+ * - `Host` tiene que ser el del daemon: corta el DNS rebinding, donde el
+ *   navegador manda el dominio del atacante.
+ * - `Origin`, si viene, tiene que ser el del daemon. Sin él (curl del hook,
+ *   CLI) se acepta: un navegador siempre lo manda en un POST cross-origin.
+ */
+export function checkOrigin(
+  req: IncomingMessage,
+  allowed: AllowedOrigins,
+): string | null {
+  const host = req.headers.host;
+  if (host === undefined || !allowed.hosts.has(host)) {
+    return `Host no permitido (${host ?? "ausente"}).`;
+  }
+  const origin = req.headers.origin;
+  if (origin !== undefined && !allowed.origins.has(origin)) {
+    return `Origin no permitido (${origin}).`;
+  }
+  return null;
 }
 
 function dispatch(handler: RouteHandler, ctx: RouteContext): void {
@@ -60,12 +87,22 @@ function dispatch(handler: RouteHandler, ctx: RouteContext): void {
 
 export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
   const openResponses = new Set<ServerResponse>();
+  // Se fija en listen(): con el puerto 0 de los tests solo se sabe entonces.
+  let allowed = allowedOrigins(PORT, deps.devOrigin);
 
   const server: Server = createNodeServer((req, res) => {
     openResponses.add(res);
     res.on("close", () => openResponses.delete(res));
 
     const method = req.method ?? "GET";
+    // Antes de buscar ruta: a un origen ajeno no se le dice qué rutas existen.
+    if (method !== "GET" && method !== "HEAD") {
+      const reason = checkOrigin(req, allowed);
+      if (reason !== null) {
+        sendJson(res, 403, { error: `Origen no permitido: ${reason}` });
+        return;
+      }
+    }
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     const ctx: RouteContext = { req, res, url };
     const handler = deps.routes[`${method} ${url.pathname}`];
@@ -95,7 +132,10 @@ export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
       return new Promise((resolve) => {
         server.listen(port, "127.0.0.1", () => {
           const address = server.address();
-          resolve(typeof address === "object" && address ? address.port : port);
+          const actual =
+            typeof address === "object" && address ? address.port : port;
+          allowed = allowedOrigins(actual, deps.devOrigin);
+          resolve(actual);
         });
       });
     },

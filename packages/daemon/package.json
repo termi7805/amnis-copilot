@@ -7,7 +7,7 @@
     "amnis": "./src/cli.ts"
   },
   "scripts": {
-    "dev": "node src/cli.ts serve",
+    "dev": "AMNIS_DEV_ORIGIN=http://localhost:5173 node src/cli.ts serve",
     "build:sea": "node scripts/build-sea.ts"
   },
   "dependencies": {

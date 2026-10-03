@@ -9,6 +9,34 @@ export const VERSION = "0.0.1";
 /** Puerto fijo por ahora; configurable via AMNIS_PORT. */
 export const PORT = Number(process.env.AMNIS_PORT ?? 4747);
 
+/**
+ * Origen del dev server de Vite (`pnpm dev`), admitido además del propio
+ * daemon. Sin valor por defecto: solo el script `dev` lo define (#88).
+ */
+export const AMNIS_DEV_ORIGIN = process.env.AMNIS_DEV_ORIGIN;
+
+export interface AllowedOrigins {
+  /** Valores válidos de la cabecera `Host`. */
+  hosts: ReadonlySet<string>;
+  /** Valores válidos de la cabecera `Origin`, cuando viene. */
+  origins: ReadonlySet<string>;
+}
+
+/**
+ * Quién puede escribir en el daemon (#88): él mismo, por IP o por `localhost`,
+ * y opcionalmente el dev server. Función pura de `port` porque los tests
+ * escuchan en el puerto 0 y el servidor la evalúa con el puerto real.
+ */
+export function allowedOrigins(
+  port: number,
+  devOrigin?: string,
+): AllowedOrigins {
+  const hosts = [`127.0.0.1:${port}`, `localhost:${port}`];
+  const origins = hosts.map((host) => `http://${host}`);
+  if (devOrigin) origins.push(devOrigin);
+  return { hosts: new Set(hosts), origins: new Set(origins) };
+}
+
 export const HOME = homedir();
 export const CLAUDE_DIR =
   process.env.CLAUDE_CONFIG_DIR ?? join(HOME, ".claude");

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { request } from "node:http";
 import { test } from "node:test";
+import { allowedOrigins } from "../src/config.ts";
 import {
   createHttpServer,
   type HttpServerDeps,
@@ -167,4 +169,178 @@ test("close() termina las respuestas abiertas y libera el puerto", async () => {
   const port2 = await server2.listen(port);
   assert.equal(port2, port);
   await server2.close();
+});
+
+// Protección de origen (#88). `fetch` no deja fijar `Host` ni siempre `Origin`,
+// así que estos tests hablan HTTP con `node:http`.
+async function withWriteServer(
+  devOrigin: string | undefined,
+  fn: (
+    send: (opts: {
+      method?: string;
+      path?: string;
+      headers?: Record<string, string>;
+    }) => Promise<{ status: number; body: string }>,
+    port: number,
+    calls: () => number,
+  ) => Promise<void>,
+): Promise<void> {
+  let calls = 0;
+  const server = createHttpServer({
+    devOrigin,
+    routes: {
+      "POST /api/escribe": ({ res }) => {
+        calls++;
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end("{}");
+      },
+      "GET /api/lee": ({ res }) => {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end("{}");
+      },
+    },
+  });
+  const port = await server.listen(0);
+  const send = (opts: {
+    method?: string;
+    path?: string;
+    headers?: Record<string, string>;
+  }) =>
+    new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const req = request(
+        {
+          host: "127.0.0.1",
+          port,
+          method: opts.method ?? "POST",
+          path: opts.path ?? "/api/escribe",
+          headers: opts.headers,
+        },
+        (res) => {
+          let body = "";
+          res.setEncoding("utf8");
+          res.on("data", (chunk) => {
+            body += chunk;
+          });
+          res.on("end", () => resolve({ status: res.statusCode ?? 0, body }));
+        },
+      );
+      req.on("error", reject);
+      req.end();
+    });
+  try {
+    await fn(send, port, () => calls);
+  } finally {
+    await server.close();
+  }
+}
+
+test("un Host ajeno da 403 y no llega al handler (DNS rebinding)", async () => {
+  await withWriteServer(undefined, async (send, port, calls) => {
+    const response = await send({ headers: { Host: `evil.example:${port}` } });
+    assert.equal(response.status, 403);
+    assert.match(JSON.parse(response.body).error, /Host/);
+    assert.equal(calls(), 0);
+  });
+});
+
+test("un Origin ajeno da 403 y no llega al handler", async () => {
+  await withWriteServer(undefined, async (send, _port, calls) => {
+    const response = await send({
+      headers: { Origin: "http://evil.example" },
+    });
+    assert.equal(response.status, 403);
+    assert.equal(
+      response.body,
+      JSON.stringify({
+        error:
+          "Origen no permitido: Origin no permitido (http://evil.example).",
+      }),
+    );
+    assert.equal(calls(), 0);
+  });
+});
+
+test("Origin: null (iframe sandbox, file://) da 403", async () => {
+  await withWriteServer(undefined, async (send, _port, calls) => {
+    const response = await send({ headers: { Origin: "null" } });
+    assert.equal(response.status, 403);
+    assert.equal(calls(), 0);
+  });
+});
+
+test("el mismo daemon en otro puerto es un origen ajeno", async () => {
+  await withWriteServer(undefined, async (send, port) => {
+    const response = await send({
+      headers: { Origin: `http://127.0.0.1:${port + 1}` },
+    });
+    assert.equal(response.status, 403);
+  });
+});
+
+test("sin Origin (curl del hook, CLI) pasa", async () => {
+  await withWriteServer(undefined, async (send, _port, calls) => {
+    const response = await send({});
+    assert.equal(response.status, 200);
+    assert.equal(calls(), 1);
+  });
+});
+
+test("el Origin del propio daemon pasa, por IP y por localhost", async () => {
+  await withWriteServer(undefined, async (send, port) => {
+    for (const origin of [
+      `http://127.0.0.1:${port}`,
+      `http://localhost:${port}`,
+    ]) {
+      const response = await send({ headers: { Origin: origin } });
+      assert.equal(response.status, 200, origin);
+    }
+    const viaLocalhost = await send({
+      headers: { Host: `localhost:${port}` },
+    });
+    assert.equal(viaLocalhost.status, 200);
+  });
+});
+
+test("el origen del dev server solo pasa si se declara", async () => {
+  const headers = { Origin: "http://localhost:5173" };
+  await withWriteServer("http://localhost:5173", async (send) => {
+    assert.equal((await send({ headers })).status, 200);
+  });
+  await withWriteServer(undefined, async (send) => {
+    assert.equal((await send({ headers })).status, 403);
+  });
+});
+
+test("un POST a una ruta inexistente desde un origen ajeno da 403, no 404", async () => {
+  await withWriteServer(undefined, async (send) => {
+    const response = await send({
+      path: "/api/no-existe",
+      headers: { Origin: "http://evil.example" },
+    });
+    assert.equal(response.status, 403);
+  });
+});
+
+test("las lecturas (GET) no pasan por la comprobación de origen", async () => {
+  await withWriteServer(undefined, async (send) => {
+    const response = await send({
+      method: "GET",
+      path: "/api/lee",
+      headers: { Origin: "http://evil.example" },
+    });
+    assert.equal(response.status, 200);
+  });
+});
+
+test("allowedOrigins deriva hosts y orígenes del puerto", () => {
+  const allowed = allowedOrigins(4747, "http://localhost:5173");
+  assert.deepEqual([...allowed.hosts].sort(), [
+    "127.0.0.1:4747",
+    "localhost:4747",
+  ]);
+  assert.deepEqual([...allowed.origins].sort(), [
+    "http://127.0.0.1:4747",
+    "http://localhost:4747",
+    "http://localhost:5173",
+  ]);
 });
