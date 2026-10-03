@@ -9,36 +9,62 @@ import {
   windowStart,
 } from "../src/domain/localQuota.ts";
 
-test("windowStart sin lastReset devuelve now", () => {
-  const now = new Date("2026-01-01T12:00:00Z");
-  assert.equal(windowStart(now).getTime(), now.getTime());
+const H = 60 * 60_000;
+const at = (iso: string) => new Date(iso);
+/** Primer ts ≥ t entre los dados, como hace la consulta SQL. */
+const firstOf = (stamps: Date[]) => (t: Date) =>
+  stamps
+    .filter((d) => d.getTime() >= t.getTime())
+    .sort((x, y) => x.getTime() - y.getTime())[0] ?? null;
+
+test("windowStart con reset futuro: la ventana empezó en reset − 5h", () => {
+  const now = at("2026-01-01T12:00:00Z");
+  const reset = at("2026-01-01T15:00:00Z");
+  const start = windowStart(now, reset, () => null);
+  assert.equal(start?.getTime(), reset.getTime() - FIVE_HOUR_MS);
 });
 
-test("windowStart con lastReset reciente: misma ventana, no avanza", () => {
-  const lastReset = new Date("2026-01-01T10:00:00Z");
-  const now = new Date("2026-01-01T12:00:00Z"); // 2h después, dentro de la ventana
-  assert.equal(windowStart(now, lastReset).getTime(), lastReset.getTime());
+test("windowStart con reset pasado: primer evento posterior al reset", () => {
+  const now = at("2026-01-01T12:00:00Z");
+  const reset = at("2026-01-01T05:00:00Z");
+  const first = at("2026-01-01T09:30:00Z");
+  const start = windowStart(
+    now,
+    reset,
+    firstOf([at("2026-01-01T04:00:00Z"), first]),
+  );
+  assert.equal(start?.getTime(), first.getTime());
 });
 
-test("windowStart con lastReset antiguo: avanza en saltos de 5h hasta cubrir now", () => {
-  const lastReset = new Date("2026-01-01T00:00:00Z");
-  // 13h después: 2 ventanas completas (10h) + 3h dentro de la tercera
-  const now = new Date("2026-01-01T13:00:00Z");
-
-  const result = windowStart(now, lastReset);
-
-  const expected = new Date(lastReset.getTime() + 2 * FIVE_HOUR_MS);
-  assert.equal(result.getTime(), expected.getTime());
-  assert.ok(result.getTime() <= now.getTime());
-  assert.ok(result.getTime() + FIVE_HOUR_MS > now.getTime());
+test("windowStart encadena ventanas cerradas hasta una que contenga now", () => {
+  const now = at("2026-01-01T20:00:00Z");
+  const reset = at("2026-01-01T00:00:00Z");
+  const stamps = [
+    at("2026-01-01T01:00:00Z"), // ventana 1: 01:00–06:00
+    at("2026-01-01T07:00:00Z"), // ventana 2: 07:00–12:00
+    at("2026-01-01T15:30:00Z"), // ventana 3: 15:30–20:30, contiene now
+    at("2026-01-01T16:00:00Z"),
+  ];
+  const start = windowStart(now, reset, firstOf(stamps));
+  assert.equal(start?.getTime(), at("2026-01-01T15:30:00Z").getTime());
 });
 
-test("windowStart con endpoint (resetsAt - 5h): 0 saltos, mismo resultado", () => {
-  const resetsAt = new Date("2026-01-01T15:00:00Z");
-  const lastReset = new Date(resetsAt.getTime() - FIVE_HOUR_MS);
-  const now = new Date("2026-01-01T11:00:00Z"); // dentro de esa ventana
+test("windowStart con reset pasado y sin evento posterior: sin ventana activa", () => {
+  const now = at("2026-01-01T12:00:00Z");
+  const reset = new Date(now.getTime() - 7 * H);
+  assert.equal(
+    windowStart(now, reset, () => null),
+    null,
+  );
+});
 
-  assert.equal(windowStart(now, lastReset).getTime(), lastReset.getTime());
+test("windowStart: ventana cerrada y sin evento posterior: sin ventana activa", () => {
+  const now = at("2026-01-01T20:00:00Z");
+  const reset = at("2026-01-01T00:00:00Z");
+  assert.equal(
+    windowStart(now, reset, firstOf([at("2026-01-01T01:00:00Z")])),
+    null,
+  );
 });
 
 test("estimate: tokens/ceiling*100, sin clamping por encima de 100", () => {

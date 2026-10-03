@@ -7,6 +7,7 @@ import { test } from "node:test";
 import { ensureAccount } from "../src/infrastructure/persistence/accounts.ts";
 import { openDb } from "../src/infrastructure/persistence/db.ts";
 import {
+  firstUsageAtOrAfter,
   tokensInWindow,
   usageTimestamps,
 } from "../src/infrastructure/persistence/usage.ts";
@@ -100,6 +101,24 @@ test("usageTimestamps devuelve los ts en orden ascendente", () => {
   assert.equal(timestamps.length, 2);
   assert.ok(timestamps[0] && timestamps[1]);
   assert.ok(timestamps[0].getTime() < timestamps[1].getTime());
+});
+
+test("firstUsageAtOrAfter devuelve el primer ts ≥ t, o null", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  for (const [key, ts] of [
+    ["a", "2026-01-01T10:00:00.000Z"],
+    ["b", "2026-01-01T12:00:00.000Z"],
+  ] as const) {
+    insertEvent(db, accountId, key, ts, { input: 1, output: 1 });
+  }
+
+  const since = (iso: string) =>
+    firstUsageAtOrAfter(db, accountId, new Date(iso))?.toISOString() ?? null;
+
+  assert.equal(since("2026-01-01T10:00:00.000Z"), "2026-01-01T10:00:00.000Z");
+  assert.equal(since("2026-01-01T10:00:01.000Z"), "2026-01-01T12:00:00.000Z");
+  assert.equal(since("2026-01-01T12:00:01.000Z"), null);
 });
 
 test("la migración añade plan_window_tokens y es idempotente", () => {

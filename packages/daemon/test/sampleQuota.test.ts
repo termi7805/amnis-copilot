@@ -22,6 +22,7 @@ function makeDeps(overrides: Partial<SampleQuotaDeps> = {}): {
     tokensInWindow: () => 0,
     localFresh: true,
     usageTimestamps: () => [],
+    firstUsageAtOrAfter: () => null,
     lastKnownReset: () => null,
     getPlanWindowTokens: () => null,
     savePlanWindowTokens: (tokens) => savedCeilings.push(tokens),
@@ -58,10 +59,12 @@ test("con endpoint: inicio de ventana = resets_at - 5h, divergencia = autoritati
 
 test("sin endpoint: se usa el último reset conocido, la estimación local sigue saliendo y la divergencia es null", async () => {
   const lastReset = new Date("2026-01-01T09:00:00.000Z");
+  const firstAfter = new Date("2026-01-01T10:00:00.000Z");
   const { deps, saved } = makeDeps({
     lastKnownReset: () => lastReset,
+    firstUsageAtOrAfter: () => firstAfter,
     tokensInWindow: (since) => {
-      assert.equal(since.toISOString(), lastReset.toISOString());
+      assert.equal(since.toISOString(), firstAfter.toISOString());
       return 11_000;
     },
   });
@@ -75,6 +78,55 @@ test("sin endpoint: se usa el último reset conocido, la estimación local sigue
     (11_000 / DEFAULT_CEILING) * 100,
   );
   assert.equal(saved[0]?.source, "local");
+});
+
+test("sin endpoint y reset futuro: la ventana empieza en reset − 5h y cuenta tokens", async () => {
+  const reset = new Date("2026-01-01T15:00:00.000Z"); // futuro respecto a NOW
+  const { deps } = makeDeps({
+    lastKnownReset: () => reset,
+    tokensInWindow: (since) =>
+      since.toISOString() === "2026-01-01T10:00:00.000Z" ? 5_000 : 0,
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.equal(snapshot.local.windowStartedAt, "2026-01-01T10:00:00.000Z");
+  assert.equal(snapshot.local.fiveHourTokens, 5_000);
+});
+
+test("sin endpoint y reset de hace 7h: la ventana empieza en el primer mensaje posterior", async () => {
+  const first = new Date("2026-01-01T09:00:00.000Z");
+  const { deps } = makeDeps({
+    lastKnownReset: () => new Date("2026-01-01T05:00:00.000Z"),
+    firstUsageAtOrAfter: (t) => (t.getTime() <= first.getTime() ? first : null),
+    tokensInWindow: (since) => {
+      assert.equal(since.toISOString(), first.toISOString());
+      return 3_000;
+    },
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.equal(snapshot.local.windowStartedAt, first.toISOString());
+  assert.equal(snapshot.local.fiveHourTokens, 3_000);
+});
+
+test("sin endpoint, reset pasado y sin mensajes posteriores: sin ventana activa, 0 tokens", async () => {
+  const { deps } = makeDeps({
+    lastKnownReset: () => new Date("2026-01-01T05:00:00.000Z"),
+    usageTimestamps: () => {
+      throw new Error("no debe caer a findGapStart");
+    },
+    tokensInWindow: () => {
+      throw new Error("sin ventana no se consulta");
+    },
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.equal(snapshot.local.windowStartedAt, null);
+  assert.equal(snapshot.local.fiveHourTokens, 0);
+  assert.equal(snapshot.local.fiveHourUtilization, 0);
 });
 
 test("sin endpoint y sin reset conocido: cae a findGapStart sobre los timestamps locales", async () => {

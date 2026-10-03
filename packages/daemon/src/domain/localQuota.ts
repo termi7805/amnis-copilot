@@ -10,19 +10,32 @@ export const FIVE_HOUR_MS = 5 * 60 * 60_000;
  * La ventana es fija, no rodante: arranca con el primer mensaje y se
  * cierra 5h después de golpe, no se desliza.
  *
- * Sin `lastReset` → `now` (cero información, la ventana "empieza ahora").
- * Con `lastReset` → avanza en saltos de FIVE_HOUR_MS hasta que la ventana
- * contenga `now`. Con el endpoint, el llamador pasa `resetsAt - 5h` como
- * `lastReset` y el bucle termina en la primera vuelta: mismo código para
- * el caso autoritativo y el inferido de un reset antiguo.
+ * `lastReset` es el **final** de una ventana (un `resets_at`), no un inicio:
+ * - Futuro → la ventana que lo produjo sigue abierta: empezó en `reset − 5h`.
+ * - Pasado → la ventana siguiente arranca en el primer evento `≥ reset`; si
+ *   ya se cerró (`inicio + 5h ≤ now`), la siguiente arranca en el primer
+ *   evento `≥` ese cierre, y así hasta una que contenga `now`.
+ * - Pasado y sin evento posterior → `null`: no hay ventana activa, y no se
+ *   inventa una (el llamador estima 0 tokens).
+ *
+ * `firstUsageAtOrAfter` consulta el índice por `ts`: no se recorren los
+ * eventos desde un reset de hace días en cada muestra.
  */
-export function windowStart(now: Date, lastReset?: Date): Date {
-  if (!lastReset) return now;
-
-  let start = lastReset.getTime();
+export function windowStart(
+  now: Date,
+  lastReset: Date,
+  firstUsageAtOrAfter: (t: Date) => Date | null,
+): Date | null {
   const nowMs = now.getTime();
-  while (start + FIVE_HOUR_MS <= nowMs) start += FIVE_HOUR_MS;
-  return new Date(start);
+  if (lastReset.getTime() > nowMs) {
+    return new Date(lastReset.getTime() - FIVE_HOUR_MS);
+  }
+
+  let start = firstUsageAtOrAfter(lastReset);
+  while (start && start.getTime() + FIVE_HOUR_MS <= nowMs) {
+    start = firstUsageAtOrAfter(new Date(start.getTime() + FIVE_HOUR_MS));
+  }
+  return start;
 }
 
 /** `%` de la ventana. Sin clamping: por encima de 100 es señal real. */

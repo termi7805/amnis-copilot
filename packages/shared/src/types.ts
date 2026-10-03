@@ -116,7 +116,8 @@ export interface QuotaSnapshot {
   local: {
     fiveHourTokens: number;
     fiveHourUtilization: number;
-    windowStartedAt: string;
+    /** `null`: sin endpoint y sin ventana activa (reset pasado sin uso posterior). */
+    windowStartedAt: string | null;
   };
   /** authoritative.fiveHour - local.fiveHour. `null` si no hay endpoint. */
   divergence: number | null;

@@ -13,7 +13,11 @@ import {
   lastKnownReset,
   samplesBetween,
 } from "./persistence/quotaSamples.ts";
-import { tokensInWindow, usageTimestamps } from "./persistence/usage.ts";
+import {
+  firstUsageAtOrAfter,
+  tokensInWindow,
+  usageTimestamps,
+} from "./persistence/usage.ts";
 
 /**
  * Cablea `sampleQuota` (application/) contra `node:sqlite` y un `Provider`
@@ -42,6 +46,7 @@ export function createQuotaSampler(
         localFresh: outcome === "fresh",
         tokensInWindow: (since) => tokensInWindow(db, accountId, since),
         usageTimestamps: () => usageTimestamps(db, accountId),
+        firstUsageAtOrAfter: (t) => firstUsageAtOrAfter(db, accountId, t),
         lastKnownReset: () => {
           const iso = lastKnownReset(db, accountId);
           return iso ? new Date(iso) : null;

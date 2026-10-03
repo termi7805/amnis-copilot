@@ -24,7 +24,12 @@ export function fiveHourWindow(
   const auth = quota.authoritative?.fiveHour ?? null;
   const end = auth?.resetsAt
     ? new Date(auth.resetsAt)
-    : new Date(new Date(quota.local.windowStartedAt).getTime() + FIVE_HOUR_MS);
+    : new Date(
+        (quota.local.windowStartedAt
+          ? new Date(quota.local.windowStartedAt)
+          : now
+        ).getTime() + FIVE_HOUR_MS,
+      );
   const start = new Date(end.getTime() - FIVE_HOUR_MS);
   const elapsedPct = clamp(
     ((now.getTime() - start.getTime()) / FIVE_HOUR_MS) * 100,

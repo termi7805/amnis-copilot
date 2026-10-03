@@ -46,6 +46,8 @@ export interface SampleQuotaDeps {
    */
   localFresh: boolean;
   usageTimestamps(): Date[];
+  /** Primer evento de uso con `ts ≥ t`, `null` si no hay (#99). */
+  firstUsageAtOrAfter(t: Date): Date | null;
   /** El `resets_at` no nulo más reciente de una muestra anterior. */
   lastKnownReset(): Date | null;
   /** El techo calibrado (2.4), o `null` si aún no se ha calibrado. */
@@ -70,16 +72,20 @@ export async function sampleQuota(
   const reading = await deps.pollQuota();
   const authoritative = reading.authoritative;
 
+  // Con endpoint el inicio es autoritativo (`resets_at − 5h`). Sin él se infiere
+  // del último reset conocido; sin ninguno, del primer hueco > 5h. `null`: no
+  // hay ventana activa (reset pasado sin uso posterior), y se estima 0.
   const resetsAt = authoritative?.fiveHour.resetsAt;
-  const lastReset = resetsAt
+  const lastReset = deps.lastKnownReset();
+  const windowStartedAt = resetsAt
     ? new Date(new Date(resetsAt).getTime() - FIVE_HOUR_MS)
-    : (deps.lastKnownReset() ?? undefined);
+    : lastReset
+      ? windowStart(now, lastReset, deps.firstUsageAtOrAfter)
+      : (findGapStart(deps.usageTimestamps(), FIVE_HOUR_MS) ?? now);
 
-  const windowStartedAt = lastReset
-    ? windowStart(now, lastReset)
-    : (findGapStart(deps.usageTimestamps(), FIVE_HOUR_MS) ?? now);
-
-  const localTokens = deps.tokensInWindow(windowStartedAt);
+  const localTokens = windowStartedAt
+    ? deps.tokensInWindow(windowStartedAt)
+    : 0;
   // Un 0 almacenado no es un techo calibrado, es "sin calibrar todavía"
   // (calibrate() ya no debería guardarlo, pero una BD anterior a esa
   // guarda puede tenerlo, y dividir entre 0 produce NaN/Infinity).
@@ -135,7 +141,7 @@ export async function sampleQuota(
     local: {
       fiveHourTokens: localTokens,
       fiveHourUtilization: localUtilization,
-      windowStartedAt: windowStartedAt.toISOString(),
+      windowStartedAt: windowStartedAt?.toISOString() ?? null,
     },
     divergence,
     projection: { fiveHourAtReset },

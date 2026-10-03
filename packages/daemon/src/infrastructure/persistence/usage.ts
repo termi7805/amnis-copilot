@@ -31,6 +31,20 @@ export function tokensInWindow(
   return row.total;
 }
 
+/** Primer evento con `ts ≥ since` (índice `idx_usage_ts`), `null` si no hay. */
+export function firstUsageAtOrAfter(
+  db: DatabaseSync,
+  accountId: number,
+  since: Date,
+): Date | null {
+  const row = db
+    .prepare(
+      "SELECT MIN(ts) AS ts FROM usage_events WHERE account_id = ? AND ts >= ?",
+    )
+    .get(accountId, since.toISOString()) as { ts: string | null };
+  return row.ts ? new Date(row.ts) : null;
+}
+
 /** ts ascendente. Alimenta findGapStart() cuando no hay ningún reset conocido. */
 export function usageTimestamps(db: DatabaseSync, accountId: number): Date[] {
   const rows = db

@@ -161,9 +161,16 @@ primer mensaje y se cierra 5 h después; el consumo no se desliza, se resetea de
 ventana rodante da un número que nunca coincide con el del endpoint.
 
 - **Con endpoint:** el inicio es `resets_at − 5 h`. Autoritativo, sin inferencia.
-- **Sin endpoint:** se infiere del último reset conocido en `quota_samples`, avanzando en saltos
-  de 5 h hasta cubrir el momento actual. Si no hay ninguno (primera ejecución sin red), se toma
-  el primer `usage_event` que deje un hueco de más de 5 h sin actividad.
+- **Sin endpoint:** se parte del último `resets_at` guardado en `quota_samples`, que es el
+  **final** de una ventana, no un inicio:
+  - Reset **futuro** → esa ventana sigue abierta y empezó en `reset − 5 h`.
+  - Reset **pasado** → la ventana actual arranca en el primer `usage_event` posterior al reset
+    (consulta por el índice de `ts`); si esa ventana ya se cerró, se repite con el primer evento
+    posterior a su cierre, hasta dar con una que contenga el momento actual.
+  - Reset pasado **sin ningún evento posterior** → no hay ventana activa: `windowStartedAt` es
+    `null` y la estimación es 0 tokens. No se inventa una ventana.
+  - **Sin ningún reset** conocido (primera ejecución sin red) → el primer `usage_event` que
+    deje un hueco de más de 5 h sin actividad.
 
 ### Serie de cuota y proyección al reset (#85)
 
