@@ -48,6 +48,7 @@ function quota(over: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
       fiveHourTokens: 41200,
       fiveHourUtilization: 28,
       windowStartedAt: START.toISOString(),
+      calibrated: true,
     },
     divergence: 6,
     projection: { fiveHourAtReset: 62 },

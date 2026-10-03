@@ -5,10 +5,6 @@ import { PLAN_WINDOW_TOKENS } from "../config.ts";
 import type { Provider } from "../domain/Provider.ts";
 import type { IngestOutcome } from "./ingestRunner.ts";
 import {
-  getPlanWindowTokens,
-  savePlanWindowTokens,
-} from "./persistence/accounts.ts";
-import {
   insertQuotaSample,
   lastKnownReset,
   samplesBetween,
@@ -18,6 +14,10 @@ import {
   tokensInWindow,
   usageTimestamps,
 } from "./persistence/usage.ts";
+import {
+  closedWindowCeilings,
+  saveWindowCeiling,
+} from "./persistence/windowCeilings.ts";
 
 /**
  * Cablea `sampleQuota` (application/) contra `node:sqlite` y un `Provider`
@@ -40,6 +40,9 @@ export function createQuotaSampler(
     // Antes del sondeo: el `%` real y los tokens locales deben ser del mismo
     // instante (DESIGN §2), y la ingesta es lo que lo hace cierto.
     const outcome = await ensureFresh();
+    const currentPlan = planId();
+    // Sin plan conocido, el historial de ventanas es de "unknown": no se mezcla.
+    const plan = currentPlan ?? "unknown";
     const snapshot = await sampleQuota(
       {
         pollQuota: () => provider.pollQuota(),
@@ -51,14 +54,15 @@ export function createQuotaSampler(
           const iso = lastKnownReset(db, accountId);
           return iso ? new Date(iso) : null;
         },
-        getPlanWindowTokens: () => getPlanWindowTokens(db, accountId),
-        savePlanWindowTokens: (tokens) =>
-          savePlanWindowTokens(db, accountId, tokens),
+        closedCeilings: (limit) =>
+          closedWindowCeilings(db, accountId, plan, now, limit),
+        saveWindowCeiling: (window) =>
+          saveWindowCeiling(db, accountId, plan, window),
         // Valor inicial del techo, hasta que se calibre solo: el del plan
         // vigente si se conoce, y "pro" si no. El `?? 44_000` solo satisface
         // noUncheckedIndexedAccess: la clave "pro" siempre existe.
         defaultPlanWindowTokens:
-          PLAN_WINDOW_TOKENS[planId() ?? "pro"] ??
+          PLAN_WINDOW_TOKENS[currentPlan ?? "pro"] ??
           PLAN_WINDOW_TOKENS.pro ??
           44_000,
         fiveHourSamplesSince: (from) =>

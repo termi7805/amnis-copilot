@@ -102,6 +102,18 @@ function migrate(db: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS idx_quota_ts ON quota_samples (ts);
 
+    -- Una fila por ventana de 5 h: tokens locales y % autoritativo de su última
+    -- muestra válida. El techo del plan es la mediana de las últimas cerradas.
+    -- Se filtra por plan: cambiar de plan descarta el historial.
+    CREATE TABLE IF NOT EXISTS window_ceilings (
+      account_id   INTEGER NOT NULL REFERENCES accounts(id),
+      plan         TEXT NOT NULL,
+      window_end   TEXT NOT NULL,
+      tokens       INTEGER NOT NULL,
+      utilization  REAL NOT NULL,
+      PRIMARY KEY (account_id, window_end)
+    );
+
     -- Última tabla de precios buena descargada (providers/anthropic/pricing.ts).
     -- No es derivada de los JSONL, pero sí reconstruible: se vuelve a
     -- descargar, y mientras tanto vale la semilla de domain/cost.ts.

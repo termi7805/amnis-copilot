@@ -325,6 +325,7 @@ describe("PetWindow", () => {
               fiveHourTokens: 0,
               fiveHourUtilization: 10,
               windowStartedAt: "2026-01-01T00:00:00Z",
+              calibrated: true,
             },
             divergence: null,
             projection: { fiveHourAtReset: null },

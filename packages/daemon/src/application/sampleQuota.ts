@@ -1,9 +1,13 @@
 import type { QuotaSnapshot } from "@amnis/shared";
 import {
+  CEILING_WINDOWS,
+  type CeilingWindow,
   calibrate,
   estimate,
   FIVE_HOUR_MS,
   findGapStart,
+  MIN_CEILING_UTILIZATION,
+  robustCeiling,
   windowStart,
 } from "../domain/localQuota.ts";
 import type { QuotaReading } from "../domain/Provider.ts";
@@ -50,9 +54,10 @@ export interface SampleQuotaDeps {
   firstUsageAtOrAfter(t: Date): Date | null;
   /** El `resets_at` no nulo más reciente de una muestra anterior. */
   lastKnownReset(): Date | null;
-  /** El techo calibrado (2.4), o `null` si aún no se ha calibrado. */
-  getPlanWindowTokens(): number | null;
-  savePlanWindowTokens(tokens: number): void;
+  /** Las últimas `limit` ventanas cerradas del plan vigente, de la más reciente a la más antigua (#100). */
+  closedCeilings(limit: number): CeilingWindow[];
+  /** Registra (o reescribe) la última muestra válida de la ventana que acaba en `windowEnd`. */
+  saveWindowCeiling(window: CeilingWindow & { windowEnd: string }): void;
   defaultPlanWindowTokens: number;
   /** Muestras con endpoint desde `from`, para medir el ritmo (#85). */
   fiveHourSamplesSince(from: Date): PaceSample[];
@@ -86,12 +91,13 @@ export async function sampleQuota(
   const localTokens = windowStartedAt
     ? deps.tokensInWindow(windowStartedAt)
     : 0;
-  // Un 0 almacenado no es un techo calibrado, es "sin calibrar todavía"
-  // (calibrate() ya no debería guardarlo, pero una BD anterior a esa
-  // guarda puede tenerlo, y dividir entre 0 produce NaN/Infinity).
-  const stored = deps.getPlanWindowTokens();
-  const ceiling =
-    stored !== null && stored > 0 ? stored : deps.defaultPlanWindowTokens;
+  // El techo es la mediana de las últimas ventanas cerradas, no la última
+  // muestra: así la estimación local es independiente del endpoint y la
+  // divergencia mide el uso fuera de Claude Code (#100). Sin 3 ventanas
+  // cerradas aún, vale el valor inicial del plan.
+  const robust = robustCeiling(deps.closedCeilings(CEILING_WINDOWS));
+  const calibrated = robust !== null;
+  const ceiling = robust ?? deps.defaultPlanWindowTokens;
   const localUtilization = estimate(localTokens, ceiling);
 
   let divergence: number | null = null;
@@ -99,16 +105,25 @@ export async function sampleQuota(
   if (authoritative) {
     divergence = authoritative.fiveHour.utilization - localUtilization;
 
-    // Solo se calibra con muestra autoritativa y utilización suficiente:
-    // por debajo del ~10% el cociente es ruido y envenenaría el techo.
-    const calibrated = deps.localFresh
-      ? calibrate(localTokens, authoritative.fiveHour.utilization)
-      : null;
-    if (calibrated !== null) deps.savePlanWindowTokens(calibrated);
+    // Se registra la ventana en curso solo con muestra autoritativa, tokens al
+    // día (#98) y utilización suficiente. La última muestra de la ventana gana;
+    // solo las ya cerradas entran en la mediana.
+    const resets = authoritative.fiveHour.resetsAt;
+    if (
+      resets &&
+      deps.localFresh &&
+      authoritative.fiveHour.utilization >= MIN_CEILING_UTILIZATION &&
+      calibrate(localTokens, authoritative.fiveHour.utilization) !== null
+    ) {
+      deps.saveWindowCeiling({
+        windowEnd: resets,
+        tokens: localTokens,
+        utilization: authoritative.fiveHour.utilization,
+      });
+    }
 
     // La ventana es fija: se proyecta desde `resets_at − 5 h` y se para en el
     // reset. La muestra actual aún no está en la BD, se añade a mano.
-    const resets = authoritative.fiveHour.resetsAt;
     if (resets) {
       const resetsAt = new Date(resets);
       const start = new Date(resetsAt.getTime() - FIVE_HOUR_MS);
@@ -142,6 +157,7 @@ export async function sampleQuota(
       fiveHourTokens: localTokens,
       fiveHourUtilization: localUtilization,
       windowStartedAt: windowStartedAt?.toISOString() ?? null,
+      calibrated,
     },
     divergence,
     projection: { fiveHourAtReset },

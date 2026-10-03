@@ -16,6 +16,7 @@ const base: QuotaSnapshot = {
     fiveHourTokens: 41200,
     fiveHourUtilization: 28,
     windowStartedAt: "2026-01-01T13:00:00Z",
+    calibrated: true,
   },
   divergence: 6,
   projection: { fiveHourAtReset: 62 },
@@ -48,6 +49,22 @@ describe("FiveHourCard", () => {
     expect(screen.queryByTestId("fact-projection")).toBeNull();
     expect(screen.queryByTestId("spark-projection")).toBeNull();
     expect(screen.getByText(/estimación local · token inválido/)).toBeVisible();
+  });
+
+  it("sin techo calibrado marca la estimación local y la divergencia como orientativas", () => {
+    const quota = { ...base, local: { ...base.local, calibrated: false } };
+    render(<FiveHourCard quota={quota} samples={samples} now={NOW} />);
+    expect(screen.getByTestId("uncalibrated")).toHaveTextContent(
+      "sin calibrar",
+    );
+    expect(screen.getByTestId("fact-divergence")).toHaveTextContent(
+      "orientativo",
+    );
+  });
+
+  it("calibrado no muestra el aviso", () => {
+    render(<FiveHourCard quota={base} samples={samples} now={NOW} />);
+    expect(screen.queryByTestId("uncalibrated")).toBeNull();
   });
 
   it("con endpoint pero sin proyección todavía: guion, no un número inventado", () => {

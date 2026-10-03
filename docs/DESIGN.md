@@ -206,18 +206,32 @@ adivina.
 - `GET /api/state` expone `plan: { id, label, monthlyUsd, source: "detected" | "manual" } | null`.
 - El plan resuelto da el **valor inicial** de `PLAN_WINDOW_TOKENS`; `accounts.plan` sigue sin usarse.
 
-El techo, en cambio, **no hace falta preguntarlo**: cada muestra trae la respuesta. El endpoint da el `%` real y el
-parseo local da los tokens del mismo instante, así que `techo ≈ tokens / (utilization / 100)`.
-Con unas cuantas muestras por encima de un uso mínimo, el techo se estima solo y mejora con el uso.
+El techo, en cambio, **no hace falta preguntarlo**: el endpoint da el `%` real y el parseo local
+los tokens del mismo instante, así que `techo ≈ tokens / (utilization / 100)`. Pero **no se
+calibra con la última muestra** (#100): entonces cada muestra reescribiría el techo y `local_util`
+sería una extrapolación de la lectura anterior, no una estimación independiente. Lo que se
+consume en claude.ai o en el móvil subiría `util` sin subir `tokens` y se absorbería en el techo
+siguiente en vez de verse como divergencia.
 
-- Se persiste en `accounts.plan_window_tokens`, no en el código.
+- **Mediana de ventanas cerradas.** `window_ceilings` guarda una fila por ventana (`plan`,
+  `window_end`, `tokens`, `utilization`) con su última muestra válida: autoritativa, con la caché de
+  uso al día y `utilization ≥ 30 %`. El techo es la mediana de `tokens / (utilization/100)` de las
+  últimas 7 ventanas **cerradas** (`window_end ≤ ahora`) del plan vigente. La ventana en curso se
+  registra, pero no entra hasta cerrarse: una muestra intermedia no mueve el techo.
+- **Con menos de 3 ventanas** no hay techo robusto: vale `PLAN_WINDOW_TOKENS` del plan detectado
+  como **valor inicial** y el snapshot lleva `local.calibrated = false`; la vista Ahora marca
+  la estimación y la divergencia como orientativas.
+- `resets_at` trae jitter de microsegundos (`15:50:00.030191`, `15:49:59.637`): `window_end` se
+  redondea al minuto, o una misma ventana se partiría en filas distintas.
+- **Cambiar de plan descarta el historial** (se filtra por `plan`): el de Pro no dice nada de Max.
 - «Del mismo instante» lo hace cierto el daemon (#98): ingiere los JSONL nuevos **antes** de cada
   muestra. Una muestra cuya ingesta falló, o que coincidió con una reconstrucción, se guarda pero
-  **no calibra**: con tokens parciales el cociente da un techo a la mitad (pasó el 2026-10-02: 37,6 M
+  **no se registra**: con tokens parciales el cociente da un techo a la mitad (pasó el 2026-10-02: 37,6 M
   de tokens congelados entre un 98 % dieron 38,4 M, frente a una mediana de 75,4 M).
-- Solo se calibra con muestras autoritativas y con `utilization` suficiente (por debajo del ~10%
-  el cociente es ruido).
-- `PLAN_WINDOW_TOKENS` (del plan detectado) queda como **valor inicial** hasta que haya calibración, no como verdad.
+- **Limitación:** con dos fuentes no se puede separar la capacidad real de un uso externo
+  **constante**. Si cada ventana lleva un 6 % de claude.ai, el techo sale un 6 % bajo. La mediana
+  tolera ventanas sueltas con mucho uso externo, no uno constante. Se documenta, no se resuelve.
+- `accounts.plan_window_tokens` queda sin uso (la columna se conserva para no migrar a la baja).
 
 Es el mejor uso posible de la doble vía: las dos fuentes no solo se comparan, **una enseña a la otra**.
 
@@ -259,7 +273,7 @@ llamadas que no están en el transcript padre (~15 % de los tokens, y todo el us
 eso la búsqueda es recursiva y solo se ingieren `.jsonl`: al lado hay `wf_*.json` que no son
 transcripts. Si algún mensaje aparece en los dos sitios, la deduplicación por `message.id` lo
 absorbe. Cuando entran tokens que antes no se contaban, el techo calibrado no se recalibra a mano:
-se reajusta solo con la siguiente muestra autoritativa, porque cada una lo sobrescribe.
+se reajusta solo a medida que las ventanas nuevas sustituyen en la mediana a las anteriores.
 
 ## 3. Almacenamiento
 
@@ -282,7 +296,7 @@ para ese uso la BD es la única copia. Un `DELETE` + reingesta perdía 10.348 ev
 | `usage_events` | Sale de los JSONL **mientras existan** | La corrige; conserva los de transcripts purgados |
 | `ingest_offsets` | Derivada | La reinicia (releer todo) |
 | `quota_samples`, `hook_events` | Solo existen porque el daemon escuchaba | No la toca |
-| `accounts.plan_window_tokens` | Recalibrar exige muestras con uso suficiente y tarda días | No la toca |
+| `window_ceilings` | Recalibrar exige ventanas cerradas con uso suficiente y tarda días | No la toca |
 | `model_prices` | Se vuelve a descargar | No la toca |
 
 Reinicio de offsets y reingesta van en **una transacción**: si la reingesta falla, no cambia nada.

@@ -178,6 +178,11 @@ export function FiveHourCard({
             {quota.local.fiveHourTokens.toLocaleString("es-ES")} tokens de
             Claude Code
           </div>
+          {!quota.local.calibrated && (
+            <div className={styles.d} data-testid="uncalibrated">
+              sin calibrar: faltan ventanas cerradas para fijar el techo
+            </div>
+          )}
         </div>
         {!window.estimated && (
           <>
@@ -188,7 +193,11 @@ export function FiveHourCard({
                   ? "—"
                   : `${divergence > 0 ? "+" : ""}${Math.round(divergence)} pts`}
               </div>
-              <div className={styles.d}>claude.ai, móvil u otro equipo</div>
+              <div className={styles.d}>
+                {quota.local.calibrated
+                  ? "claude.ai, móvil u otro equipo"
+                  : "orientativo: la estimación aún no está calibrada"}
+              </div>
             </div>
             <div className={styles.fact} data-testid="fact-projection">
               <div className={styles.k}>Proyección al reset</div>

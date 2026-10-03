@@ -6,6 +6,7 @@ import {
   estimate,
   FIVE_HOUR_MS,
   findGapStart,
+  robustCeiling,
   windowStart,
 } from "../src/domain/localQuota.ts";
 
@@ -141,4 +142,24 @@ test("Hecho cuando: promediar varias muestras calibradas se acerca más al techo
     errorCalibrated < errorDefault,
     `calibrado (${avgCalibrated}, error ${errorCalibrated}) debería acercarse más al real (${realCeiling}) que el default (${defaultCeiling}, error ${errorDefault})`,
   );
+});
+
+const win = (ceiling: number) => ({ tokens: ceiling / 2, utilization: 50 });
+
+test("robustCeiling: la mediana de las ventanas cerradas, no la última", () => {
+  assert.equal(
+    robustCeiling([win(70), win(90), win(60)].map((w) => ({ ...w }))),
+    70,
+  );
+});
+
+test("robustCeiling: con menos de 3 ventanas, null (sin calibrar)", () => {
+  assert.equal(robustCeiling([win(70), win(90)]), null);
+});
+
+test("robustCeiling: solo cuentan las 7 más recientes y las pares promedian el centro", () => {
+  const recent = [10, 20, 30, 40, 50, 60].map(win); // 6 → mediana 35
+  const old = [1000, 1000, 1000].map(win); // quedan fuera: ya hay 9
+  assert.equal(robustCeiling([...recent, win(70), ...old]), 40);
+  assert.equal(robustCeiling(recent), 35);
 });

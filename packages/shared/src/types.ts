@@ -118,6 +118,8 @@ export interface QuotaSnapshot {
     fiveHourUtilization: number;
     /** `null`: sin endpoint y sin ventana activa (reset pasado sin uso posterior). */
     windowStartedAt: string | null;
+    /** `false` hasta tener 3 ventanas cerradas: el techo es entonces el valor inicial del plan (#100). */
+    calibrated: boolean;
   };
   /** authoritative.fiveHour - local.fiveHour. `null` si no hay endpoint. */
   divergence: number | null;

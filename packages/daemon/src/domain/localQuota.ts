@@ -56,6 +56,40 @@ export function calibrate(tokens: number, utilization: number): number | null {
   return tokens / (utilization / 100);
 }
 
+/** Ventanas cerradas que hacen falta para fiarse del techo. */
+export const MIN_CEILING_WINDOWS = 3;
+/** Cuántas de las últimas ventanas cerradas entran en la mediana. */
+export const CEILING_WINDOWS = 7;
+/** Por debajo de este `%` una ventana no se registra: el cociente es ruido. */
+export const MIN_CEILING_UTILIZATION = 30;
+
+/** Tokens locales y `%` autoritativo de la última muestra válida de una ventana. */
+export interface CeilingWindow {
+  tokens: number;
+  utilization: number;
+}
+
+/**
+ * Mediana de `tokens / (utilization/100)` de las últimas `CEILING_WINDOWS`
+ * ventanas cerradas (`windows` de la más reciente a la más antigua). `null`
+ * con menos de `MIN_CEILING_WINDOWS`: aún no se ha calibrado. La mediana
+ * tolera ventanas sueltas con mucho uso externo, no uno constante (que
+ * sesgaría el techo a la baja: con dos fuentes no se puede separar).
+ */
+export function robustCeiling(windows: CeilingWindow[]): number | null {
+  const ceilings = windows
+    .slice(0, CEILING_WINDOWS)
+    .map((w) => calibrate(w.tokens, w.utilization))
+    .filter((c): c is number => c !== null)
+    .sort((a, b) => a - b);
+  if (ceilings.length < MIN_CEILING_WINDOWS) return null;
+
+  const mid = Math.floor(ceilings.length / 2);
+  return ceilings.length % 2
+    ? (ceilings[mid] as number)
+    : ((ceilings[mid - 1] as number) + (ceilings[mid] as number)) / 2;
+}
+
 /**
  * Fallback de "sin endpoint y sin historial de resets": el primer evento
  * tras un hueco > `windowMs` desde el anterior marca el inicio de la
