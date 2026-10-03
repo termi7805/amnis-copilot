@@ -17,11 +17,13 @@ import {
 } from "../../config.ts";
 import { derivePetState } from "../../domain/petState.ts";
 import { currentPlan } from "../currentPlan.ts";
+import { gatherDiagnoseFacts } from "../doctorFacts.ts";
 import { readCommitHash } from "../git.ts";
 import { createEventBroadcaster } from "../http/events.ts";
 import { createActivityRoutes } from "../http/routes/activity.ts";
 import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
+import { createHealthRoute } from "../http/routes/health.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
 import { createMediaRoutes } from "../http/routes/media.ts";
 import { createQuotaHistoryRoutes } from "../http/routes/quotaHistory.ts";
@@ -166,9 +168,13 @@ export function runServeCli(args: readonly string[] = []): void {
     anthropicProvider,
     () => currentPlan(settings.plan)?.id ?? null,
   );
+  // Último error del poller, en memoria: `/api/health` lo da sin pagar un
+  // poll en vivo (el CLI, que no lo tiene, sí lo hace).
+  let lastQuotaError: string | null = null;
   const poller = startQuotaPoller({
     sample,
     onSample: (snapshot) => {
+      lastQuotaError = snapshot.error;
       cachedFatigue = fatigueFrom([snapshot]);
       cachedExhausted = quotaExhausted([snapshot]);
       broadcaster.broadcast({ event: "quota", data: [snapshot] });
@@ -177,7 +183,10 @@ export function runServeCli(args: readonly string[] = []): void {
       // sin cambio real no emite nada de más.
       watcher.check();
     },
-    onError: (err) => console.error("Fallo muestreando cuota:", err.message),
+    onError: (err) => {
+      lastQuotaError = err.message;
+      console.error("Fallo muestreando cuota:", err.message);
+    },
   });
 
   // Un fallo no toca la tabla guardada: siguen valiendo los últimos
@@ -205,6 +214,23 @@ export function runServeCli(args: readonly string[] = []): void {
       ...createQuotaHistoryRoutes(db, accountId),
       ...createActivityRoutes(db, accountId),
       "GET /api/state": createStateRoute(stateDeps),
+      "GET /api/health": createHealthRoute({
+        facts: () =>
+          gatherDiagnoseFacts(
+            {
+              // Dentro del daemon, estar vivo es trivialmente cierto.
+              daemonAlive: async () => true,
+              quotaError: async () => lastQuotaError,
+              db,
+            },
+            new Date(),
+          ),
+        daemon: () => ({
+          version: VERSION,
+          startedAt,
+          eventsReceived: countHookEvents(db, accountId),
+        }),
+      }),
       "POST /api/quota/refresh": createQuotaRefreshRoute(poller.pollNow),
       "GET /api/events": createEventsRoute({
         broadcaster,

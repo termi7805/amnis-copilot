@@ -6,16 +6,12 @@
  * puerto y el umbral de frescura entran como datos, nunca como import.
  */
 
+import type { HealthCheck } from "@amnis/shared";
+
 /** Sin actividad de ingesta más allá de esto, se considera obsoleta. */
 export const STALE_INGEST_MS = 24 * 60 * 60_000;
 
-export interface Check {
-  name: string;
-  ok: boolean;
-  message: string;
-  /** `null` solo cuando `ok`. Un fallo sin remedio es el ✗ inútil que la issue quiere evitar. */
-  remedy: string | null;
-}
+export type Check = HealthCheck;
 
 export interface DiagnoseFacts {
   daemonAlive: boolean;

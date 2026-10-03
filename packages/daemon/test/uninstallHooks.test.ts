@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { ClaudeSettings } from "../src/infrastructure/claudeSettings.ts";
 import {
-  type ClaudeSettings,
   type HookEntry,
   mergeHooks,
 } from "../src/infrastructure/cli/installHooks.ts";

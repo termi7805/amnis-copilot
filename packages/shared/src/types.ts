@@ -291,6 +291,25 @@ export interface StateResponse {
   };
 }
 
+/** Un chequeo de `amnis doctor` / `GET /api/health` (#89). */
+export interface HealthCheck {
+  name: string;
+  ok: boolean;
+  message: string;
+  /** `null` solo cuando `ok`. Un fallo sin remedio es el ✗ inútil que la issue quiere evitar. */
+  remedy: string | null;
+}
+
+/** `GET /api/health`: el mismo diagnóstico que `amnis doctor`. */
+export interface HealthResponse {
+  checks: HealthCheck[];
+  daemon: {
+    version: string;
+    startedAt: string;
+    eventsReceived: number;
+  };
+}
+
 /**
  * Contrato de `GET /api/events` (SSE). Se declara una vez aquí porque hay
  * tres consumidores (mascota, su panel de cuota, dashboard) — si cada uno
