@@ -1,0 +1,383 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  min-width: 0;
+}
+
+.pageHead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.pageHead h1 {
+  margin: 0;
+  font: 600 1.5rem / 1.2 var(--f-body);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.pageHead p {
+  margin: 0.25rem 0 0;
+  color: var(--ink-2);
+}
+
+.pageHead p.eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--ink-3);
+  font: 500 0.7rem / 1 var(--f-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.seg {
+  margin: 0;
+  min-inline-size: 0;
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+
+.seg button {
+  border: 0;
+  background: none;
+  padding: 5px 11px;
+  border-radius: 6px;
+  color: var(--ink-2);
+  cursor: pointer;
+  white-space: nowrap;
+  font: inherit;
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  padding: 1.1rem 1.25rem;
+  min-width: 0;
+}
+
+.card h2 {
+  margin: 0 0 0.75rem;
+  font: 600 0.9rem / 1.3 var(--f-body);
+}
+
+.cardHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.cardHead h2 {
+  margin: 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+
+.span7 {
+  grid-column: span 7;
+}
+
+.span5 {
+  grid-column: span 5;
+}
+
+.span12 {
+  grid-column: span 12;
+}
+
+.empty {
+  color: var(--ink-3);
+  margin: 0;
+}
+
+/* Leyenda: la de la línea del día y la rampa del mapa de calor. */
+.legend {
+  display: flex;
+  gap: 0.4rem 1rem;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+.legend span {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* El rayado de "esperándote": el mismo en leyenda, línea y barras. */
+.hatchSwatch,
+.hatchBar {
+  background-color: var(--act-wait);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 2px,
+    rgb(0 0 0 / 0.35) 2px 3px
+  );
+}
+
+/* La línea del día es más ancha que un móvil: scrollea en su contenedor. */
+.timelineWrap {
+  overflow-x: auto;
+}
+
+.timeline {
+  position: relative;
+  min-width: 640px;
+}
+
+.timeline svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.gridline {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+}
+
+.axis {
+  fill: var(--ink-3);
+  font: 400 10.5px var(--f-mono);
+}
+
+.laneName {
+  fill: var(--ink);
+  font: 500 12.5px var(--f-body);
+}
+
+.timeline rect[tabindex] {
+  cursor: crosshair;
+}
+
+.tip {
+  position: absolute;
+  pointer-events: none;
+  z-index: 5;
+  background: var(--ink);
+  color: var(--surface);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  min-width: 150px;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+  transform: translate(-50%, calc(-100% - 6px));
+}
+
+.num {
+  font-family: var(--f-mono);
+}
+
+/* Tablas anchas: scrollean dentro de su tarjeta, no la página. */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.table th {
+  text-align: left;
+  font: 500 0.68rem / 1.2 var(--f-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  padding: 0 0.6rem 0.55rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.55rem 0.6rem;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 0;
+}
+
+.table tr:last-child td {
+  border-bottom: 0;
+}
+
+.table th.n,
+.table td.n,
+.n {
+  text-align: right;
+  font-family: var(--f-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.proj {
+  font-weight: 500;
+}
+
+.branch {
+  font: 400 0.75rem / 1 var(--f-mono);
+  color: var(--ink-3);
+  margin-top: 0.2rem;
+}
+
+.pill,
+.pillLive {
+  display: inline-flex;
+  font: 600 0.7rem / 1 var(--f-body);
+  padding: 4px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.pill {
+  background: var(--raised);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+}
+
+.pillLive {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Tiempo por estado. */
+.states {
+  display: grid;
+  gap: 9px;
+}
+
+.stateRow {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 150px) minmax(0, 1fr) 64px;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.mini {
+  width: 34px;
+  height: 25px;
+  border-radius: 5px;
+  background: var(--stage);
+  overflow: hidden;
+}
+
+.bar {
+  height: 10px;
+  border-radius: 3px;
+  background: var(--raised);
+  position: relative;
+}
+
+.bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+}
+
+.stateRow .n {
+  font-size: 0.75rem;
+  color: var(--ink-2);
+}
+
+/* Mapa de calor: rampa de un solo tono, de teal claro a oscuro. */
+.heat {
+  display: grid;
+  grid-template-columns: 34px repeat(24, minmax(0, 1fr));
+  gap: 3px;
+  min-width: 560px;
+  font: 400 10px / 1 var(--f-mono);
+  color: var(--ink-3);
+}
+
+.lbl {
+  display: flex;
+  align-items: center;
+}
+
+.hl {
+  text-align: center;
+}
+
+.cell {
+  aspect-ratio: 5 / 3;
+  border-radius: 3px;
+  background: var(--heat-0);
+}
+
+.cell[data-level="1"] {
+  background: var(--heat-1);
+}
+
+.cell[data-level="2"] {
+  background: var(--heat-2);
+}
+
+.cell[data-level="3"] {
+  background: var(--heat-3);
+}
+
+.cell[data-level="4"] {
+  background: var(--heat-4);
+}
+
+.ramp {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  font-size: 0.7rem;
+  color: var(--ink-3);
+}
+
+.ramp .cell {
+  width: 12px;
+  height: 12px;
+  aspect-ratio: auto;
+}
+
+@media (max-width: 1100px) {
+  .span7,
+  .span5 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 760px) {
+  .stateRow {
+    grid-template-columns: 34px minmax(0, 110px) minmax(0, 1fr) 54px;
+  }
+}

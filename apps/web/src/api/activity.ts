@@ -1,4 +1,4 @@
-import type { ActivityResponse } from "@amnis/shared";
+import type { ActivityHeatmapResponse, ActivityResponse } from "@amnis/shared";
 import { useEffect, useState } from "react";
 import { daemonUrl } from "./config.ts";
 
@@ -8,6 +8,18 @@ export async function fetchActivity(day?: string): Promise<ActivityResponse> {
   const response = await fetch(`${daemonUrl()}/api/activity${query}`);
   if (!response.ok) {
     throw new Error(`GET /api/activity → ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function fetchHeatmap(
+  weeks = 4,
+): Promise<ActivityHeatmapResponse> {
+  const response = await fetch(
+    `${daemonUrl()}/api/activity/heatmap?weeks=${weeks}`,
+  );
+  if (!response.ok) {
+    throw new Error(`GET /api/activity/heatmap → ${response.status}`);
   }
   return response.json();
 }

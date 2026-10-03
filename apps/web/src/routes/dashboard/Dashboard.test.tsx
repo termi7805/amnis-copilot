@@ -256,9 +256,7 @@ describe("Dashboard", () => {
     window.location.hash = "#actividad";
     render(<Dashboard />);
 
-    expect(
-      screen.getByRole("heading", { name: "Actividad" }),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("activity-title")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Actividad" })).toHaveAttribute(
       "aria-current",
       "page",
