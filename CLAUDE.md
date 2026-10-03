@@ -113,8 +113,12 @@ gh api repos/:owner/:repo/issues/N/sub_issues -q '.[].number'
 
 ## Git
 
-Único contribuyente del repo: se trabaja directamente sobre `main`, sin ramas de feature ni PRs.
-Commitear ahí salvo que el usuario pida explícitamente lo contrario.
+Único contribuyente del repo, pero varias sesiones de Claude Code pueden trabajar a la vez. Cada
+issue se implementa en su propio worktree (`../amnis-copilot-N`) y en una rama de feature
+`N-descripcion` (p. ej. `87-rutas-de-actividad`), que nace de `origin/main`, se rebasa sobre ella
+y se integra con `git push origin HEAD:main`. Sin PRs. Al integrar se borran el worktree y la
+rama; el árbol principal no se usa para editar. El flujo completo está en
+`.claude/skills/implement-amnis/SKILL.md`.
 
 ## Flujo de trabajo por issue
 
