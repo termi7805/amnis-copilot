@@ -55,3 +55,38 @@ test("dedupe por message.id: dos líneas que comparten message.id insertan un ú
   );
   assert.equal(total, 100 + 0 + 10 + 0 + 300 + 150 + 0 + 5);
 });
+
+test("parseUsageLine lee gitBranch y trata la rama vacía o ausente como null", () => {
+  const line = (extra: string) =>
+    `{"type":"assistant","sessionId":"s","timestamp":"2026-01-01T10:00:00.000Z"${extra},"message":{"id":"m","usage":{"input_tokens":1}}}`;
+  assert.equal(parseUsageLine(line(',"gitBranch":"main"'))?.gitBranch, "main");
+  assert.equal(parseUsageLine(line(',"gitBranch":""'))?.gitBranch, null);
+  assert.equal(parseUsageLine(line(""))?.gitBranch, null);
+});
+
+test("--rebuild rellena la rama de las filas que no la tenían", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const store = createUsageStore(db, accountId);
+  const base = {
+    dedupeKey: "m",
+    sessionId: "s",
+    project: "/p",
+    ts: "2026-01-01T10:00:00.000Z",
+    model: null,
+    inputTokens: 1,
+    outputTokens: 0,
+    cacheCreationTokens: 0,
+    cacheReadTokens: 0,
+    serviceTier: null,
+  };
+  store.insertUsageEvent("anthropic", { ...base, gitBranch: null });
+  createUsageStore(db, accountId, { replace: true }).insertUsageEvent(
+    "anthropic",
+    { ...base, gitBranch: "feat/x" },
+  );
+  const row = db.prepare("SELECT git_branch FROM usage_events").get() as {
+    git_branch: string | null;
+  };
+  assert.equal(row.git_branch, "feat/x");
+});

@@ -88,6 +88,8 @@ export function parseUsageLine(line: string): ProviderUsageEvent | null {
     dedupeKey: String(dedupeKey),
     sessionId: entry.sessionId ?? null,
     project: entry.cwd ?? null,
+    // Fuera de un repo llega "" o ausente: ambos son "sin rama".
+    gitBranch: entry.gitBranch || null,
     ts: entry.timestamp ?? new Date().toISOString(),
     model: message.model ?? null,
     inputTokens: usage.input_tokens ?? 0,

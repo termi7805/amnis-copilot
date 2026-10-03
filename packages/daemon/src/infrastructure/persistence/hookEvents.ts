@@ -98,6 +98,43 @@ export function lastKnownStateEvent(
   };
 }
 
+export interface HookEventRow {
+  ts: string;
+  sessionId: string | null;
+  project: string | null;
+  derivedState: string;
+}
+
+/**
+ * Los eventos en `[from, to)` por `ts` ascendente, solo con lo que necesita
+ * la vista de Actividad: ni `hook` ni `tool_name` (#87).
+ */
+export function eventsBetween(
+  db: DatabaseSync,
+  accountId: number,
+  from: Date,
+  to: Date,
+): HookEventRow[] {
+  const rows = db
+    .prepare(`
+      SELECT ts, session_id, project, derived_state FROM hook_events
+      WHERE account_id = ? AND ts >= ? AND ts < ?
+      ORDER BY ts ASC
+    `)
+    .all(accountId, from.toISOString(), to.toISOString()) as Array<{
+    ts: string;
+    session_id: string | null;
+    project: string | null;
+    derived_state: string;
+  }>;
+  return rows.map((r) => ({
+    ts: r.ts,
+    sessionId: r.session_id,
+    project: r.project,
+    derivedState: r.derived_state,
+  }));
+}
+
 export function countHookEvents(db: DatabaseSync, accountId: number): number {
   const row = db
     .prepare("SELECT COUNT(*) AS n FROM hook_events WHERE account_id = ?")

@@ -18,6 +18,8 @@ export interface ProviderUsageEvent {
   dedupeKey: string;
   sessionId: string | null;
   project: string | null;
+  /** Rama de git del `cwd` en ese mensaje; `null` si el transcript no la trae. */
+  gitBranch: string | null;
   ts: string;
   model: string | null;
   inputTokens: number;

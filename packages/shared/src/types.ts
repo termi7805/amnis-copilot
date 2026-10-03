@@ -314,3 +314,53 @@ export interface NormalizedHookEvent {
   command: string | null;
   at: string;
 }
+
+/**
+ * Los doce estados agrupados en cuatro: doce colores en una franja estrecha no
+ * se distinguen. `thinking` = investigando o planificando.
+ */
+export type ActivityGroup = "working" | "thinking" | "waiting" | "resting";
+
+/** Un tramo de una sesión en un estado. `end` ya está recortado al día. */
+export interface ActivitySegment {
+  sessionId: string;
+  state: PetState;
+  group: ActivityGroup;
+  start: string;
+  end: string;
+}
+
+export interface ActivitySession {
+  sessionId: string;
+  /** Nombre (no la ruta) del proyecto; `null` si ningún evento lo traía. */
+  project: string | null;
+  /** Última rama de git vista en el uso de la sesión; `null` si no hay. */
+  gitBranch: string | null;
+  start: string;
+  end: string;
+  /** Minutos en tramos que no son `resting`. */
+  activeMinutes: number;
+  tokens: number;
+  /** Equivalente de API, no dinero gastado (DESIGN §2). */
+  costUsd: number;
+}
+
+/** `GET /api/activity?day=YYYY-MM-DD` (día local del daemon). */
+export interface ActivityResponse {
+  day: string;
+  sessions: ActivitySession[];
+  segments: ActivitySegment[];
+  /** Minutos por estado, sin redondear. Su suma es la de los tramos. */
+  byState: Partial<Record<PetState, number>>;
+  /** Tiempo en `waiting`: cuánto te esperó y en cuántos avisos. */
+  waiting: { minutes: number; count: number };
+}
+
+/** `GET /api/activity/heatmap?weeks=4`: minutos de agente (sin `resting`). */
+export interface ActivityHeatmapResponse {
+  weeks: number;
+  from: string;
+  to: string;
+  /** 7 filas (0 = lunes) × 24 horas, en hora local del daemon. */
+  minutes: number[][];
+}

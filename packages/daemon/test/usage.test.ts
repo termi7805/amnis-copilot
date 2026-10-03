@@ -37,6 +37,7 @@ function insertEvent(
     cacheCreationTokens: tokens.cacheCreation ?? 0,
     cacheReadTokens: tokens.cacheRead ?? 0,
     serviceTier: null,
+    gitBranch: null,
   });
 }
 

@@ -33,6 +33,7 @@ function insertEvent(
     cacheCreationTokens: opts.cacheCreation ?? 0,
     cacheReadTokens: opts.cacheRead ?? 0,
     serviceTier: null,
+    gitBranch: null,
   });
 }
 

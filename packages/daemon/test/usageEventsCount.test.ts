@@ -32,6 +32,7 @@ test("countUsageEvents cuenta solo los de la cuenta indicada", () => {
     cacheCreationTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
+    gitBranch: null,
   });
   insertUsageEvent(db, {
     accountId,
@@ -46,6 +47,7 @@ test("countUsageEvents cuenta solo los de la cuenta indicada", () => {
     cacheCreationTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
+    gitBranch: null,
   });
   insertUsageEvent(db, {
     accountId: otherAccountId,
@@ -60,6 +62,7 @@ test("countUsageEvents cuenta solo los de la cuenta indicada", () => {
     cacheCreationTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
+    gitBranch: null,
   });
 
   assert.equal(countUsageEvents(db, accountId), 2);

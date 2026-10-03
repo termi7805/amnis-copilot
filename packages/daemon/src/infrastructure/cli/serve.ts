@@ -18,6 +18,7 @@ import { derivePetState } from "../../domain/petState.ts";
 import { currentPlan } from "../currentPlan.ts";
 import { readCommitHash } from "../git.ts";
 import { createEventBroadcaster } from "../http/events.ts";
+import { createActivityRoutes } from "../http/routes/activity.ts";
 import { createDashboardRoute } from "../http/routes/dashboard.ts";
 import { createEventsRoute } from "../http/routes/events.ts";
 import { createHookRoute } from "../http/routes/hook.ts";
@@ -200,6 +201,7 @@ export function runServeCli(args: readonly string[] = []): void {
       ),
       "GET /api/usage": createUsageRoute(db, accountId),
       ...createQuotaHistoryRoutes(db, accountId),
+      ...createActivityRoutes(db, accountId),
       "GET /api/state": createStateRoute(stateDeps),
       "POST /api/quota/refresh": createQuotaRefreshRoute(poller.pollNow),
       "GET /api/events": createEventsRoute({

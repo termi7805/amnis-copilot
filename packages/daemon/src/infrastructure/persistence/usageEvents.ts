@@ -6,6 +6,7 @@ export interface UsageEventRecord {
   dedupeKey: string;
   sessionId: string | null;
   project: string | null;
+  gitBranch: string | null;
   ts: string;
   model: string | null;
   inputTokens: number;
@@ -18,7 +19,7 @@ export interface UsageEventRecord {
 const INSERT_COLUMNS = `
   account_id, provider, dedupe_key, session_id, project, ts, model,
   input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens,
-  service_tier`;
+  service_tier, git_branch`;
 
 /**
  * Inserta un evento de uso. Devuelve `false` si `dedupe_key` ya existía
@@ -49,6 +50,7 @@ export function insertUsageEvent(
     event.cacheCreationTokens,
     event.cacheReadTokens,
     event.serviceTier,
+    event.gitBranch,
   ];
   const placeholders = values.map(() => "?").join(", ");
 
@@ -76,7 +78,8 @@ export function insertUsageEvent(
        output_tokens = excluded.output_tokens,
        cache_creation_tokens = excluded.cache_creation_tokens,
        cache_read_tokens = excluded.cache_read_tokens,
-       service_tier = excluded.service_tier`,
+       service_tier = excluded.service_tier,
+       git_branch = excluded.git_branch`,
   ).run(...values);
   return !existed;
 }

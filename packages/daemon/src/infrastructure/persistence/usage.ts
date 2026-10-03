@@ -39,7 +39,7 @@ export function usageTimestamps(db: DatabaseSync, accountId: number): Date[] {
   return rows.map((r) => new Date(r.ts));
 }
 
-export type UsageGroupBy = "day" | "project" | "model";
+export type UsageGroupBy = "day" | "project" | "model" | "session";
 
 export interface AggregateOptions {
   groupBy: UsageGroupBy;
@@ -67,6 +67,7 @@ const GROUP_KEY_SQL: Record<UsageGroupBy, string> = {
   day: "date(ts)",
   project: "COALESCE(project, '')",
   model: "COALESCE(model, '')",
+  session: "COALESCE(session_id, '')",
 };
 
 /**
@@ -164,4 +165,29 @@ export function aggregate(
     rows: [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key)),
     unpricedModels: [...unpriced].sort(),
   };
+}
+
+/**
+ * La última rama de git vista por sesión en el rango. Las filas sin rama
+ * (transcripts anteriores a `--rebuild`) no cuentan: una rama vieja gana a un
+ * `null`.
+ */
+export function branchesBySession(
+  db: DatabaseSync,
+  accountId: number,
+  from: Date,
+  to: Date,
+): Map<string, string> {
+  const rows = db
+    .prepare(`
+      SELECT session_id, git_branch FROM usage_events
+      WHERE account_id = ? AND ts >= ? AND ts < ?
+        AND session_id IS NOT NULL AND git_branch IS NOT NULL
+      ORDER BY ts ASC
+    `)
+    .all(accountId, from.toISOString(), to.toISOString()) as {
+    session_id: string;
+    git_branch: string;
+  }[];
+  return new Map(rows.map((r) => [r.session_id, r.git_branch]));
 }

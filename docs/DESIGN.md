@@ -285,6 +285,24 @@ pierde la serie de cuota y el uso de transcripts purgados).
 - `hook_events(...)` — evento crudo del hook + estado derivado.
 - `quota_samples(...)` — serie temporal: `%` del endpoint **y** estimación local del mismo instante.
 
+### Actividad: tramos sobre `hook_events` (#87)
+
+`GET /api/activity?day=` y `/api/activity/heatmap?weeks=` salen de `hook_events` sin guardar nada
+nuevo (`domain/activity.ts`). Reglas que conviene no olvidar:
+
+- **Tramos por sesión, nunca sobre la línea global**: dos terminales a la vez se solapan, así que
+  la suma de `byState` puede superar el tiempo de reloj. Un tramo dura hasta el siguiente evento
+  de su sesión, con tope en `SLEEP_AFTER_MS` desde el último; pasado el tope queda un hueco
+  (`sleeping` no es un tramo), para que una sesión abandonada a mediodía no salga "trabajando"
+  hasta medianoche.
+- **Eventos `unknown`** (Skill, ToolSearch, MCP…): prueban que la sesión vive y alargan un tramo
+  de trabajo, pero cierran `waiting` y `resting`: una herramienta nueva significa que ya
+  respondiste. Sin `PostToolUse`, un `waiting` incluye lo que tarda en ejecutarse lo aceptado.
+- **El día va en hora local del daemon**, a diferencia del uso (`date(ts)`, UTC): "ayer" y las
+  horas del mapa de calor son las de quien mira. El mapa cuenta minutos de agente sin `resting`.
+- Tokens, coste y rama por sesión salen de `usage_events.session_id` / `git_branch` (columna
+  nueva, la rellena `--rebuild`).
+
 ## 4. La mascota
 
 **Espejo de estado, no Tamagotchi con vida propia.** No tiene hambre por su cuenta: si te

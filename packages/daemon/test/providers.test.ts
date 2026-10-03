@@ -23,6 +23,7 @@ const fakeUsageEvent: ProviderUsageEvent = {
   cacheCreationTokens: 0,
   cacheReadTokens: 0,
   serviceTier: null,
+  gitBranch: null,
 };
 
 function makeFakeProvider(): Provider {

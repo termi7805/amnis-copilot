@@ -135,4 +135,13 @@ function migrate(db: DatabaseSync): void {
   if (!quotaColumns.some((c) => c.name === "limits_json")) {
     db.exec("ALTER TABLE quota_samples ADD COLUMN limits_json TEXT");
   }
+
+  // La rama de git de cada sesión (#87). Las filas anteriores la rellenan al
+  // pasar `amnis ingest --rebuild`, que actualiza en vez de borrar.
+  const usageColumns = db.prepare("PRAGMA table_info(usage_events)").all() as {
+    name: string;
+  }[];
+  if (!usageColumns.some((c) => c.name === "git_branch")) {
+    db.exec("ALTER TABLE usage_events ADD COLUMN git_branch TEXT");
+  }
 }

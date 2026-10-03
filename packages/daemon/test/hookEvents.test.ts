@@ -4,6 +4,7 @@ import { ensureAccount } from "../src/infrastructure/persistence/accounts.ts";
 import { openDb } from "../src/infrastructure/persistence/db.ts";
 import {
   countHookEvents,
+  eventsBetween,
   insertHookEvent,
   lastKnownStateEvent,
 } from "../src/infrastructure/persistence/hookEvents.ts";
@@ -150,4 +151,31 @@ test("countHookEvents cuenta solo los de la cuenta indicada", () => {
   insert(db, otherAccountId, "2026-01-01T00:02:00.000Z", "coding");
 
   assert.equal(countHookEvents(db, accountId), 2);
+});
+
+test("eventsBetween devuelve [from, to) de la cuenta, en orden y sin hook ni herramienta", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const other = ensureAccount(db, "anthropic", "otra");
+  insert(db, accountId, "2026-01-01T10:00:00.000Z", "coding");
+  insert(db, accountId, "2026-01-01T09:00:00.000Z", "coding");
+  insert(db, accountId, "2026-01-01T11:00:00.000Z", "coding");
+  insert(db, other, "2026-01-01T10:30:00.000Z", "coding");
+
+  const rows = eventsBetween(
+    db,
+    accountId,
+    new Date("2026-01-01T09:30:00.000Z"),
+    new Date("2026-01-01T11:00:00.000Z"),
+  );
+  assert.deepEqual(
+    rows.map((r) => r.ts),
+    ["2026-01-01T10:00:00.000Z"],
+  );
+  assert.deepEqual(Object.keys(rows[0] ?? {}).sort(), [
+    "derivedState",
+    "project",
+    "sessionId",
+    "ts",
+  ]);
 });

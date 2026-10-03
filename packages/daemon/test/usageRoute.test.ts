@@ -24,6 +24,7 @@ test("GET /api/usage responde tipado y con el coste calculado", async () => {
     cacheCreationTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
+    gitBranch: null,
   });
   insertUsageEvent(db, {
     accountId,
@@ -38,6 +39,7 @@ test("GET /api/usage responde tipado y con el coste calculado", async () => {
     cacheCreationTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
+    gitBranch: null,
   });
   // Precio descargado distinto del de la semilla: la ruta usa la tabla
   // guardada, no la constante.
