@@ -1,35 +1,53 @@
 import type { StateResponse } from "@amnis/shared";
+import type { HealthState } from "../../../api/health.ts";
 import { saveSettings } from "../../../api/settings.ts";
-import { type ThemePref, useTheme } from "../../../lib/theme.ts";
-import { MusicSettings } from "../MusicSettings.tsx";
+import type { AmnisStream } from "../../../api/useAmnisStream.ts";
+import { AppearanceCard } from "./AppearanceCard.tsx";
+import { DataCard } from "./DataCard.tsx";
+import { HealthList } from "./HealthList.tsx";
+import { MusicSettings } from "./MusicSettings.tsx";
+import { PlanCard } from "./PlanCard.tsx";
 import styles from "./SettingsView.module.css";
 
-const THEME_OPTIONS: { pref: ThemePref; label: string }[] = [
-  { pref: "system", label: "Sistema" },
-  { pref: "light", label: "Claro" },
-  { pref: "dark", label: "Oscuro" },
-];
+export interface SettingsViewProps {
+  state: StateResponse | null;
+  health: HealthState;
+  rebuild: AmnisStream["rebuild"];
+}
 
-/** Interino: tema y música; #95 añade salud, plan y caché. */
-export function SettingsView({ state }: { state: StateResponse | null }) {
-  const [theme, setTheme] = useTheme();
-
+/**
+ * Ajustes y salud (#95): lo que hoy piden el CLI o la mascota, desde el
+ * navegador. La salud ocupa la columna ancha; el plan, el tema y la caché, la
+ * estrecha; la música, todo el ancho.
+ */
+export function SettingsView({ state, health, rebuild }: SettingsViewProps) {
   return (
-    <>
-      {/* biome-ignore lint/a11y/useSemanticElements: un <fieldset> arrastra borde y padding del navegador a un conmutador segmentado */}
-      <div className={styles.themeSwitch} role="group" aria-label="Tema">
-        {THEME_OPTIONS.map(({ pref, label }) => (
-          <button
-            key={pref}
-            type="button"
-            aria-pressed={theme === pref}
-            onClick={() => setTheme(pref)}
-          >
-            {label}
-          </button>
-        ))}
+    <div className={styles.view}>
+      <header className={styles.pageHead}>
+        <div className={styles.eyebrow}>
+          Lo mismo que amnis doctor, sin abrir la terminal
+        </div>
+        <h1>Ajustes y salud</h1>
+        <p>Todo lo que hoy pide CLI o la mascota se hace desde aquí.</p>
+      </header>
+      <div className={styles.grid}>
+        <div className={styles.health}>
+          <HealthList
+            health={health.health}
+            unreachable={health.unreachable}
+            refresh={health.refresh}
+            mediaStatus={state?.media.status}
+          />
+        </div>
+        <div className={styles.side}>
+          <PlanCard state={state} />
+          <AppearanceCard />
+          <DataCard rebuild={rebuild} />
+        </div>
+        <div className={styles.music}>
+          <MusicSettings settings={state?.settings} save={saveSettings} />
+        </div>
       </div>
-      <MusicSettings settings={state?.settings} save={saveSettings} />
-    </>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+import { countWarnings, useHealth } from "../../api/health.ts";
 import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
 import { Pet } from "../../lib/Pet/Pet.tsx";
 import { ActivityView } from "./activity/ActivityView.tsx";
@@ -14,9 +15,14 @@ import { useHashView, VIEWS } from "./useHashView.ts";
  * como clientes que entran y salen del sondeo rápido de Spotify.
  */
 export function Dashboard() {
-  const { state, status } = useAmnisStream();
+  const { state, status, rebuild } = useAmnisStream();
   const view = useHashView();
-  const quotaError = state?.quotas.find((q) => q.error)?.error;
+  // Cada sondeo de cuota y cada cambio del estado de Spotify (conectar,
+  // desconectar) pueden cambiar un chequeo: se vuelve a pedir la salud.
+  const health = useHealth(
+    `${state?.quotas[0]?.sampledAt ?? ""}|${state?.media.status ?? ""}`,
+  );
+  const warnings = countWarnings(health.health);
 
   return (
     <div className={styles.dashboard}>
@@ -41,15 +47,25 @@ export function Dashboard() {
                 aria-current={view === id ? "page" : undefined}
               >
                 {label}
+                {id === "ajustes" && warnings > 0 && (
+                  <span
+                    className={styles.badge}
+                    title={`${warnings} ${warnings === 1 ? "aviso" : "avisos"} de salud`}
+                    role="status"
+                    aria-label={`${warnings} ${warnings === 1 ? "aviso" : "avisos"} de salud`}
+                  >
+                    {warnings}
+                  </span>
+                )}
               </a>
             </li>
           ))}
         </ul>
         <div className={styles.railStatus}>
           <p data-testid="connection-status">{CONNECTION_LABEL[status]}</p>
-          {quotaError && (
+          {warnings > 0 && (
             <a className={styles.health} href="#ajustes">
-              Cuota: {quotaError}
+              {warnings} {warnings === 1 ? "aviso" : "avisos"} de salud
             </a>
           )}
         </div>
@@ -58,7 +74,9 @@ export function Dashboard() {
         {view === "ahora" && <NowView state={state} />}
         {view === "historico" && <HistoryView state={state} />}
         {view === "actividad" && <ActivityView state={state} />}
-        {view === "ajustes" && <SettingsView state={state} />}
+        {view === "ajustes" && (
+          <SettingsView state={state} health={health} rebuild={rebuild} />
+        )}
       </main>
     </div>
   );

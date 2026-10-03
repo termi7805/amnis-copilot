@@ -128,6 +128,50 @@ describe("useAmnisStream", () => {
     expect(result.current.state?.quotas).toHaveLength(1);
   });
 
+  it("un settings recalcula el plan manual, pero no toca el detectado", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.emit("hello", { ...hello, plan: null }));
+    act(() =>
+      source?.emit("settings", { ...DEFAULT_SETTINGS, plan: "max_5x" }),
+    );
+    expect(result.current.state?.plan).toMatchObject({
+      id: "max_5x",
+      source: "manual",
+    });
+
+    const detected = { id: "pro", label: "Pro", monthlyUsd: 20 } as const;
+    act(() =>
+      source?.emit("hello", {
+        ...hello,
+        plan: { ...detected, source: "detected" },
+      }),
+    );
+    act(() =>
+      source?.emit("settings", { ...DEFAULT_SETTINGS, plan: "max_20x" }),
+    );
+    expect(result.current.state?.plan).toMatchObject({
+      id: "pro",
+      source: "detected",
+    });
+  });
+
+  it("rebuild anota el fin de la reconstrucción, también dos seguidas", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+    expect(result.current.rebuild).toBeNull();
+
+    act(() => source?.emit("rebuild", { status: "done" }));
+    expect(result.current.rebuild).toEqual({
+      seq: 1,
+      event: { status: "done" },
+    });
+
+    act(() => source?.emit("rebuild", { status: "done" }));
+    expect(result.current.rebuild?.seq).toBe(2);
+  });
+
   it("un settings antes del hello no rompe nada", () => {
     const { result } = renderHook(() => useAmnisStream());
     const [source] = FakeEventSource.instances;

@@ -7,8 +7,8 @@ import {
   type Vibe,
 } from "@amnis/shared";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import type { SaveSettingsResult } from "../../api/settings.ts";
-import { Pet, STATE_TITLE } from "../../lib/Pet/Pet.tsx";
+import type { SaveSettingsResult } from "../../../api/settings.ts";
+import { Pet, STATE_TITLE } from "../../../lib/Pet/Pet.tsx";
 import styles from "./MusicSettings.module.css";
 import { previewTrack } from "./previewTracks.ts";
 

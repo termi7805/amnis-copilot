@@ -1,5 +1,6 @@
 import {
   DEFAULT_SETTINGS,
+  type HealthResponse,
   type QuotaSnapshot,
   type StateResponse,
 } from "@amnis/shared";
@@ -72,8 +73,18 @@ const fakeState: StateResponse = {
   },
 };
 
+let healthBody: HealthResponse;
+
 describe("Dashboard", () => {
   beforeEach(() => {
+    healthBody = {
+      checks: [{ name: "daemon", ok: true, message: "ok", remedy: null }],
+      daemon: {
+        version: "0.0.1",
+        startedAt: "2026-01-01T00:00:00Z",
+        eventsReceived: 0,
+      },
+    };
     FakeEventSource.instances = [];
     vi.stubGlobal("EventSource", FakeEventSource);
     // <Usage/> pide /api/usage al montar; sin este stub, fetch intenta
@@ -86,24 +97,26 @@ describe("Dashboard", () => {
           ok: true,
           json: () =>
             Promise.resolve(
-              url.includes("/api/media/devices")
-                ? { devices: [] }
-                : url.includes("/api/quota/history")
-                  ? { samples: [] }
-                  : url.includes("/api/activity")
-                    ? {
-                        day: "2026-01-01",
-                        sessions: [],
-                        segments: [],
-                        byState: {},
-                        waiting: { minutes: 0, count: 0 },
-                      }
-                    : {
-                        groupBy: "day",
-                        pricesUpdatedAt: "",
-                        unpricedModels: [],
-                        rows: [],
-                      },
+              url.includes("/api/health")
+                ? healthBody
+                : url.includes("/api/media/devices")
+                  ? { devices: [] }
+                  : url.includes("/api/quota/history")
+                    ? { samples: [] }
+                    : url.includes("/api/activity")
+                      ? {
+                          day: "2026-01-01",
+                          sessions: [],
+                          segments: [],
+                          byState: {},
+                          waiting: { minutes: 0, count: 0 },
+                        }
+                      : {
+                          groupBy: "day",
+                          pricesUpdatedAt: "",
+                          unpricedModels: [],
+                          rows: [],
+                        },
             ),
         }),
       ),
@@ -168,6 +181,31 @@ describe("Dashboard", () => {
     );
     expect(screen.getByTestId("card-weekly")).not.toHaveTextContent("0%");
     expect(screen.getByText(/estimación local · endpoint caído/)).toBeVisible();
+  });
+
+  it("el raíl cuenta los avisos de salud en Ajustes, en cualquier vista", async () => {
+    healthBody.checks = [
+      { name: "hooks", ok: false, message: "Faltan hooks", remedy: "x" },
+      { name: "ingesta", ok: false, message: "Vieja", remedy: "y" },
+      { name: "daemon", ok: true, message: "ok", remedy: null },
+    ];
+    render(<Dashboard />);
+
+    const [source] = FakeEventSource.instances;
+    act(() => source?.emit("hello", fakeState));
+    await act(async () => {});
+
+    expect(screen.getByLabelText("2 avisos de salud")).toHaveTextContent("2");
+  });
+
+  it("sin avisos no hay insignia", async () => {
+    render(<Dashboard />);
+
+    const [source] = FakeEventSource.instances;
+    act(() => source?.emit("hello", fakeState));
+    await act(async () => {});
+
+    expect(screen.queryByRole("status", { name: /de salud/ })).toBeNull();
   });
 
   const quota: QuotaSnapshot = {

@@ -1,9 +1,11 @@
-import type {
-  AmnisSettings,
-  MediaSnapshot,
-  PetSnapshot,
-  QuotaSnapshot,
-  StateResponse,
+import {
+  type AmnisSettings,
+  type MediaSnapshot,
+  type PetSnapshot,
+  type QuotaSnapshot,
+  type RebuildEvent,
+  resolvePlan,
+  type StateResponse,
 } from "@amnis/shared";
 import { useEffect, useState } from "react";
 import { daemonUrl } from "./config.ts";
@@ -24,6 +26,8 @@ const OFFLINE_AFTER_MS = 5_000;
 export interface AmnisStream {
   state: StateResponse | null;
   status: ConnectionStatus;
+  /** Fin de la última reconstrucción de caché; `seq` distingue dos seguidas. */
+  rebuild: { seq: number; event: RebuildEvent } | null;
 }
 
 /** Etiqueta en español, compartida por las dos envolturas (dashboard y `/pet`). */
@@ -44,6 +48,7 @@ export function useAmnisStream(): AmnisStream {
   // Arranca en "reconnecting": antes del primer `onopen` no se ha
   // alcanzado al daemon todavía, y "connected" sería inventárselo.
   const [status, setStatus] = useState<ConnectionStatus>("reconnecting");
+  const [rebuild, setRebuild] = useState<AmnisStream["rebuild"]>(null);
 
   useEffect(() => {
     const source = new EventSource(`${daemonUrl()}/api/events`);
@@ -72,7 +77,26 @@ export function useAmnisStream(): AmnisStream {
     // hecho en el dashboard llega aquí y se aplica en vivo (#65).
     source.addEventListener("settings", (e: MessageEvent<string>) => {
       const settings = JSON.parse(e.data) as AmnisSettings;
-      setState((current) => (current ? { ...current, settings } : current));
+      setState((current) =>
+        current
+          ? {
+              ...current,
+              settings,
+              // `settings` solo trae el plan manual: lo detectado gana siempre
+              // y no cambia con este evento; lo manual sí.
+              plan:
+                current.plan?.source === "detected"
+                  ? current.plan
+                  : resolvePlan(null, settings.plan),
+            }
+          : current,
+      );
+    });
+
+    // La reconstrucción de caché responde 202 y termina aquí (#90).
+    source.addEventListener("rebuild", (e: MessageEvent<string>) => {
+      const event = JSON.parse(e.data) as RebuildEvent;
+      setRebuild((prev) => ({ seq: (prev?.seq ?? 0) + 1, event }));
     });
 
     source.onopen = () => {
@@ -98,5 +122,5 @@ export function useAmnisStream(): AmnisStream {
     };
   }, []);
 
-  return { state, status };
+  return { state, status, rebuild };
 }

@@ -398,3 +398,5 @@ export interface ActivityHeatmapResponse {
   /** 7 filas (0 = lunes) × 24 horas, en hora local del daemon. */
   minutes: number[][];
 }
+
+export { PLANS, PLANS_DATE, resolvePlan } from "./plans.ts";

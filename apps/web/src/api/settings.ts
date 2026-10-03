@@ -1,4 +1,5 @@
-import type { MusicPrefs } from "@amnis/shared";
+import type { AmnisSettings } from "@amnis/shared";
+import { errorMessage } from "./actions.ts";
 import { daemonUrl } from "./config.ts";
 
 export type SaveSettingsResult = { ok: true } | { ok: false; message: string };
@@ -9,7 +10,7 @@ export type SaveSettingsResult = { ok: true } | { ok: false; message: string };
  * se informa del fallo: no hace falta leer el cuerpo de la respuesta.
  */
 export async function saveSettings(
-  partial: Partial<MusicPrefs>,
+  partial: Partial<AmnisSettings>,
 ): Promise<SaveSettingsResult> {
   let response: Response;
   try {
@@ -22,13 +23,5 @@ export async function saveSettings(
     return { ok: false, message: "No se pudo contactar con Amnis." };
   }
   if (response.ok) return { ok: true };
-  try {
-    const body = (await response.json()) as { error?: unknown };
-    if (typeof body.error === "string") {
-      return { ok: false, message: body.error };
-    }
-  } catch {
-    // Cuerpo que no es JSON: el status basta.
-  }
-  return { ok: false, message: `Amnis respondió ${response.status}.` };
+  return { ok: false, message: await errorMessage(response) };
 }

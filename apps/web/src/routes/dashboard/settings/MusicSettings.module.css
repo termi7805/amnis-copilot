@@ -1,0 +1,126 @@
+.panel {
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  min-width: 0;
+}
+
+.panel h2 {
+  margin: 0 0 0.9rem;
+  font: 600 0.9rem / 1.3 var(--f-body);
+}
+
+.layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.controls {
+  flex: 1 1 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.field select,
+.panel select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.panel input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-mark);
+}
+
+.panel input[type="checkbox"] {
+  accent-color: var(--accent-mark);
+}
+
+.panel button {
+  align-self: flex-start;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.panel button:hover {
+  border-color: var(--ink-3);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--raised);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.preview {
+  flex: 0 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Mismo apaisado que la tarjeta del dashboard (viewBox 150×110), más grande
+   para ver la pantalla y los cascos. */
+.stage {
+  width: 260px;
+  max-width: 100%;
+  aspect-ratio: 150 / 110;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--stage);
+  overflow: hidden;
+}
+
+.sample {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+
+.error {
+  margin: 0;
+  color: var(--crit);
+  font-size: 0.85rem;
+}
