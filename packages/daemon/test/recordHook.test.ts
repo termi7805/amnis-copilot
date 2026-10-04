@@ -28,6 +28,7 @@ function makeDeps(overrides: Partial<RecordHookDeps> = {}): {
         at: "2026-01-01T00:00:00.000Z",
       };
     },
+    resolveCheckout: (cwd) => ({ repoRoot: cwd, worktree: cwd }),
     deriveState: () => null,
     insertHookEvent: (event) => inserted.push(event),
     ...overrides,
@@ -71,4 +72,44 @@ test("deriveState se llama con el evento normalizado, no con el payload crudo", 
   recordHook(deps, { hook_event_name: "PreToolUse" });
 
   assert.equal(received?.hook, "PreToolUse");
+});
+
+test("repoRoot y worktree salen de resolveCheckout con el cwd del evento", () => {
+  const calls: string[] = [];
+  const { deps, inserted } = makeDeps({
+    normalizeHookEvent: () => ({
+      provider: "anthropic",
+      hook: "PreToolUse",
+      toolName: null,
+      sessionId: "s1",
+      project: "/r/wt/sub",
+      permissionMode: null,
+      command: null,
+      sessionReason: null,
+      at: "2026-01-01T00:00:00.000Z",
+    }),
+    resolveCheckout: (cwd) => {
+      calls.push(cwd);
+      return { repoRoot: "/r", worktree: "/r/wt" };
+    },
+  });
+
+  recordHook(deps, { hook_event_name: "PreToolUse" });
+
+  assert.deepEqual(calls, ["/r/wt/sub"]);
+  assert.equal(inserted[0]?.repoRoot, "/r");
+  assert.equal(inserted[0]?.worktree, "/r/wt");
+});
+
+test("sin cwd no se resuelve nada y las dos claves van a null", () => {
+  const { deps, inserted } = makeDeps({
+    resolveCheckout: () => {
+      throw new Error("no debería llamarse");
+    },
+  });
+
+  recordHook(deps, { hook_event_name: "Stop" });
+
+  assert.equal(inserted[0]?.repoRoot, null);
+  assert.equal(inserted[0]?.worktree, null);
 });

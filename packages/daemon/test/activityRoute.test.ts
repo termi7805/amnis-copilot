@@ -49,6 +49,8 @@ function hook(
     sessionId,
     project,
     sessionReason: null,
+    repoRoot: null,
+    worktree: null,
     derivedState,
   });
 }

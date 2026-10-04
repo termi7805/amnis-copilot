@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { basename, dirname } from "node:path";
 
 /**
  * `HEAD` corto del repo en `project`. `null` si `project` no es un repo
@@ -12,6 +13,59 @@ export function readCommitHash(project: string): string | null {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     }).trim();
+  } catch {
+    return null;
+  }
+}
+
+export interface Checkout {
+  /** Raíz del repo: la misma para todos sus worktrees. */
+  repoRoot: string;
+  /** Raíz del worktree donde está `cwd`. */
+  worktree: string;
+}
+
+/** Un `cwd` no cambia de repo mientras vive: se resuelve una vez. También se
+ * guardan los fallos, para no relanzar `git` en cada `PreToolUse`. */
+const checkoutCache = new Map<string, Checkout>();
+
+/** Solo para los tests. */
+export function clearCheckoutCache(): void {
+  checkoutCache.clear();
+}
+
+/**
+ * Repo y worktree de `cwd`, con un único `git`. Fuera de un repo, con el
+ * directorio ya borrado (un worktree que se cerró) o sin `git`, las dos
+ * claves son el propio `cwd`: no se inventa nada.
+ */
+export function resolveCheckout(cwd: string): Checkout {
+  const cached = checkoutCache.get(cwd);
+  if (cached) return cached;
+  const resolved = readCheckout(cwd) ?? { repoRoot: cwd, worktree: cwd };
+  checkoutCache.set(cwd, resolved);
+  return resolved;
+}
+
+function readCheckout(cwd: string): Checkout | null {
+  try {
+    const out = execFileSync(
+      "git",
+      [
+        "rev-parse",
+        "--path-format=absolute",
+        "--git-common-dir",
+        "--show-toplevel",
+      ],
+      { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+    );
+    const [commonDir, worktree] = out.trim().split("\n");
+    if (!commonDir || !worktree) return null;
+    // Submódulos (`.git/modules/x`) y repos bare: el padre del common dir no
+    // es el repo, así que la raíz es el propio worktree.
+    const repoRoot =
+      basename(commonDir) === ".git" ? dirname(commonDir) : worktree;
+    return { repoRoot, worktree };
   } catch {
     return null;
   }

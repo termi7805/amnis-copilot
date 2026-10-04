@@ -25,6 +25,7 @@ async function withHookServer(
         at: new Date().toISOString(),
       };
     },
+    resolveCheckout: (cwd) => ({ repoRoot: cwd, worktree: cwd }),
     deriveState: () => null,
     insertHookEvent: (event) => inserted.push(event),
   });

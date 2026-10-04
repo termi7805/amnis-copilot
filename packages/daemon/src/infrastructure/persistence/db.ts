@@ -1,5 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { DB_PATH, ensureDirs } from "../../config.ts";
+import { type Checkout, resolveCheckout } from "../git.ts";
 
 /**
  * El uso (`usage_events`) sale de los JSONL, pero Claude Code los purga con el
@@ -12,7 +13,10 @@ import { DB_PATH, ensureDirs } from "../../config.ts";
  *
  * Solo metadatos: nunca prompts ni código.
  */
-export function openDb(path: string = DB_PATH): DatabaseSync {
+export function openDb(
+  path: string = DB_PATH,
+  resolve: (cwd: string) => Checkout = resolveCheckout,
+): DatabaseSync {
   ensureDirs();
   const db = new DatabaseSync(path);
   db.exec("PRAGMA journal_mode = WAL");
@@ -20,11 +24,11 @@ export function openDb(path: string = DB_PATH): DatabaseSync {
   // `--rebuild` con el daemon vivo retiene el write lock unos segundos: el
   // daemon espera en vez de fallar con SQLITE_BUSY.
   db.exec("PRAGMA busy_timeout = 5000");
-  migrate(db);
+  migrate(db, resolve);
   return db;
 }
 
-function migrate(db: DatabaseSync): void {
+function migrate(db: DatabaseSync, resolve: (cwd: string) => Checkout): void {
   db.exec(`
     -- Multi-cuenta desde el día uno aunque el MVP solo use una fila:
     -- es barato en el esquema y caro en el auth.
@@ -165,6 +169,38 @@ function migrate(db: DatabaseSync): void {
   if (!hookColumns.some((c) => c.name === "session_reason")) {
     db.exec("ALTER TABLE hook_events ADD COLUMN session_reason TEXT");
   }
+  // Repo y worktree de cada hook (#106). Se rellenan los eventos antiguos una
+  // sola vez, al añadir las columnas, resolviendo cada `project` distinto. Un
+  // worktree ya borrado no se puede resolver: `resolveCheckout` devuelve el
+  // propio `cwd` en las dos claves y no se inventa nada.
+  if (!hookColumns.some((c) => c.name === "repo_root")) {
+    db.exec("BEGIN");
+    try {
+      db.exec("ALTER TABLE hook_events ADD COLUMN repo_root TEXT");
+      db.exec("ALTER TABLE hook_events ADD COLUMN worktree TEXT");
+      const projects = db
+        .prepare(
+          "SELECT DISTINCT project FROM hook_events WHERE project IS NOT NULL",
+        )
+        .all() as { project: string }[];
+      const fill = db.prepare(
+        "UPDATE hook_events SET repo_root = ?, worktree = ? WHERE project = ?",
+      );
+      for (const { project } of projects) {
+        const { repoRoot, worktree } = resolve(project);
+        fill.run(repoRoot, worktree, project);
+      }
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_hook_repo ON hook_events (account_id, repo_root, ts);
+    CREATE INDEX IF NOT EXISTS idx_hook_worktree ON hook_events (account_id, worktree, ts);
+    CREATE INDEX IF NOT EXISTS idx_hook_session ON hook_events (account_id, session_id, ts);
+  `);
   // Parte de 1 h de las escrituras de caché (#73). Las filas anteriores
   // quedan en 0 (= todo a 5 min) hasta `amnis ingest --rebuild`.
   if (!usageColumns.some((c) => c.name === "cache_creation_1h_tokens")) {

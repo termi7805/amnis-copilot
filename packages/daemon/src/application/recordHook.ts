@@ -8,6 +8,9 @@ export interface HookEventInput {
   sessionId: string | null;
   project: string | null;
   sessionReason: string | null;
+  /** `null` si el evento no trae `cwd`: no hay de dónde resolverlos. */
+  repoRoot: string | null;
+  worktree: string | null;
   derivedState: string;
 }
 
@@ -20,6 +23,8 @@ export interface HookEventInput {
 export interface RecordHookDeps {
   normalizeHookEvent(raw: unknown): NormalizedHookEvent | null;
   deriveState(event: NormalizedHookEvent): PetState | null;
+  /** Repo y worktree de un `cwd`; con caché, no lanza `git` cada vez. */
+  resolveCheckout(cwd: string): { repoRoot: string; worktree: string };
   insertHookEvent(event: HookEventInput): void;
 }
 
@@ -35,6 +40,8 @@ export function recordHook(
   const event = deps.normalizeHookEvent(raw);
   if (!event) return null;
 
+  const checkout = event.project ? deps.resolveCheckout(event.project) : null;
+
   deps.insertHookEvent({
     provider: event.provider,
     ts: event.at,
@@ -43,6 +50,8 @@ export function recordHook(
     sessionId: event.sessionId,
     project: event.project,
     sessionReason: event.sessionReason,
+    repoRoot: checkout?.repoRoot ?? null,
+    worktree: checkout?.worktree ?? null,
     derivedState: deps.deriveState(event) ?? "unknown",
   });
 

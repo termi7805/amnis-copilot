@@ -21,7 +21,7 @@ import { derivePetState } from "../../domain/petState.ts";
 import { makeRepairHooksDeps } from "../claudeSettings.ts";
 import { currentPlan } from "../currentPlan.ts";
 import { gatherDiagnoseFacts } from "../doctorFacts.ts";
-import { readCommitHash } from "../git.ts";
+import { readCommitHash, resolveCheckout } from "../git.ts";
 import { createEventBroadcaster } from "../http/events.ts";
 import { createActivityRoutes } from "../http/routes/activity.ts";
 import { createDashboardRoute } from "../http/routes/dashboard.ts";
@@ -79,6 +79,7 @@ function makeHookDeps(
   return {
     normalizeHookEvent: (raw) => anthropicProvider.normalizeHookEvent(raw),
     deriveState: (event) => derivePetState(event)?.state ?? null,
+    resolveCheckout,
     insertHookEvent: (event) => {
       insertHookEvent(db, { accountId, ...event });
       onInserted();

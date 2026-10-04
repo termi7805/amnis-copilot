@@ -29,6 +29,8 @@ function insert(
     sessionId: null,
     project: overrides.project ?? null,
     sessionReason: null,
+    repoRoot: null,
+    worktree: null,
     derivedState,
   });
 }
@@ -193,6 +195,8 @@ test("insertHookEvent guarda session_reason y la migración añade la columna", 
     sessionId: "s1",
     project: null,
     sessionReason: "clear",
+    repoRoot: null,
+    worktree: null,
     derivedState: "unknown",
   });
 
