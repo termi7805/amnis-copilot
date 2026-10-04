@@ -1,16 +1,16 @@
 /* Sin tamaño de ventana ni fondo propios: eso vive en las envolturas
    (docs/STACK.md §2). Solo ocupa el ancho de su contenedor. Mismo
    vocabulario visual que QuotaPanel. */
-/* Paleta propia del panel de la mascota; el layout ancho del dashboard la
-   remapea a los tokens del tema (más abajo), así el compacto no cambia. */
+/* La paleta sale de los tokens del tema (#122): la ventana de la mascota y la
+   tarjeta del dashboard siguen el mismo tema. */
 .root {
-  --mp-ink: #201e1d;
-  --mp-ink-hover: #3a3735;
-  --mp-on-ink: #fff;
-  --mp-muted: #6b6660;
-  --mp-line: #c9c6c2;
-  --mp-raised: #edf1f5;
-  --mp-error: #b3261e;
+  --mp-ink: var(--ink);
+  --mp-ink-hover: var(--ink-2);
+  --mp-on-ink: var(--surface);
+  --mp-muted: var(--ink-3);
+  --mp-line: var(--line);
+  --mp-raised: var(--raised);
+  --mp-error: var(--crit);
   font-family: system-ui, sans-serif;
   color: var(--mp-ink);
   width: 100%;
@@ -301,18 +301,10 @@
   line-height: 1.35;
 }
 
-/* Layout ancho (tarjeta del dashboard, #58): con los tokens del tema para
-   seguir el claro/oscuro del dashboard (#92) y la estética del reproductor del
+/* Layout ancho (tarjeta del dashboard, #58): la estética del reproductor del
    mockup v6 (#115). Solo sobrescribe: el compacto sigue con las reglas de
    arriba. */
 .root[data-layout="wide"] {
-  --mp-ink: var(--ink);
-  --mp-ink-hover: var(--ink-2);
-  --mp-on-ink: var(--surface);
-  --mp-muted: var(--ink-3);
-  --mp-line: var(--line);
-  --mp-raised: var(--raised);
-  --mp-error: var(--crit);
   font-family: var(--f-body);
 }
 

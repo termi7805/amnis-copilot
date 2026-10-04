@@ -27,7 +27,7 @@
 }
 
 .petWindow[data-expanded="true"] {
-  background: #fff;
+  background: var(--surface);
 }
 
 /* Tamaño fijo del bicho en las dos vistas (#42): la ventana nativa es

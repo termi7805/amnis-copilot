@@ -6,9 +6,9 @@ import styles from "./PanelHeader.module.css";
 export type PanelId = "quota" | "media";
 
 const STATUS_COLOR: Record<ConnectionStatus, string> = {
-  connected: "#1FB98C",
-  reconnecting: "#e0b84a",
-  offline: "#b0b0b0",
+  connected: "var(--ok)",
+  reconnecting: "var(--warn-mark)",
+  offline: "var(--ink-3)",
 };
 
 const TABS: { id: PanelId; label: string }[] = [

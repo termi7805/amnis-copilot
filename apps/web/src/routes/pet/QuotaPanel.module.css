@@ -1,6 +1,6 @@
 .panel {
   font-family: system-ui, sans-serif;
-  color: #201e1d;
+  color: var(--ink);
   width: 100%;
   box-sizing: border-box;
 }
@@ -15,12 +15,12 @@
   padding: 0;
   border: none;
   background: none;
-  color: #6b6660;
+  color: var(--ink-2);
   cursor: pointer;
 }
 
 .refreshButton:hover:not(:disabled) {
-  color: #201e1d;
+  color: var(--ink);
 }
 
 .refreshButton:disabled {
@@ -45,7 +45,7 @@
 }
 
 .provider + .provider {
-  border-top: 1px solid #c9c6c2;
+  border-top: 1px solid var(--line);
 }
 
 .providerRow {
@@ -62,7 +62,7 @@
     monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #9a948a;
+  color: var(--ink-3);
   margin: 0;
 }
 
@@ -76,25 +76,25 @@
 }
 
 .ringCell + .ringCell {
-  border-left: 1px solid #c9c6c2;
+  border-left: 1px solid var(--line);
 }
 
 .error {
-  color: #b3261e;
+  color: var(--crit);
   font-size: 0.7rem;
   padding: 6px 14px 0;
   margin: 0;
 }
 
 .stale {
-  color: #6b6660;
+  color: var(--ink-2);
   font-size: 0.7rem;
   padding: 2px 14px 0;
   margin: 0;
 }
 
 .exhausts {
-  color: #b3261e;
+  color: var(--crit);
   font-size: 0.7rem;
   padding: 0 14px 10px;
   margin: 0;

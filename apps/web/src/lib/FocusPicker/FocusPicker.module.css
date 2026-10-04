@@ -1,12 +1,11 @@
-/* Paleta propia del panel de la mascota; `popover` (dashboard) la remapea a los
-   tokens del tema, igual que el reproductor de música. */
+/* La paleta sale de los tokens del tema (#122), igual que el reproductor. */
 .root {
-  --fp-ink: #201e1d;
-  --fp-on-ink: #fff;
-  --fp-muted: #6b6660;
-  --fp-raised: #edf1f5;
-  --fp-surface: #fff;
-  --fp-error: #b3261e;
+  --fp-ink: var(--ink);
+  --fp-on-ink: var(--surface);
+  --fp-muted: var(--ink-3);
+  --fp-raised: var(--raised);
+  --fp-surface: var(--surface);
+  --fp-error: var(--crit);
   position: relative;
   min-width: 0;
   font-family: system-ui, sans-serif;
@@ -14,12 +13,6 @@
 }
 
 .root[data-layout="popover"] {
-  --fp-ink: var(--ink);
-  --fp-on-ink: var(--surface);
-  --fp-muted: var(--ink-3);
-  --fp-raised: var(--raised);
-  --fp-surface: var(--surface);
-  --fp-error: var(--crit);
   display: inline-block;
   font-family: var(--f-body);
 }
