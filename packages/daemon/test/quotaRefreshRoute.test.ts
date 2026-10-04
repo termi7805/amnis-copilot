@@ -27,6 +27,8 @@ const SNAPSHOT: QuotaSnapshot = {
     fiveHourUtilization: 0,
     windowStartedAt: null,
     calibrated: true,
+    ceilingWindows: 3,
+    provisionalUtilization: null,
   },
   divergence: null,
   projection: { fiveHourAtReset: null },
