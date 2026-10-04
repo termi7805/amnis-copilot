@@ -13,6 +13,9 @@ const GROUPS = [
   { scheme: "dark", title: "Oscuros" },
 ] as const;
 
+/** Los tres del conmutador de #80: lo que se enseña plegada (#128). */
+const BASIC: readonly ThemeId[] = ["system", "light", "dark"];
+
 export interface AppearanceCardProps {
   theme: ThemeId;
   onTheme: (theme: ThemeId) => Promise<SaveSettingsResult>;
@@ -36,6 +39,46 @@ function ChipHalf({ id }: { id: ThemeId }) {
   );
 }
 
+/** Muestra de un tema: botón de radio con su chip pintado. */
+function Swatch({
+  id,
+  label,
+  checked,
+  onChoose,
+}: {
+  id: ThemeId;
+  label: string;
+  checked: boolean;
+  onChoose: (id: ThemeId) => void;
+}) {
+  return (
+    // biome-ignore lint/a11y/useSemanticElements: un <input type="radio"> no puede contener la muestra pintada
+    <button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      tabIndex={checked ? 0 : -1}
+      className={styles.swatch}
+      onClick={() => onChoose(id)}
+    >
+      <span
+        className={`${styles.chip} ${id === "system" ? styles.chipSplit : ""}`}
+        aria-hidden="true"
+      >
+        {id === "system" ? (
+          <>
+            <ChipHalf id="light" />
+            <ChipHalf id="dark" />
+          </>
+        ) : (
+          <ChipHalf id={id} />
+        )}
+      </span>
+      <span className={styles.swatchName}>{label}</span>
+    </button>
+  );
+}
+
 /**
  * Selector de tema (#125): una muestra por tema del catálogo. «Sistema» no
  * tiene paleta propia y depende del escritorio, así que su muestra va partida
@@ -43,7 +86,12 @@ function ChipHalf({ id }: { id: ThemeId }) {
  */
 export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
   const [error, setError] = useState<string | null>(null);
+  // Solo local y sin persistir: abrirla plegada en cada visita es lo que evita el desplazamiento.
+  const [expanded, setExpanded] = useState(false);
   const group = useRef<HTMLDivElement>(null);
+  // Plegada, el tema activo se enseña aunque no sea de los básicos: si no, no se vería cuál
+  // está puesto y el radiogroup se quedaría sin ningún botón con tabIndex 0.
+  const folded = THEMES.filter((t) => BASIC.includes(t.id) || t.id === theme);
 
   async function choose(id: ThemeId) {
     const result = await onTheme(id);
@@ -76,60 +124,68 @@ export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
     <section className={styles.card} aria-labelledby="appearance-title">
       <div className={styles.cardHead}>
         <h2 id="appearance-title">Apariencia</h2>
+        <button
+          type="button"
+          className={styles.btn}
+          aria-expanded={expanded}
+          aria-controls="appearance-themes"
+          onClick={() => setExpanded((e) => !e)}
+        >
+          {expanded
+            ? "Menos temas"
+            : `Más temas (${THEMES.length - folded.length})`}
+        </button>
       </div>
       <div
+        id="appearance-themes"
         ref={group}
         role="radiogroup"
         aria-label="Tema"
         onKeyDown={onKeyDown}
       >
-        {GROUPS.map(({ scheme, title }) => (
-          // biome-ignore lint/a11y/useSemanticElements: ídem, un grupo dentro del radiogroup
-          <div
-            key={scheme}
-            className={styles.themeGroup}
-            role="group"
-            aria-labelledby={`theme-group-${scheme}`}
-          >
+        {expanded ? (
+          GROUPS.map(({ scheme, title }) => (
+            // biome-ignore lint/a11y/useSemanticElements: ídem, un grupo dentro del radiogroup
             <div
-              id={`theme-group-${scheme}`}
-              className={styles.themeGroupLabel}
+              key={scheme}
+              className={styles.themeGroup}
+              role="group"
+              aria-labelledby={`theme-group-${scheme}`}
             >
-              {title}
+              <div
+                id={`theme-group-${scheme}`}
+                className={styles.themeGroupLabel}
+              >
+                {title}
+              </div>
+              <div className={styles.swatches}>
+                {THEMES.filter((t) => t.scheme === scheme).map(
+                  ({ id, label }) => (
+                    <Swatch
+                      key={id}
+                      id={id}
+                      label={label}
+                      checked={theme === id}
+                      onChoose={(t) => void choose(t)}
+                    />
+                  ),
+                )}
+              </div>
             </div>
-            <div className={styles.swatches}>
-              {THEMES.filter((t) => t.scheme === scheme).map(
-                ({ id, label }) => (
-                  // biome-ignore lint/a11y/useSemanticElements: un <input type="radio"> no puede contener la muestra pintada
-                  <button
-                    key={id}
-                    type="button"
-                    role="radio"
-                    aria-checked={theme === id}
-                    tabIndex={theme === id ? 0 : -1}
-                    className={styles.swatch}
-                    onClick={() => void choose(id)}
-                  >
-                    <span
-                      className={`${styles.chip} ${id === "system" ? styles.chipSplit : ""}`}
-                      aria-hidden="true"
-                    >
-                      {id === "system" ? (
-                        <>
-                          <ChipHalf id="light" />
-                          <ChipHalf id="dark" />
-                        </>
-                      ) : (
-                        <ChipHalf id={id} />
-                      )}
-                    </span>
-                    <span className={styles.swatchName}>{label}</span>
-                  </button>
-                ),
-              )}
-            </div>
+          ))
+        ) : (
+          <div className={styles.swatches}>
+            {folded.map(({ id, label }) => (
+              <Swatch
+                key={id}
+                id={id}
+                label={label}
+                checked={theme === id}
+                onChoose={(t) => void choose(t)}
+              />
+            ))}
           </div>
-        ))}
+        )}
       </div>
       {error && (
         <p role="alert" className={styles.error}>

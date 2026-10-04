@@ -7,9 +7,13 @@ afterEach(cleanup);
 
 const ok = () => vi.fn().mockResolvedValue({ ok: true });
 
+const desplegar = () =>
+  fireEvent.click(screen.getByRole("button", { name: /Más temas/ }));
+
 describe("AppearanceCard", () => {
   it("pinta una muestra por tema del catálogo, agrupadas por esquema", () => {
     render(<AppearanceCard theme="system" onTheme={ok()} />);
+    desplegar();
     expect(screen.getAllByRole("radio")).toHaveLength(THEMES.length);
 
     const nombres = (grupo: string) =>
@@ -42,6 +46,7 @@ describe("AppearanceCard", () => {
 
   it("cada muestra lleva su data-theme y Sistema va partida en claro/oscuro", () => {
     render(<AppearanceCard theme="light" onTheme={ok()} />);
+    desplegar();
     const temas = (nombre: string) =>
       [
         ...screen
@@ -55,6 +60,7 @@ describe("AppearanceCard", () => {
   it("elegir una muestra llama a onTheme con su id", async () => {
     const onTheme = ok();
     render(<AppearanceCard theme="light" onTheme={onTheme} />);
+    desplegar();
     fireEvent.click(screen.getByRole("radio", { name: "Gruvbox" }));
     expect(onTheme).toHaveBeenCalledWith("gruvbox");
     expect(screen.queryByRole("alert")).toBeNull();
@@ -66,6 +72,7 @@ describe("AppearanceCard", () => {
       .mockResolvedValueOnce({ ok: false, message: "No se pudo contactar" })
       .mockResolvedValueOnce({ ok: true });
     render(<AppearanceCard theme="light" onTheme={onTheme} />);
+    desplegar();
     fireEvent.click(screen.getByRole("radio", { name: "Nord" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "No se pudo contactar",
@@ -91,5 +98,65 @@ describe("AppearanceCard", () => {
       .getAllByRole("radio")
       .filter((r) => r.tabIndex === 0);
     expect(tabulables.map((r) => r.textContent)).toEqual(["Nord"]);
+  });
+
+  it("plegada por defecto: Sistema, Claro y Oscuro y un botón para el resto", () => {
+    render(<AppearanceCard theme="system" onTheme={ok()} />);
+    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual([
+      "Sistema",
+      "Claro",
+      "Oscuro",
+    ]);
+    const boton = screen.getByRole("button", {
+      name: `Más temas (${THEMES.length - 3})`,
+    });
+    expect(boton).toHaveAttribute("aria-expanded", "false");
+    expect(boton.getAttribute("aria-controls")).toBe(
+      screen.getByRole("radiogroup").id,
+    );
+  });
+
+  it("con un tema oculto activo, la fila plegada lo enseña marcado y tabulable", () => {
+    render(<AppearanceCard theme="nord" onTheme={ok()} />);
+    const radios = screen.getAllByRole("radio");
+    expect(radios.map((r) => r.textContent)).toContain("Nord");
+    expect(radios).toHaveLength(4);
+    expect(
+      radios.filter((r) => r.tabIndex === 0).map((r) => r.textContent),
+    ).toEqual(["Nord"]);
+    expect(screen.getByRole("radio", { name: "Nord" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: `Más temas (${THEMES.length - 4})` }),
+    ).toBeVisible();
+  });
+
+  it("«Más temas» despliega el catálogo y «Menos temas» lo pliega", () => {
+    render(<AppearanceCard theme="light" onTheme={ok()} />);
+    desplegar();
+    expect(screen.getAllByRole("radio")).toHaveLength(THEMES.length);
+    const boton = screen.getByRole("button", { name: "Menos temas" });
+    expect(boton).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(boton);
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+  });
+
+  it("plegada, las flechas recorren solo las muestras visibles", () => {
+    const onTheme = ok();
+    render(<AppearanceCard theme="dark" onTheme={onTheme} />);
+    const oscuro = screen.getByRole("radio", { name: "Oscuro" });
+    oscuro.focus();
+    fireEvent.keyDown(oscuro, { key: "ArrowRight" });
+    expect(onTheme).toHaveBeenCalledWith("system");
+  });
+
+  it("al volver a montar la tarjeta sale plegada aunque se hubiera desplegado", () => {
+    const { unmount } = render(<AppearanceCard theme="light" onTheme={ok()} />);
+    desplegar();
+    unmount();
+    render(<AppearanceCard theme="light" onTheme={ok()} />);
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
   });
 });
