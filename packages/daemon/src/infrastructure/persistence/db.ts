@@ -169,6 +169,11 @@ function migrate(db: DatabaseSync, resolve: (cwd: string) => Checkout): void {
   if (!hookColumns.some((c) => c.name === "session_reason")) {
     db.exec("ALTER TABLE hook_events ADD COLUMN session_reason TEXT");
   }
+  // Tipo de las `Notification` (#113): sin él no se distingue un permiso del
+  // aviso de inactividad. Las filas anteriores quedan en NULL.
+  if (!hookColumns.some((c) => c.name === "notification_type")) {
+    db.exec("ALTER TABLE hook_events ADD COLUMN notification_type TEXT");
+  }
   // Repo y worktree de cada hook (#106). Se rellenan los eventos antiguos una
   // sola vez, al añadir las columnas, resolviendo cada `project` distinto. Un
   // worktree ya borrado no se puede resolver: `resolveCheckout` devuelve el

@@ -13,6 +13,17 @@ const RESEARCH_TOOLS = new Set([
   "WebSearch",
   "WebFetch",
 ]);
+/**
+ * Tipos de `Notification` que piden algo al usuario ahora. El resto (el aviso
+ * de inactividad `idle_prompt` ~60 s tras un `Stop`, `auth_success`, avisos de
+ * cuota, sesiones de fondo…) no es "te necesito". Un tipo ausente o
+ * desconocido tampoco: no se inventa una transición.
+ */
+const ASKS_USER = new Set([
+  "permission_prompt",
+  "elicitation_dialog",
+  "elicitation_url_dialog",
+]);
 const PLAN_MODE_HOOKS = new Set(["ExitPlanMode", "EnterPlanMode"]);
 
 export interface DerivedState {
@@ -93,7 +104,13 @@ export function derivePetState(
   }
 
   if (event.hook === "Notification") {
-    return { state: "waiting", reason: "Notification" };
+    if (!event.notificationType || !ASKS_USER.has(event.notificationType)) {
+      return null;
+    }
+    return {
+      state: "waiting",
+      reason: `Notification ${event.notificationType}`,
+    };
   }
 
   if (event.hook === "Stop") {

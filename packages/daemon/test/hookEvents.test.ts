@@ -38,6 +38,7 @@ function insert(
     sessionId: overrides.sessionId ?? null,
     project: overrides.project ?? null,
     sessionReason: null,
+    notificationType: null,
     repoRoot: overrides.repoRoot ?? null,
     worktree: overrides.worktree ?? null,
     derivedState,
@@ -204,6 +205,7 @@ test("insertHookEvent guarda session_reason y la migración añade la columna", 
     sessionId: "s1",
     project: null,
     sessionReason: "clear",
+    notificationType: null,
     repoRoot: null,
     worktree: null,
     derivedState: "unknown",
@@ -237,6 +239,7 @@ test("recentSessions: una fila por sesión con inicio, fin, checkout y último e
       sessionId,
       project: repoRoot,
       sessionReason: null,
+      notificationType: null,
       repoRoot,
       worktree: repoRoot && `${repoRoot}-1`,
       derivedState,
@@ -345,6 +348,7 @@ test("sessionStatus: viva, cleared tras un clear, ended tras otro SessionEnd o p
       sessionId,
       project: null,
       sessionReason: reason,
+      notificationType: null,
       repoRoot: null,
       worktree: null,
       derivedState: "unknown",
@@ -415,4 +419,46 @@ test("liveSessionCandidates: una fila por sesión de la ventana, con fin, repo y
   assert.equal(by.E?.repoRoot, null);
   assert.equal(by.E?.worktree, null);
   db.close();
+});
+
+test("insertHookEvent guarda notification_type", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insertHookEvent(db, {
+    accountId,
+    provider: "anthropic",
+    ts: "2026-01-01T00:00:00.000Z",
+    hook: "Notification",
+    toolName: null,
+    sessionId: "s1",
+    project: null,
+    sessionReason: null,
+    notificationType: "idle_prompt",
+    repoRoot: null,
+    worktree: null,
+    derivedState: "unknown",
+  });
+
+  const row = db.prepare("SELECT notification_type FROM hook_events").get() as {
+    notification_type: string;
+  };
+  assert.equal(row.notification_type, "idle_prompt");
+});
+
+test("el aviso de inactividad tras un Stop no saca a la mascota de resting", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "coding");
+  insert(db, accountId, "2026-01-01T00:01:00.000Z", "resting", {
+    hook: "Stop",
+  });
+  // 60 s después: lo que `recordHook` guarda para un `idle_prompt`.
+  insert(db, accountId, "2026-01-01T00:02:00.000Z", "unknown", {
+    hook: "Notification",
+  });
+
+  assert.equal(
+    lastKnownStateEvent(db, accountId, AUTO)?.derivedState,
+    "resting",
+  );
 });

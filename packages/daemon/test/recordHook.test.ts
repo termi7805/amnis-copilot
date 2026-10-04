@@ -25,6 +25,7 @@ function makeDeps(overrides: Partial<RecordHookDeps> = {}): {
         permissionMode: null,
         command: null,
         sessionReason: null,
+        notificationType: null,
         at: "2026-01-01T00:00:00.000Z",
       };
     },
@@ -89,6 +90,7 @@ test("repoRoot y worktree salen de resolveCheckout con el cwd del evento", () =>
       permissionMode: null,
       command: null,
       sessionReason: null,
+      notificationType: null,
       at: "2026-01-01T00:00:00.000Z",
     }),
     resolveCheckout: (cwd) => {
@@ -129,6 +131,7 @@ test("un SessionEnd de la sesión enfocada devuelve el foco a auto", () => {
       permissionMode: null,
       command: null,
       sessionReason: "prompt_input_exit",
+      notificationType: null,
       at: "2026-01-01T00:00:00.000Z",
     }),
     focus: () => ({ kind: "session", sessionId: "a", worktree: "/r/wt" }),

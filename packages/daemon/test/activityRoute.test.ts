@@ -49,6 +49,7 @@ function hook(
     sessionId,
     project,
     sessionReason: null,
+    notificationType: null,
     repoRoot: null,
     worktree: null,
     derivedState,

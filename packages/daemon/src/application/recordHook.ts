@@ -9,6 +9,7 @@ export interface HookEventInput {
   sessionId: string | null;
   project: string | null;
   sessionReason: string | null;
+  notificationType: string | null;
   /** `null` si el evento no trae `cwd`: no hay de dónde resolverlos. */
   repoRoot: string | null;
   worktree: string | null;
@@ -57,6 +58,7 @@ export function recordHook(
     sessionId: event.sessionId,
     project: event.project,
     sessionReason: event.sessionReason,
+    notificationType: event.notificationType,
     repoRoot: checkout?.repoRoot ?? null,
     worktree: checkout?.worktree ?? null,
     derivedState: deps.deriveState(event) ?? "unknown",

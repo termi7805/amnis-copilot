@@ -19,6 +19,7 @@ function makeEvent(
     permissionMode: null,
     command: null,
     sessionReason: null,
+    notificationType: null,
     at: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -99,11 +100,34 @@ test("permissionMode plan gana a researching, aunque llegue un PreToolUse de Rea
   assert.equal(result?.state, "planning");
 });
 
-test("Notification → waiting", () => {
-  const result = derivePetState(
-    makeEvent({ hook: "Notification", toolName: null }),
-  );
-  assert.equal(result?.state, "waiting");
+test("Notification que pide algo al usuario → waiting", () => {
+  for (const notificationType of [
+    "permission_prompt",
+    "elicitation_dialog",
+    "elicitation_url_dialog",
+  ]) {
+    const result = derivePetState(
+      makeEvent({ hook: "Notification", toolName: null, notificationType }),
+    );
+    assert.equal(result?.state, "waiting", notificationType);
+    assert.match(result?.reason ?? "", new RegExp(notificationType));
+  }
+});
+
+test("el aviso de inactividad y los demás Notification no cambian el estado", () => {
+  for (const notificationType of [
+    "idle_prompt",
+    "auth_success",
+    "agent_needs_input",
+    "quota_auto_resume_fired",
+    "tipo_nuevo_que_no_conocemos",
+    null,
+  ]) {
+    const result = derivePetState(
+      makeEvent({ hook: "Notification", toolName: null, notificationType }),
+    );
+    assert.equal(result, null, String(notificationType));
+  }
 });
 
 test("Stop → resting", () => {

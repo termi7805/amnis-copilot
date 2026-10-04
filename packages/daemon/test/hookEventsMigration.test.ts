@@ -79,3 +79,19 @@ test("la migración rellena los eventos antiguos una vez por project y solo una 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("la migración añade notification_type a una base antigua", () => {
+  const dir = mkdtempSync(join(tmpdir(), "amnis-mig-"));
+  const path = join(dir, "a.sqlite");
+  try {
+    legacyDb(path);
+    const db = openDb(path, (cwd) => ({ repoRoot: cwd, worktree: cwd }));
+    const columns = db.prepare("PRAGMA table_info(hook_events)").all() as {
+      name: string;
+    }[];
+    assert.ok(columns.some((c) => c.name === "notification_type"));
+    db.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

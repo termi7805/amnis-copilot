@@ -67,6 +67,13 @@ function normalizeHookEvent(raw: unknown): NormalizedHookEvent | null {
         ? payload.source
         : null;
 
+  // Solo `Notification` lo trae: distingue un permiso pendiente del aviso de
+  // inactividad, que antes se leía como "esperando permiso".
+  const notificationType =
+    hook === "Notification" && typeof payload.notification_type === "string"
+      ? payload.notification_type
+      : null;
+
   return {
     provider: ID,
     hook,
@@ -80,6 +87,7 @@ function normalizeHookEvent(raw: unknown): NormalizedHookEvent | null {
         : null,
     command,
     sessionReason: typeof reasonField === "string" ? reasonField : null,
+    notificationType,
     at: new Date().toISOString(),
   };
 }

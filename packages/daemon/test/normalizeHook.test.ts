@@ -33,3 +33,28 @@ test("un motivo que no es string queda en null", () => {
 
   assert.equal(event?.sessionReason, null);
 });
+
+test("Notification guarda `notification_type`", () => {
+  const event = normalize({
+    hook_event_name: "Notification",
+    notification_type: "idle_prompt",
+  });
+
+  assert.equal(event?.notificationType, "idle_prompt");
+});
+
+test("los demás hooks no arrastran `notification_type`, y un valor que no es string queda en null", () => {
+  const stop = normalize({
+    hook_event_name: "Stop",
+    notification_type: "permission_prompt",
+  });
+  const bad = normalize({
+    hook_event_name: "Notification",
+    notification_type: 3,
+  });
+  const missing = normalize({ hook_event_name: "Notification" });
+
+  assert.equal(stop?.notificationType, null);
+  assert.equal(bad?.notificationType, null);
+  assert.equal(missing?.notificationType, null);
+});

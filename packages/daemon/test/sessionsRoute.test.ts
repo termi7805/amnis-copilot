@@ -25,6 +25,7 @@ test("GET /api/sessions: dos worktrees, una viva en cada uno; SessionEnd la apag
       sessionId,
       project: worktree,
       sessionReason: null,
+      notificationType: null,
       repoRoot: "/home/x/repo",
       worktree,
       derivedState: state,

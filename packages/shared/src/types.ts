@@ -370,6 +370,9 @@ export interface NormalizedHookEvent {
   command: string | null;
   /** `reason` de `SessionEnd` o `source` de `SessionStart`; `null` en el resto. */
   sessionReason: string | null;
+  /** `notification_type` de `Notification` (`permission_prompt`, `idle_prompt`…);
+   * `null` en el resto o si no viene. */
+  notificationType: string | null;
   at: string;
 }
 
