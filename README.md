@@ -13,6 +13,10 @@ y te dice cuánta cuota te queda sin que tengas que preguntarlo.**
 [![Plataformas](https://img.shields.io/badge/Windows%20%C2%B7%20macOS%20%C2%B7%20Linux-4A5563?style=for-the-badge&labelColor=171D26)](#descarga)
 [![Local-first](https://img.shields.io/badge/local--first-sin%20nube-FFB020?style=for-the-badge&labelColor=171D26)](#privacidad)
 
+<a href="README.md"><img src="docs/assets/lang-es-on.svg" alt="Español" height="36"></a><a href="README.en.md"><img src="docs/assets/lang-en-off.svg" alt="English" height="36"></a>
+
+<br>
+
 [**Descargar**](#descarga) · [**Qué hace**](#qué-hace) · [**Primeros pasos**](#primeros-pasos) · [**Spotify**](#spotify-opcional) · [**Privacidad**](#privacidad) · [**FAQ**](#preguntas-frecuentes)
 
 </div>

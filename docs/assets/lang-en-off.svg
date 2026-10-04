@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 36" width="110" height="36" role="img" aria-label="English">
+  <title>English</title>
+  <path d="M0 1H93A17 17 0 0 1 93 35H0z" fill="#171D26" stroke="#2F3742" stroke-width="1.5"/>
+  <text x="55" y="23" text-anchor="middle" font-family="'Segoe UI','Helvetica Neue',Arial,sans-serif" font-size="14" font-weight="600" fill="#C6D0DA" letter-spacing=".3">English</text>
+</svg>
