@@ -143,6 +143,30 @@
   color: var(--crit);
 }
 
+/* Texto en --surface y no blanco fijo: en los temas oscuros --crit es un
+   rojo claro y el blanco encima no se lee. */
+.quit {
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--crit);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--surface);
+  cursor: pointer;
+}
+
+.quit:hover {
+  filter: brightness(1.1);
+}
+
+.quit:focus-visible {
+  outline: 2px solid var(--crit);
+  outline-offset: 2px;
+}
+
 /* El mockup v6 se diseñó a ~1300 px: sin tope, en pantallas anchas las
    tarjetas se estiran al doble y dejan de parecerse a lo aprobado (#101). */
 .main {

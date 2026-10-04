@@ -178,6 +178,15 @@ describe("useAmnisStream", () => {
     expect(result.current.rebuild?.seq).toBe(2);
   });
 
+  it("quit pide cerrar la app; antes de recibirlo no", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+    expect(result.current.quitRequested).toBe(false);
+
+    act(() => source?.emit("quit", null));
+    expect(result.current.quitRequested).toBe(true);
+  });
+
   it("un settings antes del hello no rompe nada", () => {
     const { result } = renderHook(() => useAmnisStream());
     const [source] = FakeEventSource.instances;

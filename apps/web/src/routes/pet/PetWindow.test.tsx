@@ -14,11 +14,19 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as healthApi from "../../api/health.ts";
 import { PetWindow } from "./PetWindow.tsx";
-import { EXPANDED_WIDTH, resizeWindow, startDrag } from "./useTauriWindow.ts";
+import {
+  EXPANDED_WIDTH,
+  quitApp,
+  resizeWindow,
+  showPetMenu,
+  startDrag,
+} from "./useTauriWindow.ts";
 
 vi.mock("./useTauriWindow.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./useTauriWindow.ts")>()),
+  quitApp: vi.fn(),
   resizeWindow: vi.fn(),
+  showPetMenu: vi.fn(),
   startDrag: vi.fn(),
 }));
 
@@ -141,6 +149,7 @@ describe("PetWindow", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.clearAllMocks();
     cleanup();
   });
 
@@ -190,6 +199,53 @@ describe("PetWindow", () => {
     expect(startDrag).toHaveBeenCalledOnce();
 
     delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+  });
+
+  it("el clic derecho no pliega ni despliega; dentro de Tauri abre el menú nativo", () => {
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
+
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", fakeState));
+
+    const window_ = screen.getByTestId("pet").closest("div")?.parentElement;
+    if (!window_) throw new Error("petWindow no encontrado");
+
+    fireEvent.pointerDown(window_, { button: 2, clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(window_, { button: 2, clientX: 10, clientY: 10 });
+    const shown = fireEvent.contextMenu(window_);
+
+    expect(localStorage.getItem(PANEL_KEY)).toBe("none");
+    expect(showPetMenu).toHaveBeenCalledOnce();
+    // `false` = preventDefault: no sale el menú de WebView2 encima del nuestro.
+    expect(shown).toBe(false);
+
+    delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+  });
+
+  it("fuera de Tauri el clic derecho deja el menú del navegador", () => {
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", fakeState));
+
+    const window_ = screen.getByTestId("pet").closest("div")?.parentElement;
+    if (!window_) throw new Error("petWindow no encontrado");
+
+    expect(fireEvent.contextMenu(window_)).toBe(true);
+    expect(showPetMenu).not.toHaveBeenCalled();
+  });
+
+  it("un quit del daemon («Cerrar Amnis» en el dashboard) cierra la app", () => {
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", fakeState));
+    expect(quitApp).not.toHaveBeenCalled();
+
+    act(() => source?.emit("quit", null));
+    expect(quitApp).toHaveBeenCalledOnce();
   });
 
   it("el estado desplegado sobrevive a un remontaje vía localStorage", () => {

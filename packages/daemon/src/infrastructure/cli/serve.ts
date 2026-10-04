@@ -38,6 +38,7 @@ import { createQuotaHistoryRoutes } from "../http/routes/quotaHistory.ts";
 import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
 import { createSessionsRoutes } from "../http/routes/sessions.ts";
 import { createSettingsRoutes } from "../http/routes/settings.ts";
+import { createShutdownRoute } from "../http/routes/shutdown.ts";
 import { createSpotifyRoutes } from "../http/routes/spotify.ts";
 import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
@@ -296,6 +297,11 @@ export function runServeCli(args: readonly string[] = []): void {
         broadcast: (data) => broadcaster.broadcast({ event: "rebuild", data }),
       }),
       "POST /api/quota/refresh": createQuotaRefreshRoute(poller.pollNow),
+      "POST /api/shutdown": createShutdownRoute({
+        broadcastQuit: () =>
+          broadcaster.broadcast({ event: "quit", data: null }),
+        shutdown: () => shutdown(),
+      }),
       "GET /api/events": createEventsRoute({
         broadcaster,
         hello: () => getState(stateDeps, new Date()),

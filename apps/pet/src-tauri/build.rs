@@ -4,7 +4,13 @@ fn main() {
     // la capability no puede concederlo — la llamada se rechaza en silencio.
     tauri_build::try_build(
         tauri_build::Attributes::new()
-            .app_manifest(tauri_build::AppManifest::new().commands(&["resize_pet", "start_drag", "open_dashboard"])),
+            .app_manifest(tauri_build::AppManifest::new().commands(&[
+                "resize_pet",
+                "start_drag",
+                "open_dashboard",
+                "show_pet_menu",
+                "quit_app",
+            ])),
     )
     .expect("error al ejecutar tauri-build");
 }

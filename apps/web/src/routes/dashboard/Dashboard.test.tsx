@@ -4,7 +4,13 @@ import {
   type QuotaSnapshot,
   type StateResponse,
 } from "@amnis/shared";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Dashboard } from "./Dashboard.tsx";
 
@@ -143,6 +149,31 @@ describe("Dashboard", () => {
     );
     // El primero es la tarjeta; el segundo, la vista previa de MusicSettings.
     expect(screen.getAllByTestId("pet")[0]?.dataset.state).toBe("coding");
+  });
+
+  it("Cerrar Amnis pide al daemon que se pare", () => {
+    render(<Dashboard />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", fakeState));
+
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar Amnis" }));
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/shutdown"),
+      { method: "POST" },
+    );
+  });
+
+  it("sin conexión no hay Cerrar Amnis: no habría a quién pedírselo", () => {
+    render(<Dashboard />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.error());
+
+    expect(
+      screen.queryByRole("button", { name: "Cerrar Amnis" }),
+    ).not.toBeInTheDocument();
   });
 
   it("un error del stream se ve como reconectando, no como conectado", () => {

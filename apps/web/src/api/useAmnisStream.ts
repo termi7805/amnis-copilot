@@ -28,6 +28,8 @@ export interface AmnisStream {
   status: ConnectionStatus;
   /** Fin de la última reconstrucción de caché; `seq` distingue dos seguidas. */
   rebuild: { seq: number; event: RebuildEvent } | null;
+  /** El dashboard pidió «Cerrar Amnis»: la ventana de la mascota cierra la app. */
+  quitRequested: boolean;
 }
 
 /** Etiqueta en español, compartida por las dos envolturas (dashboard y `/pet`). */
@@ -49,6 +51,7 @@ export function useAmnisStream(): AmnisStream {
   // alcanzado al daemon todavía, y "connected" sería inventárselo.
   const [status, setStatus] = useState<ConnectionStatus>("reconnecting");
   const [rebuild, setRebuild] = useState<AmnisStream["rebuild"]>(null);
+  const [quitRequested, setQuitRequested] = useState(false);
 
   useEffect(() => {
     const source = new EventSource(`${daemonUrl()}/api/events`);
@@ -99,6 +102,8 @@ export function useAmnisStream(): AmnisStream {
       setRebuild((prev) => ({ seq: (prev?.seq ?? 0) + 1, event }));
     });
 
+    source.addEventListener("quit", () => setQuitRequested(true));
+
     source.onopen = () => {
       if (offlineTimer) {
         clearTimeout(offlineTimer);
@@ -122,5 +127,5 @@ export function useAmnisStream(): AmnisStream {
     };
   }, []);
 
-  return { state, status, rebuild };
+  return { state, status, rebuild, quitRequested };
 }

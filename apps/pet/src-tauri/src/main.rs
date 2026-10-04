@@ -12,8 +12,10 @@ use std::net::TcpStream;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
+use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
+use tauri::tray::TrayIconBuilder;
 use tauri::{
-    App, AppHandle, LogicalSize, Manager, PhysicalPosition, RunEvent, WebviewUrl, WebviewWindow,
+    App, AppHandle, LogicalSize, Manager, PhysicalPosition, RunEvent, Runtime, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_opener::OpenerExt;
@@ -251,10 +253,67 @@ struct DashboardUrl(String);
 /// nativo porque un enlace dentro del webview no sale al navegador del
 /// sistema. No toca la ventana: la mascota sigue desplegada y en su sitio.
 #[tauri::command]
-fn open_dashboard(app: AppHandle, state: tauri::State<DashboardUrl>) {
-    if let Err(e) = app.opener().open_url(&state.0, None::<&str>) {
-        log::warn!("no se pudo abrir el dashboard en {}: {e}", state.0);
+fn open_dashboard(app: AppHandle) {
+    open_dashboard_in_browser(&app);
+}
+
+fn open_dashboard_in_browser(app: &AppHandle) {
+    let url = &app.state::<DashboardUrl>().0;
+    if let Err(e) = app.opener().open_url(url, None::<&str>) {
+        log::warn!("no se pudo abrir el dashboard en {url}: {e}");
     }
+}
+
+/// Menú de la bandeja y del clic derecho sobre la mascota. La ventana no
+/// tiene decoraciones ni sale en la barra de tareas (ni en el Dock): sin
+/// esto no hay forma de cerrar la app. Los clics los atiende
+/// `on_pet_menu_event`, registrado una vez para los dos sitios.
+fn pet_menu<R: Runtime, M: Manager<R>>(app: &M) -> tauri::Result<Menu<R>> {
+    Menu::with_items(
+        app,
+        &[
+            &MenuItem::with_id(app, "dashboard", "Abrir dashboard", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?,
+        ],
+    )
+}
+
+/// `exit` pasa por `RunEvent::Exit`, que es donde se para el daemon lanzado
+/// por la app.
+fn on_pet_menu_event(app: &AppHandle, event: MenuEvent) {
+    match event.id().as_ref() {
+        "dashboard" => open_dashboard_in_browser(app),
+        "quit" => app.exit(0),
+        _ => {}
+    }
+}
+
+fn build_tray(app: &App) -> tauri::Result<()> {
+    let mut tray = TrayIconBuilder::with_id("amnis")
+        .tooltip("Amnis Copilot")
+        .menu(&pet_menu(app)?);
+    if let Some(icon) = app.default_window_icon() {
+        tray = tray.icon(icon.clone());
+    }
+    tray.build(app)?;
+    Ok(())
+}
+
+/// Clic derecho sobre la mascota: el mismo menú que la bandeja, que en
+/// GNOME sin la extensión de AppIndicator no existe.
+#[tauri::command]
+fn show_pet_menu(window: WebviewWindow) {
+    if let Err(e) = pet_menu(&window).and_then(|menu| window.popup_menu(&menu)) {
+        log::warn!("no se pudo abrir el menú de la mascota: {e}");
+    }
+}
+
+/// «Cerrar Amnis» del dashboard: el daemon lo difunde por SSE como `quit` y
+/// la ventana lo reenvía aquí, porque el navegador no habla con Tauri.
+#[tauri::command]
+fn quit_app(app: AppHandle) {
+    app.exit(0);
 }
 
 fn main() {
@@ -268,7 +327,14 @@ fn main() {
             anchor: Mutex::new(Anchor::default()),
             resizing: Mutex::new(()),
         })
-        .invoke_handler(tauri::generate_handler![resize_pet, start_drag, open_dashboard])
+        .invoke_handler(tauri::generate_handler![
+            resize_pet,
+            start_drag,
+            open_dashboard,
+            show_pet_menu,
+            quit_app
+        ])
+        .on_menu_event(on_pet_menu_event)
         .on_window_event(|window, event| {
             // Cada paso del arrastre se persiste al momento: no hay un "fin
             // de arrastre" fiable ni un cierre limpio en el que guardar.
@@ -293,6 +359,13 @@ fn main() {
                 "{}/",
                 url.origin().ascii_serialization()
             )));
+
+            // Antes de esperar al daemon, para poder salir aunque el
+            // arranque se alargue. Sin bandeja (Linux sin AppIndicator) se
+            // arranca igual.
+            if let Err(e) = build_tray(app) {
+                log::warn!("no se pudo crear el icono de bandeja: {e}");
+            }
 
             let mut alive = daemon_alive(&url);
             if !alive {

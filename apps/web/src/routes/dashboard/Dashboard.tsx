@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { postAction } from "../../api/actions.ts";
 import { countWarnings, useHealth } from "../../api/health.ts";
 import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
 import { Pet } from "../../lib/Pet/Pet.tsx";
@@ -121,6 +122,17 @@ export function Dashboard() {
               {status === "connected" && state && ` · v${state.daemon.version}`}
             </span>
           </p>
+          {/* Cierra la mascota y el daemon; tras esto el estado pasa solo a
+              «sin conexión». */}
+          {status === "connected" && (
+            <button
+              type="button"
+              className={styles.quit}
+              onClick={() => postAction("/api/shutdown")}
+            >
+              Cerrar Amnis
+            </button>
+          )}
           {warnings > 0 && (
             <a className={styles.health} href="#ajustes">
               {warnings} {warnings === 1 ? "aviso" : "avisos"} de salud

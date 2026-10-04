@@ -47,6 +47,25 @@ export function resizeWindow(width: number, height: number): void {
 /* Dentro de Tauri un enlace no sale al navegador del sistema (navegaría
  * dentro del propio webview o no haría nada): lo abre el proceso nativo
  * (#131). Fuera, un `window.open` normal al dashboard del mismo origen. */
+/* Menú nativo (Abrir dashboard, Salir) con el clic derecho: la ventana no
+ * tiene decoraciones ni sale en la barra de tareas, y la bandeja no existe
+ * en todos los escritorios. */
+export function showPetMenu(): void {
+  if (!isTauri()) return;
+  import("@tauri-apps/api/core")
+    .then(({ invoke }) => invoke("show_pet_menu"))
+    .catch(() => {});
+}
+
+/* «Cerrar Amnis» del dashboard, recibido por SSE. Fuera de Tauri no hay
+ * app que cerrar. */
+export function quitApp(): void {
+  if (!isTauri()) return;
+  import("@tauri-apps/api/core")
+    .then(({ invoke }) => invoke("quit_app"))
+    .catch(() => {});
+}
+
 export function openDashboard(): void {
   if (!isTauri()) {
     window.open(`${daemonUrl()}/`, "_blank");

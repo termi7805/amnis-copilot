@@ -417,7 +417,9 @@ export type AmnisEvent =
   | { event: "quota"; data: QuotaSnapshot[] }
   | { event: "media"; data: MediaSnapshot }
   | { event: "settings"; data: AmnisSettings }
-  | { event: "rebuild"; data: RebuildEvent };
+  | { event: "rebuild"; data: RebuildEvent }
+  /** «Cerrar Amnis»: la ventana de la mascota cierra la app de escritorio. */
+  | { event: "quit"; data: null };
 
 /** Evento de hook ya normalizado por el `Provider`. */
 export interface NormalizedHookEvent {

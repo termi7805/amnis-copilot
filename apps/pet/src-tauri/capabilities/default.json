@@ -10,6 +10,8 @@
   "permissions": [
     "allow-resize-pet",
     "allow-start-drag",
-    "allow-open-dashboard"
+    "allow-open-dashboard",
+    "allow-show-pet-menu",
+    "allow-quit-app"
   ]
 }

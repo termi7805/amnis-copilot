@@ -13,7 +13,9 @@ import {
   COLLAPSED_SIZE,
   EXPANDED_WIDTH,
   isTauri,
+  quitApp,
   resizeWindow,
+  showPetMenu,
   startDrag,
 } from "./useTauriWindow.ts";
 
@@ -55,7 +57,7 @@ function readLastPanel(): OpenPanel {
  * Tauri, vía `useTauriWindow.ts` (docs/STACK.md §3).
  */
 export function PetWindow() {
-  const { state, status } = useAmnisStream();
+  const { state, status, quitRequested } = useAmnisStream();
   const now = useNow();
   // Al cambiar la conexión se vuelve a preguntar: tras reconectar no hay que
   // esperar al minuto del sondeo.
@@ -75,6 +77,10 @@ export function PetWindow() {
     status !== "offline" &&
     !health.unreachable &&
     (health.health?.checks.some((c) => c.name === "hooks" && !c.ok) ?? false);
+
+  useEffect(() => {
+    if (quitRequested) quitApp();
+  }, [quitRequested]);
 
   useEffect(() => {
     localStorage.setItem(PANEL_KEY, panel);
@@ -111,7 +117,10 @@ export function PetWindow() {
     return () => observer.disconnect();
   }, [expanded]);
 
+  // Solo el botón principal pliega, despliega o arrastra: el derecho es
+  // para el menú contextual.
   function handlePointerDown(e: React.PointerEvent) {
+    if (e.button !== 0) return;
     pointerDownAt.current = { x: e.clientX, y: e.clientY };
     dragStarted.current = false;
   }
@@ -129,6 +138,7 @@ export function PetWindow() {
   }
 
   function handlePointerUp() {
+    if (!pointerDownAt.current) return;
     if (!dragStarted.current) {
       setPanel((current) => (current === "none" ? lastPanel : "none"));
     }
@@ -137,6 +147,7 @@ export function PetWindow() {
   }
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: el clic derecho es un atajo; el mismo menú está en la bandeja
     <div
       className={styles.petWindow}
       data-status={status}
@@ -145,6 +156,12 @@ export function PetWindow() {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onContextMenu={(e) => {
+        // Fuera de Tauri se deja el menú del navegador.
+        if (!isTauri()) return;
+        e.preventDefault();
+        showPetMenu();
+      }}
     >
       {hooksMissing && !expanded && (
         <span
