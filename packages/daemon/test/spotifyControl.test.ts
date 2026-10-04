@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { formatMessage, msg } from "@amnis/shared";
 import { createMediaControl } from "../src/infrastructure/providers/spotify/control.ts";
 import type { LoadSpotifyTokenResult } from "../src/infrastructure/providers/spotify/session.ts";
 
@@ -98,7 +99,10 @@ test("404 NO_ACTIVE_DEVICE es no-device; otro 404 es unavailable", async () => {
     spotifyError(404, "NO_ACTIVE_DEVICE"),
   ).control.next();
   assert.equal(!noDevice.ok && noDevice.kind, "no-device");
-  assert.match(!noDevice.ok ? noDevice.message : "", /Abre Spotify/);
+  assert.match(
+    !noDevice.ok ? formatMessage("es", noDevice.message) : "",
+    /Abre Spotify/,
+  );
 
   const other = await setup(spotifyError(404, "OTRA_COSA")).control.next();
   assert.equal(!other.ok && other.kind, "unavailable");
@@ -109,14 +113,23 @@ test("403 PREMIUM_REQUIRED se explica; otro 403 es forbidden genérico", async (
     spotifyError(403, "PREMIUM_REQUIRED"),
   ).control.next();
   assert.equal(!premium.ok && premium.kind, "forbidden");
-  assert.match(!premium.ok ? premium.message : "", /Premium/);
+  assert.match(
+    !premium.ok ? formatMessage("es", premium.message) : "",
+    /Premium/,
+  );
 
   const other = await setup(
     spotifyError(403, "UNKNOWN", "Restriction violated"),
   ).control.next();
   assert.equal(!other.ok && other.kind, "forbidden");
-  assert.doesNotMatch(!other.ok ? other.message : "", /Premium/);
-  assert.match(!other.ok ? other.message : "", /Restriction violated/);
+  assert.doesNotMatch(
+    !other.ok ? formatMessage("es", other.message) : "",
+    /Premium/,
+  );
+  assert.match(
+    !other.ok ? formatMessage("es", other.message) : "",
+    /Restriction violated/,
+  );
 });
 
 test("429 respeta Retry-After y sin cabecera espera un minuto", async () => {
@@ -165,7 +178,7 @@ test("sin token no toca la red", async () => {
     loadToken: tokens({
       ok: false,
       reason: "not-logged-in",
-      message: "Sin sesión de Spotify.",
+      message: msg("spotify.notLoggedIn"),
     }).impl,
   });
   const result = await control.play();
@@ -179,7 +192,7 @@ test("un fallo al refrescar el token es unavailable, no not-logged-in", async ()
     loadToken: tokens({
       ok: false,
       reason: "refresh-failed",
-      message: "red",
+      message: msg("raw", { text: "red" }),
     }).impl,
   });
   const result = await control.next();

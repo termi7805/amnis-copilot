@@ -1,4 +1,5 @@
 import type {
+  DaemonMessage,
   NormalizedHookEvent,
   ProviderId,
   QuotaLimit,
@@ -55,7 +56,7 @@ export interface QuotaReading {
     limits: QuotaLimit[];
     weeklyBreakdown: WeeklyBreakdown | null;
   } | null;
-  error: string | null;
+  error: DaemonMessage | null;
   /**
    * El endpoint limitó la consulta (#116). Tipado aparte de `error`: un 429 no
    * es un dato nuevo ni un fallo, es un «ahora no», y distinguirlo comparando

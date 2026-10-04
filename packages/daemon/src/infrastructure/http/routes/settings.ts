@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { AmnisSettings } from "@amnis/shared";
+import { type AmnisSettings, msg } from "@amnis/shared";
 import { validateSettings } from "../../../domain/settings.ts";
 import type { RouteHandler } from "../server.ts";
 
@@ -50,7 +50,7 @@ export function createSettingsRoutes(
       const raw = await readBody(req);
       if (raw === null) {
         sendJson(res, 413, {
-          error: "El body es demasiado grande.",
+          error: msg("body.tooLarge"),
           field: "body",
         });
         return;
@@ -60,7 +60,7 @@ export function createSettingsRoutes(
         body = JSON.parse(raw);
       } catch {
         sendJson(res, 400, {
-          error: "El body no es JSON válido.",
+          error: msg("body.invalidJson"),
           field: "body",
         });
         return;

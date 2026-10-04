@@ -1,9 +1,11 @@
 import {
   type AmnisSettings,
+  type DaemonMessage,
   DEFAULT_SETTINGS,
   isLocaleId,
   isThemeId,
   LOCALES,
+  msg,
   type PetFocus,
   THEMES,
 } from "@amnis/shared";
@@ -12,7 +14,7 @@ import { PLANS } from "./plans.ts";
 
 export type SettingsResult =
   | { ok: true; settings: AmnisSettings }
-  | { ok: false; field: string; message: string };
+  | { ok: false; field: string; message: DaemonMessage };
 
 function isKnownPlan(v: unknown): v is string | null {
   return v === null || (typeof v === "string" && v in PLANS);
@@ -59,7 +61,7 @@ export function validateSettings(
   current: AmnisSettings,
 ): SettingsResult {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    return { ok: false, field: "body", message: "El body debe ser un objeto." };
+    return { ok: false, field: "body", message: msg("body.notObject") };
   }
   const { plan, petFocus, theme, locale, ...rest } = input as Record<
     string,
@@ -72,7 +74,9 @@ export function validateSettings(
       return {
         ok: false,
         field: "plan",
-        message: `plan debe ser null o uno de: ${Object.keys(PLANS).join(", ")}.`,
+        message: msg("settings.invalidPlan", {
+          allowed: Object.keys(PLANS).join(", "),
+        }),
       };
     }
     nextPlan = plan;
@@ -85,8 +89,7 @@ export function validateSettings(
       return {
         ok: false,
         field: "petFocus",
-        message:
-          'petFocus debe ser {"kind":"auto"}, {"kind":"repo","repoRoot"}, {"kind":"worktree","worktree"} o {"kind":"session","sessionId","worktree"}, con textos no vacíos.',
+        message: msg("settings.invalidPetFocus"),
       };
     }
     nextFocus = parsed;
@@ -98,7 +101,9 @@ export function validateSettings(
       return {
         ok: false,
         field: "theme",
-        message: `theme debe ser uno de: ${THEMES.map((t) => t.id).join(", ")}.`,
+        message: msg("settings.invalidTheme", {
+          allowed: THEMES.map((t) => t.id).join(", "),
+        }),
       };
     }
     nextTheme = theme;
@@ -110,7 +115,7 @@ export function validateSettings(
       return {
         ok: false,
         field: "locale",
-        message: `locale debe ser uno de: ${LOCALES.join(", ")}.`,
+        message: msg("settings.invalidLocale", { allowed: LOCALES.join(", ") }),
       };
     }
     nextLocale = locale;

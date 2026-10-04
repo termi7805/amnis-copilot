@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { msg } from "@amnis/shared";
 import { currentPrices } from "../../persistence/prices.ts";
 import { aggregate, type UsageGroupBy } from "../../persistence/usage.ts";
 import type { RouteHandler } from "../server.ts";
@@ -37,7 +38,7 @@ export function createUsageRoute(
     const groupByParam = url.searchParams.get("groupBy") ?? "day";
     if (!isValidGroupBy(groupByParam)) {
       sendJson(res, 400, {
-        error: `groupBy inválido: "${groupByParam}". Debe ser day, project, model o day,model.`,
+        error: msg("http.invalidGroupBy", { value: groupByParam }),
       });
       return;
     }
@@ -52,7 +53,7 @@ export function createUsageRoute(
       (toParam && Number.isNaN(to?.getTime()))
     ) {
       sendJson(res, 400, {
-        error: "from/to deben ser fechas ISO 8601 válidas.",
+        error: msg("http.invalidRange"),
       });
       return;
     }

@@ -1,4 +1,4 @@
-import type { MediaDeviceOption } from "@amnis/shared";
+import { type DaemonMessage, type MediaDeviceOption, msg } from "@amnis/shared";
 import { retryAfterMsFrom } from "./player.ts";
 import { loadSpotifyToken } from "./session.ts";
 
@@ -14,7 +14,7 @@ export type ControlErrorKind =
 export interface ControlFailure {
   ok: false;
   kind: ControlErrorKind;
-  message: string;
+  message: DaemonMessage;
   /** Solo en `rate-limited`. */
   retryAfterMs?: number;
 }
@@ -54,7 +54,7 @@ interface ControlRequest {
 
 function failure(
   kind: ControlErrorKind,
-  message: string,
+  message: DaemonMessage,
   retryAfterMs?: number,
 ): ControlFailure {
   return retryAfterMs === undefined
@@ -82,24 +82,29 @@ async function toControlFailure(response: Response): Promise<ControlFailure> {
   }
 
   if (response.status === 404 && reason === "NO_ACTIVE_DEVICE") {
-    return failure("no-device", "Abre Spotify en algún dispositivo.");
+    return failure("no-device", msg("spotify.noDevice"));
   }
   if (response.status === 403) {
     return failure(
       "forbidden",
       reason === "PREMIUM_REQUIRED"
-        ? "Esta acción requiere Spotify Premium."
-        : `Spotify no permite esta acción ahora${detail ? `: ${detail}` : "."}`,
+        ? msg("spotify.premiumRequired")
+        : detail
+          ? msg("spotify.forbiddenDetail", { detail })
+          : msg("spotify.forbidden"),
     );
   }
   if (response.status === 429) {
     return failure(
       "rate-limited",
-      "Spotify pide esperar antes de volver a intentarlo.",
+      msg("spotify.rateLimited"),
       retryAfterMsFrom(response),
     );
   }
-  return failure("unavailable", `Spotify respondió ${response.status}.`);
+  return failure(
+    "unavailable",
+    msg("spotify.status", { status: response.status }),
+  );
 }
 
 /**
@@ -141,11 +146,11 @@ async function sendControl(
         body: hasBody ? JSON.stringify(req.body) : undefined,
       });
     } catch {
-      return failure("unavailable", "No se pudo contactar con Spotify.");
+      return failure("unavailable", msg("spotify.unreachable"));
     }
     if (response.status !== 401) return { ok: true, response };
   }
-  return failure("not-logged-in", "La sesión de Spotify ya no es válida.");
+  return failure("not-logged-in", msg("spotify.sessionExpired"));
 }
 
 async function control(
@@ -170,7 +175,7 @@ async function realPlayback(deps: ControlDeps): Promise<Playback> {
   }
   const { response } = sent;
   if (response.status === 204) {
-    return failure("no-device", "Abre Spotify en algún dispositivo.");
+    return failure("no-device", msg("spotify.noDevice"));
   }
   if (response.status === 429) return toControlFailure(response);
   if (!response.ok) return { state: "unknown" };
@@ -261,7 +266,7 @@ export function createMediaControl(deps: ControlDeps = {}): MediaControl {
           })),
         };
       } catch {
-        return failure("unavailable", "Respuesta de Spotify no válida.");
+        return failure("unavailable", msg("spotify.invalidResponse"));
       }
     },
   };

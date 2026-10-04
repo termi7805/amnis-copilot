@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { request } from "node:http";
 import { test } from "node:test";
+import { msg } from "@amnis/shared";
 import { allowedOrigins } from "../src/config.ts";
 import {
   createHttpServer,
@@ -238,7 +239,7 @@ test("un Host ajeno da 403 y no llega al handler (DNS rebinding)", async () => {
   await withWriteServer(undefined, async (send, port, calls) => {
     const response = await send({ headers: { Host: `evil.example:${port}` } });
     assert.equal(response.status, 403);
-    assert.match(JSON.parse(response.body).error, /Host/);
+    assert.equal(JSON.parse(response.body).error.key, "http.hostNotAllowed");
     assert.equal(calls(), 0);
   });
 });
@@ -252,8 +253,7 @@ test("un Origin ajeno da 403 y no llega al handler", async () => {
     assert.equal(
       response.body,
       JSON.stringify({
-        error:
-          "Origen no permitido: Origin no permitido (http://evil.example).",
+        error: msg("http.originNotAllowed", { origin: "http://evil.example" }),
       }),
     );
     assert.equal(calls(), 0);
@@ -340,7 +340,7 @@ test("una lectura con Host ajeno da 403 (DNS rebinding, #135)", async () => {
       headers: { Host: `evil.example:${port}` },
     });
     assert.equal(response.status, 403);
-    assert.match(JSON.parse(response.body).error, /Host/);
+    assert.equal(JSON.parse(response.body).error.key, "http.hostNotAllowed");
   });
 });
 

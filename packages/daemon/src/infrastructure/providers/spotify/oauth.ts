@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
+import { type DaemonMessage, msg } from "@amnis/shared";
 
 const AUTHORIZE_URL = "https://accounts.spotify.com/authorize";
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -46,7 +47,7 @@ export type SpotifyTokenOutcome =
       expiresAt: number;
       scope: string;
     }
-  | { ok: false; permanent: boolean; message: string };
+  | { ok: false; permanent: boolean; message: DaemonMessage };
 
 /**
  * Spotify rechaza un refresh token muerto con 400 `invalid_grant`, no con
@@ -67,7 +68,7 @@ async function requestToken(
     return {
       ok: false,
       permanent: false,
-      message: `Fallo de red al hablar con Spotify: ${(err as Error).message}.`,
+      message: msg("spotify.network", { detail: (err as Error).message }),
     };
   }
 
@@ -78,7 +79,7 @@ async function requestToken(
     return {
       ok: false,
       permanent: false,
-      message: `Spotify respondió ${response.status} sin JSON válido.`,
+      message: msg("spotify.statusNoJson", { status: response.status }),
     };
   }
 
@@ -91,7 +92,7 @@ async function requestToken(
     return {
       ok: false,
       permanent,
-      message: `Spotify rechazó la petición (${response.status}): ${detail}.`,
+      message: msg("spotify.rejected", { status: response.status, detail }),
     };
   }
 
@@ -107,7 +108,7 @@ async function requestToken(
     return {
       ok: false,
       permanent: false,
-      message: "Respuesta de Spotify con forma inesperada.",
+      message: msg("spotify.unexpectedShape"),
     };
   }
   return {

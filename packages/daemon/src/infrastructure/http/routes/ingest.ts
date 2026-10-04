@@ -1,4 +1,4 @@
-import type { RebuildEvent } from "@amnis/shared";
+import { msg, type RebuildEvent } from "@amnis/shared";
 import type { RouteHandler } from "../server.ts";
 
 export interface IngestRoutesDeps {
@@ -29,7 +29,7 @@ export function createIngestRoutes(
   return {
     "POST /api/ingest/rebuild": ({ res }) => {
       if (running) {
-        sendJson(res, 409, { error: "Ya hay una reconstrucción en curso." });
+        sendJson(res, 409, { error: msg("ingest.rebuildRunning") });
         return;
       }
       running = true;
@@ -40,7 +40,9 @@ export function createIngestRoutes(
           (err: unknown) =>
             deps.broadcast({
               status: "error",
-              error: err instanceof Error ? err.message : String(err),
+              error: msg("ingest.rebuildFailed", {
+                detail: err instanceof Error ? err.message : String(err),
+              }),
             }),
         )
         .finally(() => {

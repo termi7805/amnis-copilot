@@ -1,6 +1,11 @@
 import { existsSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
-import type { AmnisSettings, PetFocus } from "@amnis/shared";
+import {
+  type AmnisSettings,
+  type DaemonMessage,
+  msg,
+  type PetFocus,
+} from "@amnis/shared";
 import {
   fatigueFrom,
   type GetStateDeps,
@@ -39,7 +44,7 @@ import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
 import { createSessionsRoutes } from "../http/routes/sessions.ts";
 import { createSettingsRoutes } from "../http/routes/settings.ts";
 import { createShutdownRoute } from "../http/routes/shutdown.ts";
-import { createSpotifyRoutes } from "../http/routes/spotify.ts";
+import { acceptLanguage, createSpotifyRoutes } from "../http/routes/spotify.ts";
 import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
 import { createHttpServer } from "../http/server.ts";
@@ -225,7 +230,7 @@ export function runServeCli(args: readonly string[] = []): void {
   );
   // Último error del poller, en memoria: `/api/health` lo da sin pagar un
   // poll en vivo (el CLI, que no lo tiene, sí lo hace).
-  let lastQuotaError: string | null = null;
+  let lastQuotaError: DaemonMessage | null = null;
   const poller = startQuotaPoller({
     sample: (previous) => sample(previous),
     onSample: (snapshot) => {
@@ -239,7 +244,7 @@ export function runServeCli(args: readonly string[] = []): void {
       watcher.check();
     },
     onError: (err) => {
-      lastQuotaError = err.message;
+      lastQuotaError = msg("raw", { text: err.message });
       console.error("Fallo muestreando cuota:", err.message);
     },
   });
@@ -308,6 +313,8 @@ export function runServeCli(args: readonly string[] = []): void {
       }),
       ...createSpotifyRoutes({
         readClientId: () => readSpotifyConfig()?.clientId ?? null,
+        language: (req) =>
+          settings.locale === "system" ? acceptLanguage(req) : settings.locale,
         redirectUri: SPOTIFY_REDIRECT_URI,
         openBrowser,
         exchangeCode,

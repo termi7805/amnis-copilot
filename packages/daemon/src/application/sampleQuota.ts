@@ -173,7 +173,8 @@ export async function sampleQuota(
       localTokens,
       localUtil: localUtilization,
       source: authoritative ? "both" : "local",
-      error: reading.error,
+      // La columna es texto: el mensaje va serializado, con su clave y parámetros.
+      error: reading.error ? JSON.stringify(reading.error) : null,
     });
   }
 

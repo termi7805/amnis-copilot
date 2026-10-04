@@ -1,7 +1,14 @@
-import type { HealthResponse } from "@amnis/shared";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { type HealthResponse, msg } from "@amnis/shared";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import i18n from "../../../i18n/index.ts";
 import { HealthList, type HealthListActions } from "./HealthList.tsx";
 
 afterEach(cleanup);
@@ -15,11 +22,16 @@ const DAEMON = {
 const OK_ALL: HealthResponse = {
   daemon: DAEMON,
   checks: [
-    { name: "daemon", ok: true, message: "El daemon responde.", remedy: null },
+    {
+      name: "daemon",
+      ok: true,
+      message: msg("raw", { text: "El daemon responde." }),
+      remedy: null,
+    },
     {
       name: "hooks",
       ok: true,
-      message: "Los hooks de Amnis están instalados.",
+      message: msg("raw", { text: "Los hooks de Amnis están instalados." }),
       remedy: null,
     },
   ],
@@ -32,14 +44,14 @@ const HOOKS_BROKEN: HealthResponse = {
     {
       name: "hooks",
       ok: false,
-      message: "Faltan hooks de Amnis: Notification.",
-      remedy: "Instálalos con `amnis install-hooks`.",
+      message: msg("raw", { text: "Faltan hooks de Amnis: Notification." }),
+      remedy: msg("raw", { text: "Instálalos con `amnis install-hooks`." }),
     },
     {
       name: "ingesta",
       ok: false,
-      message: "Nunca se ha ingerido nada.",
-      remedy: "Ejecuta `amnis ingest`.",
+      message: msg("raw", { text: "Nunca se ha ingerido nada." }),
+      remedy: msg("raw", { text: "Ejecuta `amnis ingest`." }),
     },
   ],
 };
@@ -115,7 +127,9 @@ describe("HealthList", () => {
                   ? {
                       ...c,
                       ok: true,
-                      message: "Los hooks de Amnis están instalados.",
+                      message: msg("raw", {
+                        text: "Los hooks de Amnis están instalados.",
+                      }),
                       remedy: null,
                     }
                   : c,
@@ -149,9 +163,10 @@ describe("HealthList", () => {
         refresh={refresh}
         mediaStatus="ok"
         actions={actions({
-          repairHooks: vi
-            .fn()
-            .mockResolvedValue({ ok: false, message: "Sin permisos." }),
+          repairHooks: vi.fn().mockResolvedValue({
+            ok: false,
+            message: "Sin permisos.",
+          }),
         })}
       />,
     );
@@ -169,7 +184,14 @@ describe("HealthList", () => {
       <HealthList
         health={{
           daemon: DAEMON,
-          checks: [{ name: "spotify", ok: true, message: "x", remedy: null }],
+          checks: [
+            {
+              name: "spotify",
+              ok: true,
+              message: msg("raw", { text: "x" }),
+              remedy: null,
+            },
+          ],
         }}
         unreachable={false}
         refresh={() => {}}
@@ -178,6 +200,49 @@ describe("HealthList", () => {
       />,
     );
     expect(screen.getByRole("button", { name: label })).toBeVisible();
+  });
+
+  it("en inglés, los mensajes del daemon salen traducidos y cambian sin recargar", async () => {
+    const health: HealthResponse = {
+      daemon: DAEMON,
+      checks: [
+        {
+          name: "hooks",
+          ok: false,
+          message: msg("health.hooks.missing", { events: "Notification" }),
+          remedy: msg("health.hooks.remedy"),
+        },
+        {
+          name: "ingesta",
+          ok: false,
+          message: msg("health.ingest.never"),
+          remedy: msg("health.ingest.run"),
+        },
+      ],
+    };
+    render(
+      <HealthList
+        health={health}
+        unreachable={false}
+        refresh={() => {}}
+        mediaStatus={undefined}
+        actions={actions()}
+      />,
+    );
+    expect(
+      screen.getByText("Faltan hooks de Amnis: Notification."),
+    ).toBeVisible();
+
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+    expect(
+      screen.getByText("Missing Amnis hooks: Notification."),
+    ).toBeVisible();
+    expect(screen.getByText("Nothing has ever been ingested.")).toBeVisible();
+    expect(screen.getByText("amnis ingest").closest("div")).toHaveTextContent(
+      "Run amnis ingest.",
+    );
   });
 
   it("Spotify sin configurar no ofrece botón", () => {
@@ -189,7 +254,7 @@ describe("HealthList", () => {
             {
               name: "spotify",
               ok: true,
-              message: "No configurado",
+              message: msg("raw", { text: "No configurado" }),
               remedy: null,
             },
           ],
@@ -210,7 +275,14 @@ describe("HealthList", () => {
       <HealthList
         health={{
           daemon: DAEMON,
-          checks: [{ name: "spotify", ok: true, message: "x", remedy: null }],
+          checks: [
+            {
+              name: "spotify",
+              ok: true,
+              message: msg("raw", { text: "x" }),
+              remedy: null,
+            },
+          ],
         }}
         unreachable={false}
         refresh={refresh}

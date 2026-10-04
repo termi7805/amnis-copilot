@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { type DaemonMessage, formatMessage, msg } from "@amnis/shared";
 import { type DiagnoseFacts, diagnose } from "../src/application/diagnose.ts";
+
+/** Los tests leen el texto en español, como lo enseña `amnis doctor`. */
+const es = (m: DaemonMessage | null) => (m ? formatMessage("es", m) : "");
+const raw = (text: string) => msg("raw", { text });
 
 const NOW = new Date("2026-01-02T00:00:00.000Z");
 
@@ -47,7 +52,7 @@ test("spotify sin Client ID no es un fallo y da el redirect URI", () => {
     "spotify",
   );
   assert.equal(check.ok, true);
-  assert.ok(check.message.includes(REDIRECT));
+  assert.ok(es(check.message).includes(REDIRECT));
 });
 
 test("spotify con Client ID y sin login falla y el remedio da el comando y el redirect URI", () => {
@@ -61,8 +66,8 @@ test("spotify con Client ID y sin login falla y el remedio da el comando y el re
     "spotify",
   );
   assert.equal(check.ok, false);
-  assert.ok(check.remedy?.includes("amnis spotify login"));
-  assert.ok(check.remedy?.includes(REDIRECT));
+  assert.ok(es(check.remedy).includes("amnis spotify login"));
+  assert.ok(es(check.remedy).includes(REDIRECT));
 });
 
 test("spotify con token caducado pero renovable es ok", () => {
@@ -86,20 +91,20 @@ test("hooks desinstalados: el chequeo falla y el remedio menciona install-hooks"
   const checks = diagnose(makeFacts({ amnisHookEvents: [] }), NOW);
   const check = find(checks, "hooks");
   assert.equal(check.ok, false);
-  assert.ok(check.remedy?.includes("install-hooks"));
+  assert.ok(es(check.remedy).includes("install-hooks"));
 });
 
 test("token caducado no es un fallo: Claude Code lo renueva al usarse (#136)", () => {
   const checks = diagnose(
     makeFacts({
       credentials: { ok: true, expiresAt: NOW.getTime() - 1000 },
-      quotaError: "El token de Claude Code caducó",
+      quotaError: raw("El token de Claude Code caducó"),
     }),
     NOW,
   );
   const token = find(checks, "token");
   assert.equal(token.ok, true);
-  assert.match(token.message, /Claude Code lo renueva/);
+  assert.match(es(token.message), /Claude Code lo renueva/);
   // El endpoint no se consulta con el token caducado: no es un segundo fallo.
   assert.equal(find(checks, "endpoint").ok, true);
 });
@@ -108,7 +113,7 @@ test("con el token vigente, un fallo del endpoint sí falla", () => {
   const checks = diagnose(
     makeFacts({
       credentials: { ok: true, expiresAt: NOW.getTime() + 60_000 },
-      quotaError: "boom",
+      quotaError: raw("boom"),
     }),
     NOW,
   );
@@ -119,7 +124,7 @@ test("ingesta nunca hecha falla", () => {
   const checks = diagnose(makeFacts({ lastIngestAt: null }), NOW);
   const check = find(checks, "ingesta");
   assert.equal(check.ok, false);
-  assert.ok(check.remedy?.includes("amnis ingest"));
+  assert.ok(es(check.remedy).includes("amnis ingest"));
 });
 
 test("ingesta de hace 25h falla, de hace 1h no", () => {
@@ -186,8 +191,8 @@ test("ingesta automática: la última pasada falló, sale el error y un remedio"
     "ingesta",
   );
   assert.equal(check.ok, false);
-  assert.ok(check.message.includes("database is locked"));
-  assert.ok(check.remedy?.includes("amnis ingest"));
+  assert.ok(es(check.message).includes("database is locked"));
+  assert.ok(es(check.remedy).includes("amnis ingest"));
 });
 
 test("ingesta automática: sin pasada completada en más de 2 intervalos falla", () => {
@@ -214,12 +219,12 @@ test("daemon caído falla con remedio amnis serve", () => {
   const checks = diagnose(makeFacts({ daemonAlive: false }), NOW);
   const check = find(checks, "daemon");
   assert.equal(check.ok, false);
-  assert.ok(check.remedy?.includes("amnis serve"));
+  assert.ok(es(check.remedy).includes("amnis serve"));
 });
 
 test("credenciales ilegibles: falla, y token también falla en cascada, ambos con remedio", () => {
   const checks = diagnose(
-    makeFacts({ credentials: { ok: false, message: "no hay sesión" } }),
+    makeFacts({ credentials: { ok: false, message: raw("no hay sesión") } }),
     NOW,
   );
   assert.equal(find(checks, "credenciales").ok, false);
@@ -227,27 +232,30 @@ test("credenciales ilegibles: falla, y token también falla en cascada, ambos co
 });
 
 test("endpoint con error falla con el mensaje del error", () => {
-  const checks = diagnose(makeFacts({ quotaError: "401 no autorizado" }), NOW);
+  const checks = diagnose(
+    makeFacts({ quotaError: raw("401 no autorizado") }),
+    NOW,
+  );
   const check = find(checks, "endpoint");
   assert.equal(check.ok, false);
-  assert.equal(check.message, "401 no autorizado");
+  assert.equal(es(check.message), "401 no autorizado");
 });
 
 test("BD con error falla con remedio de permisos o fichero corrupto", () => {
   const checks = diagnose(makeFacts({ dbError: "EACCES" }), NOW);
   const check = find(checks, "base de datos");
   assert.equal(check.ok, false);
-  assert.ok(check.remedy?.includes("permisos"));
+  assert.ok(es(check.remedy).includes("permisos"));
   // --rebuild ya no arregla una BD ilegible: no se ofrece como remedio.
-  assert.ok(!check.remedy?.includes("--rebuild"));
+  assert.ok(!es(check.remedy).includes("--rebuild"));
 });
 
 test("invariante: todo chequeo que falla trae un remedio no nulo", () => {
   const scenarios: Partial<DiagnoseFacts>[] = [
     { daemonAlive: false },
     { amnisHookEvents: [] },
-    { credentials: { ok: false, message: "x" } },
-    { quotaError: "boom" },
+    { credentials: { ok: false, message: raw("x") } },
+    { quotaError: raw("boom") },
     { dbError: "boom" },
     { lastIngestAt: null },
   ];

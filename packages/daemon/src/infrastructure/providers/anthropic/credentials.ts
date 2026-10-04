@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { type DaemonMessage, msg } from "@amnis/shared";
 import { CLAUDE_CREDENTIALS } from "../../../config.ts";
 
 export interface OAuthToken {
@@ -16,12 +17,11 @@ export type CredentialsResult =
   | {
       ok: false;
       reason: "no-session" | "unreadable" | "malformed";
-      message: string;
+      message: DaemonMessage;
     };
 
 const KEYCHAIN_SERVICE = "Claude Code-credentials";
-const NO_SESSION_MESSAGE =
-  "No se encontró una sesión de Claude Code. Ejecuta `claude login` e inténtalo de nuevo.";
+const NO_SESSION_MESSAGE = msg("credentials.noSession");
 
 /** Sin I/O: separado para poder testear la forma del JSON sin tocar disco. */
 export function parseCredentialsJson(
@@ -35,7 +35,7 @@ export function parseCredentialsJson(
     return {
       ok: false,
       reason: "malformed",
-      message: `El fichero de credenciales no es JSON válido (${source}).`,
+      message: msg("credentials.invalidJson", { source }),
     };
   }
 
@@ -47,7 +47,7 @@ export function parseCredentialsJson(
     return {
       ok: false,
       reason: "malformed",
-      message: `El fichero de credenciales no tiene la forma esperada (claudeAiOauth.accessToken, ${source}).`,
+      message: msg("credentials.unexpectedShape", { source }),
     };
   }
 
@@ -111,7 +111,10 @@ function readFromFile(path: string): CredentialsResult {
     return {
       ok: false,
       reason: "unreadable",
-      message: `No se pudo leer ${path}: ${(err as Error).message}.`,
+      message: msg("credentials.unreadable", {
+        path,
+        detail: (err as Error).message,
+      }),
     };
   }
   return parseCredentialsJson(raw, "file");
@@ -141,11 +144,10 @@ export type FreshTokenResult =
   | {
       ok: false;
       reason: "no-session" | "unreadable" | "malformed" | "expired";
-      message: string;
+      message: DaemonMessage;
     };
 
-export const EXPIRED_TOKEN_MESSAGE =
-  "El token de Claude Code caducó: se renueva solo en cuanto vuelvas a usar Claude Code. Mientras, el % es una estimación local.";
+export const EXPIRED_TOKEN_MESSAGE = msg("credentials.expired");
 
 /**
  * `readCredentials()` que descarta un token caducado. Amnis no refresca el

@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { msg } from "@amnis/shared";
 import {
   type ActivityDeps,
   formatDay,
@@ -79,7 +80,7 @@ export function createActivityRoutes(
       const dayStart = parseDay(dayParam) ?? null;
       if (!dayStart) {
         return sendJson(res, 400, {
-          error: "day debe ser una fecha YYYY-MM-DD válida.",
+          error: msg("http.invalidDay"),
         });
       }
       sendJson(res, 200, getActivity(deps, startOfDay(dayStart), now));
@@ -90,7 +91,7 @@ export function createActivityRoutes(
       const weeks = Number(weeksParam);
       if (!Number.isInteger(weeks) || weeks < 1 || weeks > MAX_WEEKS) {
         return sendJson(res, 400, {
-          error: `weeks debe ser un entero entre 1 y ${MAX_WEEKS}.`,
+          error: msg("http.invalidWeeks", { max: MAX_WEEKS }),
         });
       }
       sendJson(res, 200, getHeatmap(deps, weeks, new Date()));

@@ -1,6 +1,6 @@
 import type { MediaDeviceOption, MediaSnapshot } from "@amnis/shared";
 import { useEffect } from "react";
-import i18n from "../i18n/index.ts";
+import i18n, { daemonField } from "../i18n/index.ts";
 import { daemonUrl } from "./config.ts";
 
 /** Dos focos seguidos (foco de ventana + visibilidad suelen llegar juntos)
@@ -92,9 +92,8 @@ function bodyRequest(command: Exclude<MediaCommand, string>): {
 }
 
 /**
- * El daemon ya traduce los errores de Spotify a texto en español (409 sin
- * dispositivo, 403 sin Premium…): aquí solo se recoge ese texto, no se
- * reinterpreta.
+ * El daemon ya traduce los errores de Spotify a mensajes (409 sin
+ * dispositivo, 403 sin Premium…): aquí solo se formatean en el idioma activo.
  */
 async function failureOf(response: Response): Promise<MediaFailure> {
   try {
@@ -102,12 +101,10 @@ async function failureOf(response: Response): Promise<MediaFailure> {
       error?: unknown;
       remedy?: unknown;
     };
-    if (typeof body.error === "string") {
-      return {
-        ok: false,
-        message: body.error,
-        ...(typeof body.remedy === "string" && { remedy: body.remedy }),
-      };
+    const message = daemonField(body.error);
+    const remedy = daemonField(body.remedy);
+    if (message !== null) {
+      return { ok: false, message, ...(remedy !== null && { remedy }) };
     }
   } catch {
     // Cuerpo que no es JSON: el status basta.

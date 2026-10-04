@@ -1,6 +1,7 @@
 import {
   DEFAULT_SETTINGS,
   type HealthCheck,
+  msg,
   type StateResponse,
 } from "@amnis/shared";
 import {
@@ -38,14 +39,14 @@ vi.mock("../../api/health.ts", async (importOriginal) => ({
 const HOOKS_OK: HealthCheck = {
   name: "hooks",
   ok: true,
-  message: "Los hooks de Amnis están instalados.",
+  message: msg("raw", { text: "Los hooks de Amnis están instalados." }),
   remedy: null,
 };
 const HOOKS_MISSING: HealthCheck = {
   name: "hooks",
   ok: false,
-  message: "Faltan hooks de Amnis: PreToolUse.",
-  remedy: "Repáralos.",
+  message: msg("raw", { text: "Faltan hooks de Amnis: PreToolUse." }),
+  remedy: msg("raw", { text: "Repáralos." }),
 };
 
 /** `/api/health` contesta con estos checks (o no contesta); lo demás, `{}`. */

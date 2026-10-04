@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { msg } from "@amnis/shared";
 import {
   readSpotifyToken,
   writeSpotifyConfig,
@@ -88,7 +89,11 @@ test("invalid_grant borra el token y vuelve a not-logged-in", async () => {
       now: NOW,
       configPath: s.configPath,
       tokenPath: s.tokenPath,
-      refreshFn: async () => ({ ok: false, permanent: true, message: "x" }),
+      refreshFn: async () => ({
+        ok: false,
+        permanent: true,
+        message: msg("raw", { text: "x" }),
+      }),
     });
     assert.equal(result.ok, false);
     assert.equal(!result.ok && result.reason, "not-logged-in");
@@ -105,7 +110,11 @@ test("fallo transitorio deja el token intacto", async () => {
       now: NOW,
       configPath: s.configPath,
       tokenPath: s.tokenPath,
-      refreshFn: async () => ({ ok: false, permanent: false, message: "red" }),
+      refreshFn: async () => ({
+        ok: false,
+        permanent: false,
+        message: msg("raw", { text: "red" }),
+      }),
     });
     assert.equal(!result.ok && result.reason, "refresh-failed");
     assert.equal(readSpotifyToken(s.tokenPath)?.accessToken, "old-access");

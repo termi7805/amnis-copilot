@@ -1,5 +1,6 @@
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import { createServer as createNodeServer } from "node:http";
+import { type DaemonMessage, msg } from "@amnis/shared";
 import { type AllowedOrigins, allowedOrigins, PORT } from "../../config.ts";
 
 export interface RouteContext {
@@ -56,15 +57,15 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 export function checkOrigin(
   req: IncomingMessage,
   allowed: AllowedOrigins,
-): string | null {
+): DaemonMessage | null {
   const host = req.headers.host;
   if (host === undefined || !allowed.hosts.has(host)) {
-    return `Host no permitido (${host ?? "ausente"}).`;
+    return msg("http.hostNotAllowed", { host: host ?? "—" });
   }
   if (req.method === "GET" || req.method === "HEAD") return null;
   const origin = req.headers.origin;
   if (origin !== undefined && !allowed.origins.has(origin)) {
-    return `Origin no permitido (${origin}).`;
+    return msg("http.originNotAllowed", { origin });
   }
   return null;
 }
@@ -82,7 +83,7 @@ function dispatch(handler: RouteHandler, ctx: RouteContext): void {
     // respondido nada.
     console.error("Error en handler:", err);
     if (!ctx.res.headersSent) {
-      sendJson(ctx.res, 500, { error: "Error interno." });
+      sendJson(ctx.res, 500, { error: msg("http.internal") });
     } else {
       ctx.res.end();
     }
@@ -102,7 +103,7 @@ export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
     // Antes de buscar ruta: a un origen ajeno no se le dice qué rutas existen.
     const reason = checkOrigin(req, allowed);
     if (reason !== null) {
-      sendJson(res, 403, { error: `Origen no permitido: ${reason}` });
+      sendJson(res, 403, { error: reason });
       return;
     }
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
@@ -123,9 +124,9 @@ export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
       (key) => key.slice(key.indexOf(" ") + 1) === url.pathname,
     );
     if (knownPath) {
-      sendJson(res, 405, { error: "Método no permitido." });
+      sendJson(res, 405, { error: msg("http.methodNotAllowed") });
     } else {
-      sendJson(res, 404, { error: "No encontrado." });
+      sendJson(res, 404, { error: msg("http.notFound") });
     }
   });
 

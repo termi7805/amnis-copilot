@@ -1,6 +1,6 @@
 import type { QuotaHistoryResponse, QuotaSnapshot } from "@amnis/shared";
 import { Trans, useTranslation } from "react-i18next";
-import { dateFormat, formatNumber } from "../../../i18n/index.ts";
+import { daemonText, dateFormat, formatNumber } from "../../../i18n/index.ts";
 import { formatElapsed, formatUntil } from "../../../lib/countdown.ts";
 import {
   CEILING_WINDOWS_NEEDED,
@@ -132,7 +132,7 @@ export function FiveHourCard({
           </div>
           <p className={styles.source}>
             {window.estimated
-              ? `${t("now.fiveHour.sourceLocal")}${window.provisional ? t("now.fiveHour.sourceProvisional", { windows: window.provisional.windows, needed: CEILING_WINDOWS_NEEDED }) : ""}${quota.error ? ` · ${quota.error}` : ""}`
+              ? `${t("now.fiveHour.sourceLocal")}${window.provisional ? t("now.fiveHour.sourceProvisional", { windows: window.provisional.windows, needed: CEILING_WINDOWS_NEEDED }) : ""}${quota.error ? ` · ${daemonText(quota.error)}` : ""}`
               : `${t("now.fiveHour.sourceEndpoint", { elapsed: formatElapsed(quota.sampledAt, now) })}${quota.rateLimitedAt ? t("now.fiveHour.rateLimited") : ""}`}
           </p>
         </div>

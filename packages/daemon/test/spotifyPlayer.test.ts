@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
+import { msg } from "@amnis/shared";
 import {
   fetchPlayer,
   readMedia,
@@ -151,12 +152,12 @@ test("readMedia sin Client ID o sin sesión no toca la red", async () => {
   const noClient = await readMedia(NOW, async () => ({
     ok: false,
     reason: "no-client-id",
-    message: "x",
+    message: msg("raw", { text: "x" }),
   }));
   const noLogin = await readMedia(NOW, async () => ({
     ok: false,
     reason: "not-logged-in",
-    message: "x",
+    message: msg("raw", { text: "x" }),
   }));
   assert.equal(noClient.snapshot.status, "not-configured");
   assert.equal(noLogin.snapshot.status, "not-logged-in");

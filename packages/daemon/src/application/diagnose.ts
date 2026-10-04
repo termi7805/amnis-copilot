@@ -6,7 +6,7 @@
  * puerto y el umbral de frescura entran como datos, nunca como import.
  */
 
-import type { HealthCheck } from "@amnis/shared";
+import { type DaemonMessage, type HealthCheck, msg } from "@amnis/shared";
 
 /** Sin actividad de ingesta más allá de esto, se considera obsoleta. */
 export const STALE_INGEST_MS = 24 * 60 * 60_000;
@@ -31,8 +31,8 @@ export interface DiagnoseFacts {
   expectedHookEvents: readonly string[];
   credentials:
     | { ok: true; expiresAt: number | null }
-    | { ok: false; message: string };
-  quotaError: string | null;
+    | { ok: false; message: DaemonMessage };
+  quotaError: DaemonMessage | null;
   dbError: string | null;
   lastIngestAt: Date | null;
   /** Solo el daemon lo rellena; el CLI no ingiere solo y usa `lastIngestAt`. */
@@ -49,15 +49,15 @@ function checkDaemon(facts: DiagnoseFacts): Check {
     return {
       name: "daemon",
       ok: true,
-      message: "El daemon responde.",
+      message: msg("health.daemon.ok"),
       remedy: null,
     };
   }
   return {
     name: "daemon",
     ok: false,
-    message: "El daemon no responde.",
-    remedy: "Arráncalo con `amnis serve`.",
+    message: msg("health.daemon.down"),
+    remedy: msg("health.daemon.remedy"),
   };
 }
 
@@ -69,16 +69,15 @@ function checkHooks(facts: DiagnoseFacts): Check {
     return {
       name: "hooks",
       ok: true,
-      message: "Los hooks de Amnis están instalados.",
+      message: msg("health.hooks.ok"),
       remedy: null,
     };
   }
   return {
     name: "hooks",
     ok: false,
-    message: `Faltan hooks de Amnis: ${missing.join(", ")}.`,
-    remedy:
-      "Instálalos o repáralos con `amnis install-hooks` o con el botón «Reparar hooks» de Ajustes.",
+    message: msg("health.hooks.missing", { events: missing.join(", ") }),
+    remedy: msg("health.hooks.remedy"),
   };
 }
 
@@ -87,7 +86,7 @@ function checkCredentials(facts: DiagnoseFacts): Check {
     return {
       name: "credenciales",
       ok: true,
-      message: "Las credenciales son legibles.",
+      message: msg("health.credentials.ok"),
       remedy: null,
     };
   }
@@ -95,7 +94,7 @@ function checkCredentials(facts: DiagnoseFacts): Check {
     name: "credenciales",
     ok: false,
     message: facts.credentials.message,
-    remedy: "Ejecuta `claude login`.",
+    remedy: msg("health.claudeLogin"),
   };
 }
 
@@ -104,8 +103,8 @@ function checkToken(facts: DiagnoseFacts, now: Date): Check {
     return {
       name: "token",
       ok: false,
-      message: "No se pudo comprobar: sin credenciales legibles.",
-      remedy: "Ejecuta `claude login`.",
+      message: msg("health.token.unchecked"),
+      remedy: msg("health.claudeLogin"),
     };
   }
   // Caducado no es un fallo: Amnis no refresca el token (#136) y Claude Code
@@ -115,8 +114,8 @@ function checkToken(facts: DiagnoseFacts, now: Date): Check {
     name: "token",
     ok: true,
     message: tokenExpired(facts, now)
-      ? "Caducado: Claude Code lo renueva en cuanto vuelvas a usarlo. Mientras, el % es una estimación local."
-      : "El token es válido.",
+      ? msg("health.token.expired")
+      : msg("health.token.ok"),
     remedy: null,
   };
 }
@@ -134,7 +133,7 @@ function checkEndpoint(facts: DiagnoseFacts, now: Date): Check {
     return {
       name: "endpoint",
       ok: true,
-      message: "Sin consultar hasta que Claude Code renueve el token.",
+      message: msg("health.endpoint.waiting"),
       remedy: null,
     };
   }
@@ -142,7 +141,7 @@ function checkEndpoint(facts: DiagnoseFacts, now: Date): Check {
     return {
       name: "endpoint",
       ok: true,
-      message: "El endpoint de cuota responde.",
+      message: msg("health.endpoint.ok"),
       remedy: null,
     };
   }
@@ -150,7 +149,7 @@ function checkEndpoint(facts: DiagnoseFacts, now: Date): Check {
     name: "endpoint",
     ok: false,
     message: facts.quotaError,
-    remedy: "Reintenta en unos minutos; si persiste, ejecuta `claude login`.",
+    remedy: msg("health.endpoint.remedy"),
   };
 }
 
@@ -159,16 +158,15 @@ function checkDb(facts: DiagnoseFacts): Check {
     return {
       name: "base de datos",
       ok: true,
-      message: "La base de datos es escribible.",
+      message: msg("health.db.ok"),
       remedy: null,
     };
   }
   return {
     name: "base de datos",
     ok: false,
-    message: facts.dbError,
-    remedy:
-      "Revisa los permisos de ~/.amnis. Si el fichero está corrupto, bórralo y reinicia (se pierden la serie de cuota y los eventos de hook).",
+    message: msg("raw", { text: facts.dbError }),
+    remedy: msg("health.db.remedy"),
   };
 }
 
@@ -178,7 +176,7 @@ function checkAutoIngest(auto: AutoIngestFacts, now: Date): Check {
     return {
       name: "ingesta",
       ok: true,
-      message: "La primera ingesta tras arrancar está en curso.",
+      message: msg("health.ingest.firstRun"),
       remedy: null,
     };
   }
@@ -186,23 +184,24 @@ function checkAutoIngest(auto: AutoIngestFacts, now: Date): Check {
     return {
       name: "ingesta",
       ok: false,
-      message: `La última ingesta automática falló: ${lastRun.error}`,
-      remedy:
-        "Ejecuta `amnis ingest` para ver el error completo; mientras tanto la estimación local queda atrasada.",
+      message: msg("health.ingest.autoFailed", { detail: lastRun.error }),
+      remedy: msg("health.ingest.autoFailedRemedy"),
     };
   }
   if (now.getTime() - lastRun.at.getTime() > staleAfterMs) {
     return {
       name: "ingesta",
       ok: false,
-      message: `Hace más de ${Math.round(staleAfterMs / 60_000)} min que no se completa una ingesta automática.`,
-      remedy: "Reinicia el daemon; si persiste, ejecuta `amnis ingest`.",
+      message: msg("health.ingest.autoStale", {
+        minutes: Math.round(staleAfterMs / 60_000),
+      }),
+      remedy: msg("health.ingest.autoStaleRemedy"),
     };
   }
   return {
     name: "ingesta",
     ok: true,
-    message: "La ingesta automática está al día.",
+    message: msg("health.ingest.autoOk"),
     remedy: null,
   };
 }
@@ -213,8 +212,8 @@ function checkIngest(facts: DiagnoseFacts, now: Date): Check {
     return {
       name: "ingesta",
       ok: false,
-      message: "Nunca se ha ingerido nada.",
-      remedy: "Ejecuta `amnis ingest`.",
+      message: msg("health.ingest.never"),
+      remedy: msg("health.ingest.run"),
     };
   }
   const ageMs = now.getTime() - facts.lastIngestAt.getTime();
@@ -222,15 +221,17 @@ function checkIngest(facts: DiagnoseFacts, now: Date): Check {
     return {
       name: "ingesta",
       ok: true,
-      message: "La última ingesta es reciente.",
+      message: msg("health.ingest.recent"),
       remedy: null,
     };
   }
   return {
     name: "ingesta",
     ok: false,
-    message: `La última ingesta fue hace más de ${STALE_INGEST_MS / 3_600_000}h.`,
-    remedy: "Ejecuta `amnis ingest`.",
+    message: msg("health.ingest.stale", {
+      hours: STALE_INGEST_MS / 3_600_000,
+    }),
+    remedy: msg("health.ingest.run"),
   };
 }
 
@@ -242,7 +243,7 @@ function checkSpotify(facts: DiagnoseFacts): Check {
     return {
       name: "spotify",
       ok: true,
-      message: `No configurado (opcional). Redirect URI a registrar: ${redirectUri}`,
+      message: msg("health.spotify.notConfigured", { uri: redirectUri }),
       remedy: null,
     };
   }
@@ -250,14 +251,14 @@ function checkSpotify(facts: DiagnoseFacts): Check {
     return {
       name: "spotify",
       ok: false,
-      message: "Hay Client ID pero no has hecho login.",
-      remedy: `Ejecuta \`amnis spotify login\`. El redirect URI de tu app debe ser exactamente ${redirectUri}`,
+      message: msg("health.spotify.notLoggedIn"),
+      remedy: msg("health.spotify.loginRemedy", { uri: redirectUri }),
     };
   }
   return {
     name: "spotify",
     ok: true,
-    message: `Sesión de Spotify activa. Redirect URI: ${redirectUri}`,
+    message: msg("health.spotify.ok", { uri: redirectUri }),
     remedy: null,
   };
 }

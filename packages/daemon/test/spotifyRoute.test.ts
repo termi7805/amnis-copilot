@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { ApiError } from "@amnis/shared";
+import { msg } from "@amnis/shared";
 import {
   createSpotifyRoutes,
   PENDING_TTL_MS,
@@ -132,8 +134,8 @@ test("login sin Client ID responde 409 con el remedio", async () => {
   await withSpotify({ readClientId: () => null }, async ({ base, opened }) => {
     const res = await fetch(`${base}/api/spotify/login`, { method: "POST" });
     assert.equal(res.status, 409);
-    const body = (await res.json()) as { remedy: string };
-    assert.match(body.remedy, /amnis spotify login --client-id/);
+    const body = (await res.json()) as ApiError;
+    assert.equal(body.remedy?.key, "spotify.clientIdRemedy");
     assert.equal(opened.length, 0);
   });
 });
@@ -155,7 +157,7 @@ test("si el intercambio falla, 502 con el mensaje y sin guardar", async () => {
       exchangeCode: async () => ({
         ok: false,
         permanent: true,
-        message: "<boom>",
+        message: msg("raw", { text: "<boom>" }),
       }),
     },
     async ({ base, opened, saved }) => {

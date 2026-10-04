@@ -1,4 +1,4 @@
-import type { QuotaSnapshot } from "@amnis/shared";
+import { msg, type QuotaSnapshot } from "@amnis/shared";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { FiveHourCard } from "./FiveHourCard.tsx";
@@ -60,7 +60,11 @@ describe("FiveHourCard", () => {
   });
 
   it("sin endpoint: `~`, sin divergencia ni proyección", () => {
-    const quota = { ...base, authoritative: null, error: "token inválido" };
+    const quota = {
+      ...base,
+      authoritative: null,
+      error: msg("raw", { text: "token inválido" }),
+    };
     render(<FiveHourCard quota={quota} samples={samples} now={NOW} />);
     expect(screen.getByTestId("five-hour-value")).toHaveTextContent("~28%");
     expect(screen.queryByTestId("fact-divergence")).toBeNull();

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { formatMessage } from "@amnis/shared";
 import {
   fetchQuota,
   parseQuotaResponse,
@@ -133,7 +134,7 @@ test("404 degrada sin lanzar", async () => {
   const result = await fetchQuota("token", { fetchImpl });
 
   assert.equal(result.authoritative, null);
-  assert.match(result.error ?? "", /404/);
+  assert.match(result.error ? formatMessage("es", result.error) : "", /404/);
 });
 
 test("429 se marca como rateLimited, tipado y no por el texto (#116)", async () => {
@@ -152,7 +153,7 @@ test("500 degrada sin lanzar", async () => {
   const result = await fetchQuota("token", { fetchImpl });
 
   assert.equal(result.authoritative, null);
-  assert.match(result.error ?? "", /500/);
+  assert.match(result.error ? formatMessage("es", result.error) : "", /500/);
   assert.equal(result.rateLimited, false);
 });
 
@@ -174,7 +175,7 @@ test("fallo de red degrada sin lanzar", async () => {
   const result = await fetchQuota("token", { fetchImpl });
 
   assert.equal(result.authoritative, null);
-  assert.match(result.error ?? "", /red/);
+  assert.match(result.error ? formatMessage("es", result.error) : "", /red/);
 });
 
 test("la petición lleva Authorization, anthropic-beta y User-Agent", async () => {

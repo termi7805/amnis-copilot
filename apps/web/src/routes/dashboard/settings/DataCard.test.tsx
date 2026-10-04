@@ -1,3 +1,4 @@
+import { msg } from "@amnis/shared";
 import {
   act,
   cleanup,
@@ -70,7 +71,13 @@ describe("DataCard", () => {
 
     rerender(
       <DataCard
-        rebuild={{ seq: 1, event: { status: "error", error: "disco lleno" } }}
+        rebuild={{
+          seq: 1,
+          event: {
+            status: "error",
+            error: msg("raw", { text: "disco lleno" }),
+          },
+        }}
         start={start}
       />,
     );

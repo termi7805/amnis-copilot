@@ -1,4 +1,4 @@
-import type { PetSnapshot, QuotaSnapshot } from "@amnis/shared";
+import { msg, type PetSnapshot, type QuotaSnapshot } from "@amnis/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuotaPanel } from "./QuotaPanel.tsx";
@@ -125,7 +125,10 @@ describe("QuotaPanel", () => {
   });
 
   it("un error del sampleo se ve, no desaparece detrás de un anillo vacío", () => {
-    const quota: QuotaSnapshot = { ...baseQuota, error: "endpoint caído" };
+    const quota: QuotaSnapshot = {
+      ...baseQuota,
+      error: msg("raw", { text: "endpoint caído" }),
+    };
     render(
       <QuotaPanel
         pet={basePet}
@@ -254,7 +257,7 @@ describe("QuotaPanel", () => {
           {
             ...baseQuota,
             sampledAt: "2025-12-31T23:50:00Z",
-            error: "El endpoint de cuota respondió 429.",
+            error: msg("raw", { text: "El endpoint de cuota respondió 429." }),
             rateLimitedAt: "2026-01-01T00:00:00Z",
           },
         ]}

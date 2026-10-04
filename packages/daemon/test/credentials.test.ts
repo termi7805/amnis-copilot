@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { formatMessage } from "@amnis/shared";
 import {
   isTokenExpired,
   parseCredentialsJson,
@@ -69,7 +70,7 @@ test("sin claude login: ok:false, reason no-session, mensaje accionable", () => 
     assert.equal(result.ok, false);
     assert.ok(!result.ok);
     assert.equal(result.reason, "no-session");
-    assert.match(result.message, /claude login/);
+    assert.match(formatMessage("es", result.message), /claude login/);
   });
 });
 

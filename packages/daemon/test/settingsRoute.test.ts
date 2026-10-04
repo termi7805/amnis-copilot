@@ -3,7 +3,9 @@ import { test } from "node:test";
 import {
   type AmnisEvent,
   type AmnisSettings,
+  type ApiError,
   DEFAULT_SETTINGS,
+  formatMessage,
 } from "@amnis/shared";
 import { createEventBroadcaster } from "../src/infrastructure/http/events.ts";
 import { createSettingsRoutes } from "../src/infrastructure/http/routes/settings.ts";
@@ -101,9 +103,9 @@ test("PUT inválido: 400 con el campo, y no guarda ni avisa", async () => {
       JSON.stringify({ enabled: false, screenSeconds: 99 }),
     );
     assert.equal(res.status, 400);
-    const body = (await res.json()) as { error: string; field: string };
+    const body = (await res.json()) as ApiError;
     assert.equal(body.field, "screenSeconds");
-    assert.match(body.error, /screenSeconds/);
+    assert.match(formatMessage("es", body.error), /screenSeconds/);
     assert.deepEqual(state.saves, []);
     assert.deepEqual(state.events, []);
     assert.deepEqual(state.prefs, DEFAULT_SETTINGS);
@@ -166,9 +168,9 @@ test("PUT con un theme desconocido: 400 con la lista, sin guardar ni avisar", as
   await withSettings(async ({ base, state }) => {
     const res = await put(base, JSON.stringify({ theme: "sepia" }));
     assert.equal(res.status, 400);
-    const body = (await res.json()) as { field: string; error: string };
+    const body = (await res.json()) as ApiError;
     assert.equal(body.field, "theme");
-    assert.match(body.error, /catppuccin-mocha/);
+    assert.match(formatMessage("es", body.error), /catppuccin-mocha/);
     assert.deepEqual(state.saves, []);
     assert.deepEqual(state.events, []);
     assert.deepEqual(state.prefs, DEFAULT_SETTINGS);
@@ -190,9 +192,10 @@ test("PUT con un locale desconocido: 400 con la lista, sin guardar ni avisar", a
   await withSettings(async ({ base, state }) => {
     const res = await put(base, JSON.stringify({ locale: "fr" }));
     assert.equal(res.status, 400);
-    const body = (await res.json()) as { field: string; error: string };
+    const body = (await res.json()) as ApiError;
     assert.equal(body.field, "locale");
-    assert.match(body.error, /system, es, en/);
+    assert.equal(body.error.key, "settings.invalidLocale");
+    assert.match(formatMessage("es", body.error), /system, es, en/);
     assert.deepEqual(state.saves, []);
     assert.deepEqual(state.events, []);
     assert.deepEqual(state.prefs, DEFAULT_SETTINGS);

@@ -1,3 +1,4 @@
+import { formatMessage } from "@amnis/shared";
 import { type Check, diagnose } from "../../application/diagnose.ts";
 import { PORT } from "../../config.ts";
 import { gatherDiagnoseFacts } from "../doctorFacts.ts";
@@ -19,8 +20,11 @@ async function probeDaemon(): Promise<boolean> {
 
 function printCheck(check: Check): void {
   const mark = check.ok ? "✓" : "✗";
-  console.log(`${mark} ${check.name}: ${check.message}`);
-  if (!check.ok && check.remedy) console.log(`  → ${check.remedy}`);
+  // El CLI sigue en español: el idioma elegido es el de la interfaz web.
+  console.log(`${mark} ${check.name}: ${formatMessage("es", check.message)}`);
+  if (!check.ok && check.remedy) {
+    console.log(`  → ${formatMessage("es", check.remedy)}`);
+  }
 }
 
 export async function runDoctorCli(): Promise<void> {

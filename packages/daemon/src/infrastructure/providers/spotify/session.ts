@@ -1,3 +1,4 @@
+import { type DaemonMessage, msg } from "@amnis/shared";
 import { SPOTIFY_CONFIG_PATH, SPOTIFY_TOKEN_PATH } from "../../../config.ts";
 import {
   deleteSpotifyToken,
@@ -15,7 +16,7 @@ export type LoadSpotifyTokenResult =
   | {
       ok: false;
       reason: "no-client-id" | "not-logged-in" | "refresh-failed";
-      message: string;
+      message: DaemonMessage;
     };
 
 export interface LoadSpotifyTokenOptions {
@@ -61,7 +62,7 @@ async function doLoad(
     return {
       ok: false,
       reason: "no-client-id",
-      message: "Falta el Client ID de Spotify.",
+      message: msg("spotify.missingClientId"),
     };
   }
   const token = readSpotifyToken(tokenPath);
@@ -69,7 +70,7 @@ async function doLoad(
     return {
       ok: false,
       reason: "not-logged-in",
-      message: "Sin sesión de Spotify.",
+      message: msg("spotify.notLoggedIn"),
     };
   }
 
@@ -101,7 +102,7 @@ async function doLoad(
     return {
       ok: false,
       reason: "not-logged-in",
-      message: `La sesión de Spotify ya no es válida: ${outcome.message}`,
+      message: msg("spotify.sessionInvalid", { reason: outcome.message }),
     };
   }
   return { ok: false, reason: "refresh-failed", message: outcome.message };

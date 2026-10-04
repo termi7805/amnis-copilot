@@ -1,4 +1,4 @@
-import i18n from "../i18n/index.ts";
+import i18n, { daemonField } from "../i18n/index.ts";
 import { daemonUrl } from "./config.ts";
 
 export type ActionResult<T = unknown> =
@@ -9,7 +9,8 @@ export type ActionResult<T = unknown> =
 export async function errorMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { error?: unknown };
-    if (typeof body.error === "string") return body.error;
+    const error = daemonField(body.error);
+    if (error !== null) return error;
   } catch {
     // Cuerpo que no es JSON: el status basta.
   }

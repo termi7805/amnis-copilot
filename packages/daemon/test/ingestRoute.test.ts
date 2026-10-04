@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { RebuildEvent } from "@amnis/shared";
+import { msg } from "@amnis/shared";
 import { createIngestRoutes } from "../src/infrastructure/http/routes/ingest.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
 import {
@@ -81,7 +82,12 @@ test("un rebuild que falla avisa `error` con el motivo y libera el cerrojo", asy
       assert.equal((await fetch(url, { method: "POST" })).status, 202);
       await tick();
       await tick();
-      assert.deepEqual(events, [{ status: "error", error: "SQLITE_BUSY" }]);
+      assert.deepEqual(events, [
+        {
+          status: "error",
+          error: msg("ingest.rebuildFailed", { detail: "SQLITE_BUSY" }),
+        },
+      ]);
 
       fail = false;
       assert.equal((await fetch(url, { method: "POST" })).status, 202);

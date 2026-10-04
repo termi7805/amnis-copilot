@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_MUSIC_PREFS } from "@amnis/shared";
+import { DEFAULT_MUSIC_PREFS, formatMessage } from "@amnis/shared";
 import {
   sanitizeMusicPrefs,
   validateMusicPrefs,
@@ -60,7 +60,7 @@ test("cada campo inválido responde con su nombre", () => {
     const result = validateMusicPrefs({ [field]: value }, D);
     assert.ok(!result.ok, `${field}=${String(value)}`);
     assert.equal(result.field, field);
-    assert.match(result.message, new RegExp(field));
+    assert.match(formatMessage("es", result.message), new RegExp(field));
   }
 });
 

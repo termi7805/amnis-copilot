@@ -13,7 +13,11 @@ import {
   repairHooks,
 } from "../../../api/health.ts";
 import { settings as settingsMessages } from "../../../i18n/es/settings.ts";
-import i18n, { dateFormat, formatNumber } from "../../../i18n/index.ts";
+import i18n, {
+  daemonText,
+  dateFormat,
+  formatNumber,
+} from "../../../i18n/index.ts";
 import styles from "./SettingsView.module.css";
 
 /** Los `name` de `diagnose()` son para el CLI; aquí se muestran con título. */
@@ -162,7 +166,7 @@ export function HealthList({
         events: formatNumber(eventsReceived),
       });
     }
-    return check.message;
+    return daemonText(check.message);
   }
 
   return (
@@ -205,7 +209,7 @@ export function HealthList({
                   </div>
                   {!check.ok && check.remedy && !action && (
                     <div className={styles.detail}>
-                      {withCode(check.remedy)}
+                      {withCode(daemonText(check.remedy))}
                     </div>
                   )}
                   {notices[check.name] && (

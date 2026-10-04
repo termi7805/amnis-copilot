@@ -1,4 +1,9 @@
-import type { LocaleId } from "@amnis/shared";
+import {
+  type DaemonMessage,
+  formatMessage,
+  isDaemonMessage,
+  type LocaleId,
+} from "@amnis/shared";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { en } from "./en.ts";
@@ -67,6 +72,19 @@ export function formatNumber(
   options?: Intl.NumberFormatOptions,
 ): string {
   return value.toLocaleString(intlLocale(), options);
+}
+
+/** Texto de un mensaje del daemon en el idioma activo; un daemon viejo aún manda frases. */
+export function daemonText(message: DaemonMessage | string): string {
+  return typeof message === "string"
+    ? message
+    : formatMessage(language(), message);
+}
+
+/** `error`/`remedy` de un cuerpo de error del daemon, sea mensaje o frase. */
+export function daemonField(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  return isDaemonMessage(value) ? daemonText(value) : null;
 }
 
 export default i18n;

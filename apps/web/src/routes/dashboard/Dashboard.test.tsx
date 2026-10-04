@@ -1,6 +1,7 @@
 import {
   DEFAULT_SETTINGS,
   type HealthResponse,
+  msg,
   type QuotaSnapshot,
   type StateResponse,
 } from "@amnis/shared";
@@ -86,7 +87,14 @@ let healthBody: HealthResponse;
 describe("Dashboard", () => {
   beforeEach(() => {
     healthBody = {
-      checks: [{ name: "daemon", ok: true, message: "ok", remedy: null }],
+      checks: [
+        {
+          name: "daemon",
+          ok: true,
+          message: msg("raw", { text: "ok" }),
+          remedy: null,
+        },
+      ],
       daemon: {
         version: "0.0.1",
         startedAt: "2026-01-01T00:00:00Z",
@@ -228,7 +236,7 @@ describe("Dashboard", () => {
       divergence: null,
       projection: { fiveHourAtReset: null, fiveHourExhaustsAt: null },
       sampledAt: "2026-01-01T00:00:00Z",
-      error: "endpoint caído",
+      error: msg("raw", { text: "endpoint caído" }),
       rateLimitedAt: null,
     };
     render(<Dashboard />);
@@ -247,9 +255,24 @@ describe("Dashboard", () => {
 
   it("el raíl cuenta los avisos de salud en Ajustes, en cualquier vista", async () => {
     healthBody.checks = [
-      { name: "hooks", ok: false, message: "Faltan hooks", remedy: "x" },
-      { name: "ingesta", ok: false, message: "Vieja", remedy: "y" },
-      { name: "daemon", ok: true, message: "ok", remedy: null },
+      {
+        name: "hooks",
+        ok: false,
+        message: msg("raw", { text: "Faltan hooks" }),
+        remedy: msg("raw", { text: "x" }),
+      },
+      {
+        name: "ingesta",
+        ok: false,
+        message: msg("raw", { text: "Vieja" }),
+        remedy: msg("raw", { text: "y" }),
+      },
+      {
+        name: "daemon",
+        ok: true,
+        message: msg("raw", { text: "ok" }),
+        remedy: null,
+      },
     ];
     render(<Dashboard />);
 

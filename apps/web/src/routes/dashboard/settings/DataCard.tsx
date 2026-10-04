@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ActionResult } from "../../../api/actions.ts";
 import { rebuildCache } from "../../../api/health.ts";
 import type { AmnisStream } from "../../../api/useAmnisStream.ts";
+import { daemonText } from "../../../i18n/index.ts";
 import styles from "./SettingsView.module.css";
 
 type Phase =
@@ -40,7 +41,9 @@ export function DataCard({ rebuild, start = rebuildCache }: DataCardProps) {
           ? { kind: "done" }
           : {
               kind: "error",
-              message: rebuild.event.error ?? t("settings.data.rebuildFailed"),
+              message: rebuild.event.error
+                ? daemonText(rebuild.event.error)
+                : t("settings.data.rebuildFailed"),
             },
     );
   }, [rebuild, seenSeq, t]);

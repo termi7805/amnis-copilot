@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { msg } from "@amnis/shared";
 import type {
   ControlErrorKind,
   ControlFailure,
@@ -52,7 +53,7 @@ function sendFailure(res: ServerResponse, failure: ControlFailure): void {
       error: failure.message,
       kind: failure.kind,
       ...(failure.kind === "not-logged-in" && {
-        remedy: "Conecta Spotify con `amnis spotify login`.",
+        remedy: msg("spotify.loginRemedy"),
       }),
     },
     failure.kind === "rate-limited" && failure.retryAfterMs !== undefined
@@ -81,7 +82,7 @@ async function safely<T extends { ok: boolean }>(
     return {
       ok: false,
       kind: "unavailable",
-      message: "Error inesperado hablando con Spotify.",
+      message: msg("spotify.unexpectedError"),
     };
   }
 }
@@ -115,7 +116,7 @@ export function createMediaRoutes(
       try {
         body = JSON.parse(await readBody(req));
       } catch {
-        sendJson(res, 400, { error: "El body no es JSON válido." });
+        sendJson(res, 400, { error: msg("body.invalidJson") });
         return;
       }
       const value =
@@ -123,7 +124,7 @@ export function createMediaRoutes(
           ? parse(body as Record<string, unknown>)
           : null;
       if (value === null) {
-        sendJson(res, 400, { error: `Body inválido: ${expected}.` });
+        sendJson(res, 400, { error: msg("body.invalid", { expected }) });
         return;
       }
       await act(res, () => run(value));

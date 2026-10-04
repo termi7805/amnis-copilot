@@ -1,3 +1,5 @@
+import type { DaemonMessage } from "./messages.ts";
+
 /**
  * Tipos compartidos entre el daemon y sus clientes (dashboard, mascota).
  * La mascota renderiza `PetSnapshot` sin saber de dónde sale.
@@ -144,7 +146,7 @@ export interface QuotaSnapshot {
   /** Ritmo de la ventana de 5 h (#85). */
   projection: QuotaProjection;
   sampledAt: string;
-  error: string | null;
+  error: DaemonMessage | null;
   /**
    * Instante del último intento que dio 429 (#116). Un 429 no es un dato nuevo:
    * `authoritative`, si lo hay, sigue siendo el de `sampledAt`. `null` si el
@@ -389,9 +391,9 @@ export interface StateResponse {
 export interface HealthCheck {
   name: string;
   ok: boolean;
-  message: string;
+  message: DaemonMessage;
   /** `null` solo cuando `ok`. Un fallo sin remedio es el ✗ inútil que la issue quiere evitar. */
-  remedy: string | null;
+  remedy: DaemonMessage | null;
 }
 
 /** `GET /api/health`: el mismo diagnóstico que `amnis doctor`. */
@@ -415,7 +417,7 @@ export interface RepairHooksResponse {
 /** Evento SSE `rebuild`: fin de `POST /api/ingest/rebuild`. */
 export interface RebuildEvent {
   status: "done" | "error";
-  error?: string;
+  error?: DaemonMessage;
 }
 
 /**
@@ -500,6 +502,7 @@ export interface ActivityHeatmapResponse {
   minutes: number[][];
 }
 
+export * from "./messages.ts";
 export { PLANS, PLANS_DATE, resolvePlan } from "./plans.ts";
 
 /** Una sesión de agente vista por hooks (`GET /api/sessions`, #107). */

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { msg } from "@amnis/shared";
 import type {
   QuotaSampleInput,
   SampleQuotaDeps,
@@ -363,7 +364,7 @@ test("con 1 ventana y endpoint la divergencia sigue calculándose con el techo d
 const RESETS_AT = "2026-01-01T15:00:00.000Z";
 const RATE_LIMITED: QuotaReading = {
   authoritative: null,
-  error: "El endpoint de cuota respondió 429.",
+  error: msg("quota.status", { status: 429 }),
   rateLimited: true,
 };
 

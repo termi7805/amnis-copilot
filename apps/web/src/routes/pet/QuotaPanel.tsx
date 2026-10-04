@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { postAction } from "../../api/actions.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
-import { dateFormat } from "../../i18n/index.ts";
+import { daemonText, dateFormat } from "../../i18n/index.ts";
 import { formatElapsed, formatUntil } from "../../lib/countdown.ts";
 import { fiveHourExhaustion, fiveHourWindow } from "../../lib/fiveHour.ts";
 import { extraLimits } from "../../lib/quotaLimits.ts";
@@ -169,7 +169,9 @@ export function QuotaPanel({
                 {notice}
               </p>
             )}
-            {quota.error && <p className={styles.error}>{quota.error}</p>}
+            {quota.error && (
+              <p className={styles.error}>{daemonText(quota.error)}</p>
+            )}
             {quota.rateLimitedAt && quota.authoritative && (
               <p className={styles.stale}>
                 {t("pet.window.stale", {

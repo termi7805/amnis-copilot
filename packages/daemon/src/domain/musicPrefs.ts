@@ -1,46 +1,48 @@
-import { DEFAULT_MUSIC_PREFS, type MusicPrefs } from "@amnis/shared";
+import {
+  type DaemonMessage,
+  DEFAULT_MUSIC_PREFS,
+  type MusicPrefs,
+  msg,
+} from "@amnis/shared";
 
 export type MusicPrefsResult =
   | { ok: true; prefs: MusicPrefs }
-  | { ok: false; field: string; message: string };
+  | { ok: false; field: string; message: DaemonMessage };
 
-type Rule = (value: unknown) => boolean;
+/** Comprobación de un campo y cómo se describe lo que espera. */
+interface Rule {
+  check: (value: unknown) => boolean;
+  expected: DaemonMessage;
+}
 
-const oneOf =
-  (...allowed: readonly string[]): Rule =>
-  (v) =>
-    typeof v === "string" && allowed.includes(v);
+const oneOf = (...allowed: readonly string[]): Rule => ({
+  check: (v) => typeof v === "string" && allowed.includes(v),
+  expected: msg("validation.oneOf", {
+    values: allowed.map((a) => `"${a}"`).join(", "),
+  }),
+});
 
-const inRange =
-  (min: number, max: number): Rule =>
-  (v) =>
-    typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
+const inRange = (min: number, max: number): Rule => ({
+  check: (v) =>
+    typeof v === "number" && Number.isFinite(v) && v >= min && v <= max,
+  expected: msg("validation.range", { min, max }),
+});
 
-const isBoolean: Rule = (v) => typeof v === "boolean";
+const isBoolean: Rule = {
+  check: (v) => typeof v === "boolean",
+  expected: msg("validation.boolean"),
+};
 
-/** Una regla por campo: es la única fuente de qué es válido. */
-const RULES: Record<keyof MusicPrefs, { check: Rule; expected: string }> = {
-  enabled: { check: isBoolean, expected: "true o false" },
-  motion: {
-    check: oneOf("head", "accessory"),
-    expected: '"head" o "accessory"',
-  },
-  damping: { check: inRange(0, 1), expected: "un número entre 0 y 1" },
-  color: {
-    check: oneOf("vibe", "cover", "teal"),
-    expected: '"vibe", "cover" o "teal"',
-  },
-  fallback: {
-    check: oneOf("neutral", "quiet"),
-    expected: '"neutral" o "quiet"',
-  },
-  screen: {
-    check: oneOf("two-phase", "cover", "cover-title", "pixel", "text", "none"),
-    expected: '"two-phase", "cover", "cover-title", "pixel", "text" o "none"',
-  },
-  screenSeconds: { check: inRange(2, 8), expected: "un número entre 2 y 8" },
-  screenEntry: { check: oneOf("tv", "fade"), expected: '"tv" o "fade"' },
-  scanlines: { check: isBoolean, expected: "true o false" },
+const RULES: Record<keyof MusicPrefs, Rule> = {
+  enabled: isBoolean,
+  motion: oneOf("head", "accessory"),
+  damping: inRange(0, 1),
+  color: oneOf("vibe", "cover", "teal"),
+  fallback: oneOf("neutral", "quiet"),
+  screen: oneOf("two-phase", "cover", "cover-title", "pixel", "text", "none"),
+  screenSeconds: inRange(2, 8),
+  screenEntry: oneOf("tv", "fade"),
+  scanlines: isBoolean,
 };
 
 const FIELDS = Object.keys(RULES) as (keyof MusicPrefs)[];
@@ -56,18 +58,26 @@ export function validateMusicPrefs(
   current: MusicPrefs,
 ): MusicPrefsResult {
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    return { ok: false, field: "body", message: "El body debe ser un objeto." };
+    return { ok: false, field: "body", message: msg("body.notObject") };
   }
   const changes = input as Record<string, unknown>;
   const next: Record<string, unknown> = { ...current };
 
   for (const field of Object.keys(changes)) {
     if (!FIELDS.includes(field as keyof MusicPrefs)) {
-      return { ok: false, field, message: `Campo desconocido: ${field}.` };
+      return {
+        ok: false,
+        field,
+        message: msg("validation.unknownField", { field }),
+      };
     }
     const { check, expected } = RULES[field as keyof MusicPrefs];
     if (!check(changes[field])) {
-      return { ok: false, field, message: `${field} debe ser ${expected}.` };
+      return {
+        ok: false,
+        field,
+        message: msg("validation.field", { field, expected }),
+      };
     }
     next[field] = changes[field];
   }

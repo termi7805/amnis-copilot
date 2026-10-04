@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_SETTINGS } from "@amnis/shared";
+import { DEFAULT_SETTINGS, msg } from "@amnis/shared";
 import { detectPlanId, PLANS, resolvePlan } from "../src/domain/plans.ts";
 import { sanitizeSettings, validateSettings } from "../src/domain/settings.ts";
 import { currentPlan } from "../src/infrastructure/currentPlan.ts";
@@ -61,7 +61,11 @@ test("currentPlan: un subscriptionType desconocido da null hasta que hay un manu
 
 test("currentPlan: sin sesión, manda el manual; con sesión, el detectado", () => {
   const sinSesion = () =>
-    ({ ok: false, reason: "no-session", message: "" }) as CredentialsResult;
+    ({
+      ok: false,
+      reason: "no-session",
+      message: msg("credentials.noSession"),
+    }) as CredentialsResult;
   assert.equal(currentPlan("max_20x", sinSesion)?.id, "max_20x");
   const plan = currentPlan("max_5x", creds("pro", "default_claude_ai"));
   assert.equal(plan?.id, "pro");

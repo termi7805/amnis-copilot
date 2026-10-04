@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { type ApiError, msg } from "@amnis/shared";
 import { createMediaRoutes } from "../src/infrastructure/http/routes/media.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
 import type {
@@ -86,7 +87,12 @@ function failure(
   kind: ControlFailure["kind"],
   extra: Partial<ControlFailure> = {},
 ): ControlResult & DevicesResult {
-  return { ok: false, kind, message: `msg ${kind}`, ...extra };
+  return {
+    ok: false,
+    kind,
+    message: msg("raw", { text: `msg ${kind}` }),
+    ...extra,
+  };
 }
 
 test("con Spotify cerrado en todos los dispositivos, TODA ruta responde 409, nunca 500", async () => {
@@ -122,8 +128,8 @@ test("cada tipo de fallo se traduce a su código HTTP", async () => {
         if (kind === "rate-limited")
           assert.equal(res.headers.get("Retry-After"), "7");
         if (kind === "not-logged-in") {
-          const body = (await res.json()) as { remedy?: string };
-          assert.match(body.remedy ?? "", /amnis spotify login/);
+          const body = (await res.json()) as ApiError;
+          assert.equal(body.remedy?.key, "spotify.loginRemedy");
         }
       },
     );

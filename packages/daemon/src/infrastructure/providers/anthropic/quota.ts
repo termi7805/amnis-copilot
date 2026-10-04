@@ -1,4 +1,9 @@
-import type { QuotaLimit, QuotaWindow, WeeklyBreakdown } from "@amnis/shared";
+import {
+  msg,
+  type QuotaLimit,
+  type QuotaWindow,
+  type WeeklyBreakdown,
+} from "@amnis/shared";
 import type { QuotaReading } from "../../../domain/Provider.ts";
 
 const QUOTA_URL = "https://api.anthropic.com/api/oauth/usage";
@@ -183,7 +188,7 @@ export async function fetchQuota(
   } catch (err) {
     return {
       authoritative: null,
-      error: `Fallo de red al consultar la cuota: ${(err as Error).message}.`,
+      error: msg("quota.network", { detail: (err as Error).message }),
       rateLimited: false,
     };
   }
@@ -191,7 +196,7 @@ export async function fetchQuota(
   if (!response.ok) {
     return {
       authoritative: null,
-      error: `El endpoint de cuota respondió ${response.status}.`,
+      error: msg("quota.status", { status: response.status }),
       rateLimited: response.status === 429,
     };
   }
@@ -202,7 +207,7 @@ export async function fetchQuota(
   } catch {
     return {
       authoritative: null,
-      error: "Respuesta de cuota no es JSON válido.",
+      error: msg("quota.invalidJson"),
       rateLimited: false,
     };
   }
@@ -211,7 +216,7 @@ export async function fetchQuota(
   if (!authoritative) {
     return {
       authoritative: null,
-      error: "Respuesta de cuota con forma inesperada.",
+      error: msg("quota.unexpectedShape"),
       rateLimited: false,
     };
   }

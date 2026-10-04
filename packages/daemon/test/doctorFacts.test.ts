@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, test } from "node:test";
+import { msg } from "@amnis/shared";
 
 // config.ts lee estas variables al importarse: van antes del import dinámico.
 const root = mkdtempSync(join(tmpdir(), "amnis-doctor-"));
@@ -35,7 +36,7 @@ function writeHooks(events: string[]): void {
 
 const deps = {
   daemonAlive: async () => true,
-  quotaError: async () => "boom",
+  quotaError: async () => msg("raw", { text: "boom" }),
   db: openDb(":memory:"),
 };
 const NOW = new Date("2026-01-02T00:00:00.000Z");
@@ -56,7 +57,7 @@ test("los hooks de Amnis salen de settings.json; quitar Notification lo refleja"
 test("daemonAlive y quotaError vienen de quien llama; la BD inyectada no da error", async () => {
   const facts = await gatherDiagnoseFacts(deps, NOW);
   assert.equal(facts.daemonAlive, true);
-  assert.equal(facts.quotaError, "boom");
+  assert.deepEqual(facts.quotaError, msg("raw", { text: "boom" }));
   assert.equal(facts.dbError, null);
   assert.equal(facts.lastIngestAt, null);
 });

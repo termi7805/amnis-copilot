@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { HealthResponse } from "@amnis/shared";
+import { formatMessage } from "@amnis/shared";
 import { type DiagnoseFacts, diagnose } from "../src/application/diagnose.ts";
 import { createHealthRoute } from "../src/infrastructure/http/routes/health.ts";
 import { createHttpServer } from "../src/infrastructure/http/server.ts";
@@ -60,6 +61,9 @@ test("sin Notification: responde 200 con el fallo y su remedio", async () => {
   );
   const hooks = body.checks.find((c) => c.name === "hooks");
   assert.equal(hooks?.ok, false);
-  assert.match(hooks?.message ?? "", /Notification/);
-  assert.match(hooks?.remedy ?? "", /amnis install-hooks/);
+  assert.match(hooks ? formatMessage("es", hooks.message) : "", /Notification/);
+  assert.match(
+    hooks?.remedy ? formatMessage("es", hooks.remedy) : "",
+    /amnis install-hooks/,
+  );
 });

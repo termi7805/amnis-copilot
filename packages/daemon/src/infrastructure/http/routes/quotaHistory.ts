@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { QuotaHistoryResponse, QuotaPeak } from "@amnis/shared";
+import { msg, type QuotaHistoryResponse, type QuotaPeak } from "@amnis/shared";
 import { dailyPeaks, samplesBetween } from "../../persistence/quotaSamples.ts";
 import type { RouteHandler } from "../server.ts";
 
@@ -33,7 +33,7 @@ function parseRange(
 }
 
 const INVALID_RANGE = {
-  error: "from/to deben ser fechas ISO 8601 válidas.",
+  error: msg("http.invalidRange"),
 };
 
 /**

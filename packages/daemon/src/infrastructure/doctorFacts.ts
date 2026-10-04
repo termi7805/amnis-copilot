@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { DaemonMessage } from "@amnis/shared";
 import type {
   AutoIngestFacts,
   DiagnoseFacts,
@@ -26,7 +27,7 @@ export interface DoctorFactsDeps {
   /** CLI: sondea el puerto. Daemon: trivialmente `true`. */
   daemonAlive(): Promise<boolean>;
   /** CLI: un poll en vivo. Daemon: el último error del poller, en memoria. */
-  quotaError(): Promise<string | null>;
+  quotaError(): Promise<DaemonMessage | null>;
   /** Daemon: cómo fue su última ingesta automática (#98). El CLI no la tiene. */
   autoIngest?(): AutoIngestFacts;
   /** Conexión ya abierta (daemon). Sin ella se abre y cierra `DB_PATH`. */

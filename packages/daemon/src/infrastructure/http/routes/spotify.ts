@@ -1,5 +1,11 @@
 import { randomBytes } from "node:crypto";
-import type { ServerResponse } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
+import {
+  type DaemonMessage,
+  formatMessage,
+  type MessageLanguage,
+  msg,
+} from "@amnis/shared";
 import type { SpotifyToken } from "../../persistence/spotifyToken.ts";
 import {
   buildAuthorizeUrl,
@@ -24,7 +30,19 @@ export interface SpotifyRoutesDeps {
   saveToken: (token: SpotifyToken) => void;
   /** Borra el token (conserva el Client ID) y avisa al poller de media. */
   logout: () => void;
+  /** Idioma de la página de vuelta del login; sin él, el del navegador. */
+  language?: (req: IncomingMessage) => MessageLanguage;
   now?: () => number;
+}
+
+/**
+ * La pestaña de vuelta la abre el navegador: su `Accept-Language` es lo más
+ * fiable. Sin preferencia (`*` o sin cabecera), el idioma por defecto, español.
+ */
+export function acceptLanguage(req: IncomingMessage): MessageLanguage {
+  const first =
+    req.headers["accept-language"]?.split(",")[0]?.trim().toLowerCase() ?? "";
+  return first === "" || first === "*" || first.startsWith("es") ? "es" : "en";
 }
 
 function escapeHtml(text: string): string {
@@ -74,8 +92,8 @@ export function createSpotifyRoutes(
       const clientId = deps.readClientId();
       if (!clientId) {
         sendJson(res, 409, {
-          error: "Falta el Client ID de Spotify.",
-          remedy: "amnis spotify login --client-id <tu id>",
+          error: msg("spotify.missingClientId"),
+          remedy: msg("spotify.clientIdRemedy"),
         });
         return;
       }
@@ -98,7 +116,10 @@ export function createSpotifyRoutes(
       sendJson(res, 200, {});
     },
 
-    "GET /api/spotify/callback": async ({ res, url }) => {
+    "GET /api/spotify/callback": async ({ req, res, url }) => {
+      const language = (deps.language ?? acceptLanguage)(req);
+      const page = (status: number, message: DaemonMessage) =>
+        sendPage(res, status, formatMessage(language, message));
       purgeExpired();
       const state = url.searchParams.get("state") ?? "";
       // Un solo uso: se consume antes de cualquier otra comprobación.
@@ -106,25 +127,17 @@ export function createSpotifyRoutes(
       pending.delete(state);
 
       if (!entry) {
-        sendPage(
-          res,
-          400,
-          "El login caducó o el daemon se reinició. Vuelve a pulsar Conectar.",
-        );
+        page(400, msg("spotify.page.expired"));
         return;
       }
       if (url.searchParams.get("error")) {
-        sendPage(res, 400, "Cancelaste el login de Spotify.");
+        page(400, msg("spotify.page.cancelled"));
         return;
       }
       const code = url.searchParams.get("code");
       const clientId = deps.readClientId();
       if (!code || !clientId) {
-        sendPage(
-          res,
-          400,
-          "Respuesta de Spotify incompleta. Vuelve a pulsar Conectar.",
-        );
+        page(400, msg("spotify.page.incomplete"));
         return;
       }
 
@@ -135,7 +148,7 @@ export function createSpotifyRoutes(
         redirectUri: deps.redirectUri,
       });
       if (!outcome.ok) {
-        sendPage(res, 502, outcome.message);
+        page(502, outcome.message);
         return;
       }
       deps.saveToken({
@@ -144,7 +157,7 @@ export function createSpotifyRoutes(
         expiresAt: outcome.expiresAt,
         scope: outcome.scope,
       });
-      sendPage(res, 200, "Spotify conectado. Ya puedes cerrar esta pestaña.");
+      page(200, msg("spotify.page.connected"));
     },
   };
 }
