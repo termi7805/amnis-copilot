@@ -36,6 +36,7 @@ function insertEvent(
     inputTokens: tokens.input,
     outputTokens: tokens.output,
     cacheCreationTokens: tokens.cacheCreation ?? 0,
+    cacheCreation1hTokens: 0,
     cacheReadTokens: tokens.cacheRead ?? 0,
     serviceTier: null,
     gitBranch: null,

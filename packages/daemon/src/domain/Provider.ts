@@ -25,6 +25,9 @@ export interface ProviderUsageEvent {
   inputTokens: number;
   outputTokens: number;
   cacheCreationTokens: number;
+  /** Parte de `cacheCreationTokens` escrita en la caché de 1 h (el resto es de
+   * 5 min). 0 si el transcript no trae el desglose. */
+  cacheCreation1hTokens: number;
   cacheReadTokens: number;
   serviceTier: string | null;
 }

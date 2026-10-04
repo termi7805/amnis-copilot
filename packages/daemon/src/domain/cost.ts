@@ -17,8 +17,7 @@ export interface ModelPrices {
   output: number;
   /** Escritura en la caché de 5 min. */
   cacheWrite: number;
-  /** Escritura en la caché de 1 h. Aún no se cobra aparte: la ingesta no
-   * separa las dos escrituras (#73). */
+  /** Escritura en la caché de 1 h. */
   cacheWrite1h: number;
   cacheRead: number;
 }
@@ -74,12 +73,16 @@ export interface TokenUsage {
   model: string | null;
   inputTokens: number;
   outputTokens: number;
+  /** Total de escrituras de caché (5 min + 1 h). */
   cacheCreationTokens: number;
+  /** Parte del total escrita en la caché de 1 h; el resto es de 5 min. */
+  cacheCreation1hTokens: number;
   cacheReadTokens: number;
 }
 
 /**
- * Los cuatro tipos de token tienen precios distintos y `cacheRead` es
+ * Los tipos de token tienen precios distintos (las escrituras de caché,
+ * dos: 5 min y 1 h) y `cacheRead` es
  * ~10x más barato que `input` — sumarlos sin distinguir infla el coste
  * varias veces, el mismo error silencioso que el doble conteo.
  *
@@ -91,10 +94,14 @@ export function apiEquivalent(usage: TokenUsage, table: PriceTable): number {
   const p = pricesFor(usage.model, table);
   if (!p) return 0;
 
+  const write1h = usage.cacheCreation1hTokens;
+  const write5m = usage.cacheCreationTokens - write1h;
+
   return (
     (usage.inputTokens * p.input +
       usage.outputTokens * p.output +
-      usage.cacheCreationTokens * p.cacheWrite +
+      write5m * p.cacheWrite +
+      write1h * p.cacheWrite1h +
       usage.cacheReadTokens * p.cacheRead) /
     1_000_000
   );

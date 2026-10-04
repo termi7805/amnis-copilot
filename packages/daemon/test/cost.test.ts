@@ -13,6 +13,7 @@ test("apiEquivalent distingue los cuatro tipos de token: cache_read es ~10x más
       inputTokens: 1_000_000,
       outputTokens: 0,
       cacheCreationTokens: 0,
+      cacheCreation1hTokens: 0,
       cacheReadTokens: 0,
     },
     SEED_PRICES,
@@ -23,6 +24,7 @@ test("apiEquivalent distingue los cuatro tipos de token: cache_read es ~10x más
       inputTokens: 0,
       outputTokens: 0,
       cacheCreationTokens: 0,
+      cacheCreation1hTokens: 0,
       cacheReadTokens: 1_000_000,
     },
     SEED_PRICES,
@@ -36,6 +38,28 @@ test("apiEquivalent distingue los cuatro tipos de token: cache_read es ~10x más
   );
 });
 
+test("las escrituras de caché de 1 h y de 5 min se cobran a su tarifa (#73)", () => {
+  const prices = SEED_PRICES["claude-opus-5"];
+  assert.ok(prices);
+  const cost = apiEquivalent(
+    {
+      model: "claude-opus-5",
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheCreationTokens: 1_000_000,
+      cacheCreation1hTokens: 750_000,
+      cacheReadTokens: 0,
+    },
+    SEED_PRICES,
+  );
+  assert.ok(
+    Math.abs(cost - (0.25 * prices.cacheWrite + 0.75 * prices.cacheWrite1h)) <
+      1e-9,
+  );
+  assert.notEqual(cost, prices.cacheWrite);
+  assert.notEqual(cost, prices.cacheWrite1h);
+});
+
 test("sumar los cuatro tipos sin distinguir infla el coste: apiEquivalent no lo hace", () => {
   const mixed = apiEquivalent(
     {
@@ -43,6 +67,7 @@ test("sumar los cuatro tipos sin distinguir infla el coste: apiEquivalent no lo 
       inputTokens: 100,
       outputTokens: 100,
       cacheCreationTokens: 100,
+      cacheCreation1hTokens: 0,
       cacheReadTokens: 100,
     },
     SEED_PRICES,
@@ -70,6 +95,7 @@ test("modelo desconocido (incluido null) da coste 0, nunca una estimación inven
         inputTokens: 1_000_000,
         outputTokens: 0,
         cacheCreationTokens: 0,
+        cacheCreation1hTokens: 0,
         cacheReadTokens: 0,
       },
       SEED_PRICES,
@@ -83,6 +109,7 @@ test("modelo desconocido (incluido null) da coste 0, nunca una estimación inven
         inputTokens: 1_000_000,
         outputTokens: 0,
         cacheCreationTokens: 0,
+        cacheCreation1hTokens: 0,
         cacheReadTokens: 0,
       },
       SEED_PRICES,
@@ -103,6 +130,7 @@ test("el ID con fecha de los JSONL encuentra su precio: Haiku no cuenta 0", () =
         inputTokens: 1_000_000,
         outputTokens: 0,
         cacheCreationTokens: 0,
+        cacheCreation1hTokens: 0,
         cacheReadTokens: 0,
       },
       SEED_PRICES,

@@ -73,6 +73,7 @@ test("GET /api/activity: sesiones solapadas con proyecto, espera, coste y rama",
         inputTokens: 1_000,
         outputTokens: 500,
         cacheCreationTokens: 0,
+        cacheCreation1hTokens: 0,
         cacheReadTokens: 0,
         serviceTier: null,
       });

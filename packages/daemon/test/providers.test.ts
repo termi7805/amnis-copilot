@@ -21,6 +21,7 @@ const fakeUsageEvent: ProviderUsageEvent = {
   inputTokens: 10,
   outputTokens: 5,
   cacheCreationTokens: 0,
+  cacheCreation1hTokens: 0,
   cacheReadTokens: 0,
   serviceTier: null,
   gitBranch: null,

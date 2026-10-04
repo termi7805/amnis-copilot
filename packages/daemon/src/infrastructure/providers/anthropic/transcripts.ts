@@ -84,6 +84,14 @@ export function parseUsageLine(line: string): ProviderUsageEvent | null {
   const dedupeKey = message.id ?? entry.requestId ?? entry.uuid;
   if (!dedupeKey) return null;
 
+  // El total manda: el desglose de 1 h nunca puede superarlo, y sin
+  // `cache_creation` todo se trata como de 5 min (sin inventar reparto).
+  const cacheCreationTokens = usage.cache_creation_input_tokens ?? 0;
+  const cacheCreation1hTokens = Math.min(
+    usage.cache_creation?.ephemeral_1h_input_tokens ?? 0,
+    cacheCreationTokens,
+  );
+
   return {
     dedupeKey: String(dedupeKey),
     sessionId: entry.sessionId ?? null,
@@ -94,7 +102,8 @@ export function parseUsageLine(line: string): ProviderUsageEvent | null {
     model: message.model ?? null,
     inputTokens: usage.input_tokens ?? 0,
     outputTokens: usage.output_tokens ?? 0,
-    cacheCreationTokens: usage.cache_creation_input_tokens ?? 0,
+    cacheCreationTokens,
+    cacheCreation1hTokens,
     cacheReadTokens: usage.cache_read_input_tokens ?? 0,
     serviceTier: usage.service_tier ?? null,
   };

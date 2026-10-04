@@ -17,6 +17,7 @@ function insertEvent(
     input: number;
     output: number;
     cacheCreation?: number;
+    cacheCreation1h?: number;
     cacheRead?: number;
     sessionId?: string;
   },
@@ -32,6 +33,7 @@ function insertEvent(
     inputTokens: opts.input,
     outputTokens: opts.output,
     cacheCreationTokens: opts.cacheCreation ?? 0,
+    cacheCreation1hTokens: opts.cacheCreation1h ?? 0,
     cacheReadTokens: opts.cacheRead ?? 0,
     serviceTier: null,
     gitBranch: null,
@@ -369,4 +371,28 @@ test("las sesiones se cuentan distintas por fila; una con dos modelos es una, y 
       ["claude-sonnet-5", 1],
     ],
   );
+});
+
+test("aggregate cobra la escritura de caché de 1 h a su tarifa y la de 5 min a la suya (#73)", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insertEvent(db, accountId, {
+    dedupeKey: "mix",
+    ts: "2026-01-01T10:00:00.000Z",
+    project: "/repo",
+    model: "claude-opus-5",
+    input: 0,
+    output: 0,
+    cacheCreation: 3_000_000,
+    cacheCreation1h: 2_000_000,
+  });
+
+  const result = aggregate(db, accountId, { groupBy: "project" }, SEED_PRICES);
+  const p = SEED_PRICES["claude-opus-5"];
+  assert.ok(p);
+  const expected = 1 * p.cacheWrite + 2 * p.cacheWrite1h;
+  assert.ok(Math.abs((result.rows[0]?.costUsd ?? 0) - expected) < 1e-9);
+  // Si alguien vuelve a cobrar todo a una sola tarifa, esto falla.
+  assert.notEqual(result.rows[0]?.costUsd, 3 * p.cacheWrite);
+  assert.notEqual(result.rows[0]?.costUsd, 3 * p.cacheWrite1h);
 });

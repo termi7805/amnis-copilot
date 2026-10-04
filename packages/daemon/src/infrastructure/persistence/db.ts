@@ -63,6 +63,7 @@ function migrate(db: DatabaseSync): void {
       input_tokens           INTEGER NOT NULL DEFAULT 0,
       output_tokens          INTEGER NOT NULL DEFAULT 0,
       cache_creation_tokens  INTEGER NOT NULL DEFAULT 0,
+      cache_creation_1h_tokens INTEGER NOT NULL DEFAULT 0,
       cache_read_tokens      INTEGER NOT NULL DEFAULT 0,
       service_tier           TEXT
     );
@@ -155,5 +156,12 @@ function migrate(db: DatabaseSync): void {
   }[];
   if (!usageColumns.some((c) => c.name === "git_branch")) {
     db.exec("ALTER TABLE usage_events ADD COLUMN git_branch TEXT");
+  }
+  // Parte de 1 h de las escrituras de caché (#73). Las filas anteriores
+  // quedan en 0 (= todo a 5 min) hasta `amnis ingest --rebuild`.
+  if (!usageColumns.some((c) => c.name === "cache_creation_1h_tokens")) {
+    db.exec(
+      "ALTER TABLE usage_events ADD COLUMN cache_creation_1h_tokens INTEGER NOT NULL DEFAULT 0",
+    );
   }
 }

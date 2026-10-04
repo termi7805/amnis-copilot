@@ -287,6 +287,7 @@ function readingProvider(): Provider {
         inputTokens: 1,
         outputTokens: 1,
         cacheCreationTokens: 0,
+        cacheCreation1hTokens: 0,
         cacheReadTokens: 0,
         serviceTier: null,
       };
@@ -411,6 +412,7 @@ test("runIngest incremental (#98): lee con los offsets reales fuera de la transa
         inputTokens: 1,
         outputTokens: 1,
         cacheCreationTokens: 0,
+        cacheCreation1hTokens: 0,
         cacheReadTokens: 0,
         serviceTier: null,
       });

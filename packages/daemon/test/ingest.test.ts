@@ -64,6 +64,30 @@ test("parseUsageLine lee gitBranch y trata la rama vacía o ausente como null", 
   assert.equal(parseUsageLine(line(""))?.gitBranch, null);
 });
 
+test("parseUsageLine separa las escrituras de caché de 1 h; sin desglose todo es de 5 min (#73)", () => {
+  const line = (usage: string) =>
+    `{"type":"assistant","timestamp":"2026-01-01T10:00:00.000Z","message":{"id":"m","usage":${usage}}}`;
+  const mixed = parseUsageLine(
+    line(
+      '{"cache_creation_input_tokens":300,"cache_creation":{"ephemeral_5m_input_tokens":100,"ephemeral_1h_input_tokens":200}}',
+    ),
+  );
+  assert.equal(mixed?.cacheCreationTokens, 300);
+  assert.equal(mixed?.cacheCreation1hTokens, 200);
+
+  const legacy = parseUsageLine(line('{"cache_creation_input_tokens":300}'));
+  assert.equal(legacy?.cacheCreationTokens, 300);
+  assert.equal(legacy?.cacheCreation1hTokens, 0);
+
+  // Línea anómala real: total 0 con 1 h > 0. El total manda.
+  const anomalous = parseUsageLine(
+    line(
+      '{"cache_creation_input_tokens":0,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":1367}}',
+    ),
+  );
+  assert.equal(anomalous?.cacheCreation1hTokens, 0);
+});
+
 test("--rebuild rellena la rama de las filas que no la tenían", () => {
   const db = openDb(":memory:");
   const accountId = ensureAccount(db, "anthropic", "default");
@@ -77,6 +101,7 @@ test("--rebuild rellena la rama de las filas que no la tenían", () => {
     inputTokens: 1,
     outputTokens: 0,
     cacheCreationTokens: 0,
+    cacheCreation1hTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
   };

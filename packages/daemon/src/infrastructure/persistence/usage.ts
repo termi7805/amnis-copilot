@@ -138,6 +138,7 @@ export function aggregate(
         SUM(input_tokens) AS inputTokens,
         SUM(output_tokens) AS outputTokens,
         SUM(cache_creation_tokens) AS cacheCreationTokens,
+        SUM(cache_creation_1h_tokens) AS cacheCreation1hTokens,
         SUM(cache_read_tokens) AS cacheReadTokens
       FROM usage_events
       WHERE ${conditions.join(" AND ")}
@@ -149,6 +150,7 @@ export function aggregate(
     inputTokens: number;
     outputTokens: number;
     cacheCreationTokens: number;
+    cacheCreation1hTokens: number;
     cacheReadTokens: number;
   }[];
 
@@ -187,6 +189,7 @@ export function aggregate(
         inputTokens: row.inputTokens,
         outputTokens: row.outputTokens,
         cacheCreationTokens: row.cacheCreationTokens,
+        cacheCreation1hTokens: row.cacheCreation1hTokens,
         cacheReadTokens: row.cacheReadTokens,
       },
       prices,

@@ -22,6 +22,7 @@ test("GET /api/usage responde tipado y con el coste calculado", async () => {
     inputTokens: 1_000_000,
     outputTokens: 0,
     cacheCreationTokens: 0,
+    cacheCreation1hTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
     gitBranch: null,
@@ -37,6 +38,7 @@ test("GET /api/usage responde tipado y con el coste calculado", async () => {
     inputTokens: 10,
     outputTokens: 0,
     cacheCreationTokens: 0,
+    cacheCreation1hTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
     gitBranch: null,
@@ -125,6 +127,7 @@ test("GET /api/usage acepta groupBy=day,model y devuelve el modelo en cada fila"
     inputTokens: 10,
     outputTokens: 0,
     cacheCreationTokens: 0,
+    cacheCreation1hTokens: 0,
     cacheReadTokens: 0,
     serviceTier: null,
   });

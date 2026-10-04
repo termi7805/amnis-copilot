@@ -12,6 +12,7 @@ export interface UsageEventRecord {
   inputTokens: number;
   outputTokens: number;
   cacheCreationTokens: number;
+  cacheCreation1hTokens: number;
   cacheReadTokens: number;
   serviceTier: string | null;
 }
@@ -19,7 +20,7 @@ export interface UsageEventRecord {
 const INSERT_COLUMNS = `
   account_id, provider, dedupe_key, session_id, project, ts, model,
   input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens,
-  service_tier, git_branch`;
+  service_tier, git_branch, cache_creation_1h_tokens`;
 
 interface InsertStatements {
   ignore: StatementSync;
@@ -57,7 +58,8 @@ function insertStatements(db: DatabaseSync): InsertStatements {
          cache_creation_tokens = excluded.cache_creation_tokens,
          cache_read_tokens = excluded.cache_read_tokens,
          service_tier = excluded.service_tier,
-         git_branch = excluded.git_branch`,
+         git_branch = excluded.git_branch,
+         cache_creation_1h_tokens = excluded.cache_creation_1h_tokens`,
     ),
   };
   statementsByDb.set(db, statements);
@@ -94,6 +96,7 @@ export function insertUsageEvent(
     event.cacheReadTokens,
     event.serviceTier,
     event.gitBranch,
+    event.cacheCreation1hTokens,
   ];
   const statements = insertStatements(db);
 
