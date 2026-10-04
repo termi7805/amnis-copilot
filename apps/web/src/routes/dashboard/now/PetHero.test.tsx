@@ -13,6 +13,7 @@ const state = {
     commitHash: null,
     project: "amnis-copilot",
     listening: null,
+    focus: { kind: "auto" },
   },
   quotas: [],
   settings: DEFAULT_SETTINGS,
@@ -28,6 +29,24 @@ describe("PetHero", () => {
     expect(screen.getByText("amnis-copilot")).toBeVisible();
     expect(screen.getByText(/34 % ·/)).toBeVisible();
     expect(screen.getByTestId("pet-stage")).toBeInTheDocument();
+  });
+
+  it("el selector de foco enseña a qué mira la mascota", () => {
+    render(
+      <PetHero
+        state={{
+          ...state,
+          pet: {
+            ...state.pet,
+            focus: { kind: "worktree", worktree: "/home/x/repo-1" },
+          },
+        }}
+        now={new Date("2026-01-01T00:04:00Z")}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Foco de la mascota" }),
+    ).toHaveTextContent("repo-1");
   });
 
   it("el chip de música solo aparece si suena algo", () => {

@@ -86,7 +86,13 @@ export function QuotaPanel({
 
   return (
     <div className={styles.panel}>
-      <PanelHeader status={status} active="quota" onSelect={onSelectPanel} />
+      <PanelHeader
+        status={status}
+        active="quota"
+        onSelect={onSelectPanel}
+        focus={pet.focus}
+        now={now}
+      />
 
       <ActivityRow
         pet={pet}

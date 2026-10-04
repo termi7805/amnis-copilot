@@ -1,0 +1,127 @@
+/* Paleta propia del panel de la mascota; `popover` (dashboard) la remapea a los
+   tokens del tema, igual que el reproductor de música. */
+.root {
+  --fp-ink: #201e1d;
+  --fp-on-ink: #fff;
+  --fp-muted: #6b6660;
+  --fp-raised: #edf1f5;
+  --fp-surface: #fff;
+  --fp-error: #b3261e;
+  position: relative;
+  min-width: 0;
+  font-family: system-ui, sans-serif;
+  color: var(--fp-ink);
+}
+
+.root[data-layout="popover"] {
+  --fp-ink: var(--ink);
+  --fp-on-ink: var(--surface);
+  --fp-muted: var(--ink-3);
+  --fp-raised: var(--raised);
+  --fp-surface: var(--surface);
+  --fp-error: var(--crit);
+  display: inline-block;
+  font-family: var(--f-body);
+}
+
+.trigger,
+.row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 7px;
+  border: 2px solid var(--fp-ink);
+  background: none;
+  color: var(--fp-ink);
+  font:
+    600 10px / 1.2 system-ui,
+    sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trigger:hover,
+.row:hover:not(:disabled) {
+  background: var(--fp-raised);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.list {
+  min-width: 0;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.root[data-layout="popover"] .list {
+  position: absolute;
+  z-index: 10;
+  top: 100%;
+  left: 0;
+  width: 18rem;
+  max-height: 20rem;
+  overflow-y: auto;
+  padding: 6px;
+  border: 2px solid var(--fp-ink);
+  background: var(--fp-surface);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.row[data-level="1"] {
+  padding-left: 16px;
+}
+
+.row[data-level="2"] {
+  padding-left: 28px;
+  font-weight: 400;
+}
+
+.row[aria-pressed="true"] {
+  background: var(--fp-ink);
+  color: var(--fp-on-ink);
+}
+
+/* La terminada se atenúa pero se lee: debe verse por qué no se puede elegir. */
+.row:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.note {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: 10px;
+}
+
+.hint {
+  padding: 2px 4px;
+  color: var(--fp-muted);
+  font-size: 11px;
+}
+
+.error {
+  padding: 2px 4px;
+  color: var(--fp-error);
+  font-size: 11px;
+}

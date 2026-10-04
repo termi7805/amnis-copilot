@@ -57,7 +57,7 @@
   font-size: 0.82rem;
 }
 
-.meta span {
+.meta > span {
   display: inline-flex;
   align-items: center;
   gap: 5px;

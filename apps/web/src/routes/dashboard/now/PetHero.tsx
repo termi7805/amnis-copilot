@@ -1,5 +1,6 @@
 import type { StateResponse } from "@amnis/shared";
 import { formatElapsed } from "../../../lib/countdown.ts";
+import { FocusPicker } from "../../../lib/FocusPicker/FocusPicker.tsx";
 import { fatigueLevel, Pet, STATE_TITLE } from "../../../lib/Pet/Pet.tsx";
 import styles from "./PetHero.module.css";
 
@@ -50,7 +51,7 @@ export function PetHero({ state, now }: { state: StateResponse; now: Date }) {
           </span>
         )}
       </div>
-      <p className={styles.meta}>
+      <div className={styles.meta}>
         <span>
           <svg {...META_ICON} aria-hidden="true">
             <circle cx="12" cy="12" r="9" />
@@ -66,7 +67,8 @@ export function PetHero({ state, now }: { state: StateResponse; now: Date }) {
             {pet.project}
           </span>
         )}
-      </p>
+        <FocusPicker focus={pet.focus} now={now} layout="popover" />
+      </div>
       <div className={styles.fatigue}>
         <span>Fatiga</span>
         <div className={styles.bar}>

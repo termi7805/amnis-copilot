@@ -48,4 +48,30 @@ describe("PanelHeader", () => {
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.getByText("AMNIS")).toBeInTheDocument();
   });
+
+  it("con foco enseña el selector y su pointerdown no llega a la ventana", () => {
+    const onPointerDown = vi.fn();
+    render(
+      <div onPointerDown={onPointerDown}>
+        <PanelHeader
+          status="connected"
+          active="quota"
+          onSelect={vi.fn()}
+          focus={{ kind: "worktree", worktree: "/home/x/repo-1" }}
+          now={new Date()}
+        />
+      </div>,
+    );
+    const trigger = screen.getByRole("button", { name: "Foco de la mascota" });
+    expect(trigger).toHaveTextContent("repo-1");
+    fireEvent.pointerDown(trigger);
+    expect(onPointerDown).not.toHaveBeenCalled();
+  });
+
+  it("sin foco no hay selector", () => {
+    render(<PanelHeader status="connected" active="quota" />);
+    expect(
+      screen.queryByRole("button", { name: "Foco de la mascota" }),
+    ).toBeNull();
+  });
 });

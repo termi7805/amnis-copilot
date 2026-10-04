@@ -28,7 +28,13 @@ export function MediaPanel({
 }: MediaPanelProps) {
   return (
     <div>
-      <PanelHeader status={status} active="media" onSelect={onSelectPanel} />
+      <PanelHeader
+        status={status}
+        active="media"
+        onSelect={onSelectPanel}
+        focus={pet?.focus}
+        now={now}
+      />
       {pet && (
         <ActivityRow
           pet={pet}
