@@ -8,7 +8,7 @@ import {
 import { removeHooks } from "../src/infrastructure/cli/uninstallHooks.ts";
 
 const ORCA_COMMAND =
-  "if [ -f '/home/termi/.orca/agent-hooks/claude-hook.sh' ]; then /bin/sh '/home/termi/.orca/agent-hooks/claude-hook.sh'; fi";
+  "if [ -f '/home/x/.otra-app/hooks/claude-hook.sh' ]; then /bin/sh '/home/x/.otra-app/hooks/claude-hook.sh'; fi";
 
 const AMNIS_ENTRIES: HookEntry[] = [
   { event: "PreToolUse", matcher: "*", command: "/bin/sh '/x/amnis-hook.sh'" },

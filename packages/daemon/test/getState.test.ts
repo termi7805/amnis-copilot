@@ -63,8 +63,8 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
 }
 
 test("projectName: último tramo de la ruta, null sin cwd", () => {
-  assert.equal(projectName("/home/termi/amnis-copilot"), "amnis-copilot");
-  assert.equal(projectName("/home/termi/amnis-copilot/"), "amnis-copilot");
+  assert.equal(projectName("/home/x/amnis-copilot"), "amnis-copilot");
+  assert.equal(projectName("/home/x/amnis-copilot/"), "amnis-copilot");
   assert.equal(projectName("C:\\src\\amnis"), "amnis");
   assert.equal(projectName(null), null);
   assert.equal(projectName("/"), null);

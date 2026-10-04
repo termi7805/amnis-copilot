@@ -34,9 +34,10 @@ en minúsculas, sin tildes y con guiones (`87-rutas-de-actividad`, no
 
 - Si el script se niega porque `../amnis-copilot-N` o una rama `N-*` ya existen, son de otra
   sesión o de un intento anterior: **no pisarlos**; enseñar al usuario lo que lista y preguntar.
-- Desde aquí, todo en `/home/termi/amnis-copilot-N`: rutas absolutas de `Edit`/`Write` incluidas,
-  nunca al árbol principal. El shell puede volver al árbol principal entre llamadas, así que cada
-  comando del worktree empieza por `cd /home/termi/amnis-copilot-N &&`.
+- Desde aquí, todo en el worktree (la ruta absoluta que imprime `worktree.sh --open`, hermana
+  del árbol principal): rutas absolutas de `Edit`/`Write` incluidas, nunca al árbol principal. El
+  shell puede volver al árbol principal entre llamadas, así que cada comando del worktree empieza
+  por `cd <ruta del worktree> &&`.
 - Si el paso 1 encuentra un bloqueo y se para aquí, cerrar el worktree (§5, limpieza).
 
 ## 1. Leer y comprobar la jerarquía
@@ -104,7 +105,7 @@ También se hace si se paró en §1 por un bloqueo. Antes, cerrar los procesos (
 verificación, `pnpm dev`) y pestañas abiertos desde el worktree (§4).
 
 ```bash
-cd /home/termi/amnis-copilot && .claude/scripts/worktree.sh --close N
+cd <árbol principal> && .claude/scripts/worktree.sh --close N
 ```
 
 - Se lanza desde el árbol principal: desde dentro del worktree se niega.

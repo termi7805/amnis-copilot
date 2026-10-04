@@ -87,12 +87,12 @@ test("lastKnownStateEvent devuelve el project del evento — de ahí sale el cwd
   const accountId = ensureAccount(db, "anthropic", "default");
   insert(db, accountId, "2026-01-01T00:00:00.000Z", "pushing", {
     toolName: "Bash",
-    project: "/home/termi/amnis-copilot",
+    project: "/home/x/amnis-copilot",
   });
 
   const last = lastKnownStateEvent(db, accountId, AUTO);
 
-  assert.equal(last?.project, "/home/termi/amnis-copilot");
+  assert.equal(last?.project, "/home/x/amnis-copilot");
 });
 
 test("stateEnteredAt es el primer evento de la racha, no el último — varios PreToolUse seguidos en el mismo estado no lo reinician", () => {
