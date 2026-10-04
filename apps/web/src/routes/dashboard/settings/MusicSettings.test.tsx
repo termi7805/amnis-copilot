@@ -5,9 +5,19 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MusicSettings, SLIDER_DEBOUNCE_MS } from "./MusicSettings.tsx";
+
+/** Botón de un segmentado: el nombre del grupo desambigua opciones repetidas
+ * ("Solo cascos" está en dos). */
+function option(group: string, label: string) {
+  return within(screen.getByRole("group", { name: group })).getByRole(
+    "button",
+    { name: label },
+  );
+}
 
 function setup(save = vi.fn().mockResolvedValue({ ok: true })) {
   const view = render(
@@ -23,17 +33,37 @@ afterEach(() => {
 });
 
 describe("MusicSettings", () => {
-  it("guarda un select al cambiarlo, con solo ese campo", () => {
+  it("guarda un segmentado al pulsarlo, con solo ese campo", () => {
     const { save } = setup();
-    fireEvent.change(screen.getByLabelText("Entrada"), {
-      target: { value: "fade" },
-    });
+    fireEvent.click(option("Entrada", "Fundido"));
     expect(save).toHaveBeenCalledExactlyOnceWith({ screenEntry: "fade" });
+  });
+
+  it("el segmentado marca la opción guardada", () => {
+    setup();
+    expect(option("Color de la capa", "Vibe")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(option("Color de la capa", "Teal")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("guarda el desplegable de pantalla", () => {
+    const { save } = setup();
+    fireEvent.change(screen.getByLabelText("Pantalla al cambiar de canción"), {
+      target: { value: "text" },
+    });
+    expect(save).toHaveBeenCalledExactlyOnceWith({ screen: "text" });
   });
 
   it("guarda el interruptor general", () => {
     const { save } = setup();
-    fireEvent.click(screen.getByLabelText("Mostrar la música en Amnis"));
+    const toggle = screen.getByRole("switch", { name: "Capa de música" });
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(toggle);
     expect(save).toHaveBeenCalledWith({ enabled: false });
   });
 
@@ -69,9 +99,7 @@ describe("MusicSettings", () => {
       message: "screenSeconds fuera de rango",
     });
     setup(save);
-    fireEvent.change(screen.getByLabelText("Entrada"), {
-      target: { value: "fade" },
-    });
+    fireEvent.click(option("Entrada", "Fundido"));
     await act(async () => {});
     expect(screen.getByRole("alert")).toHaveTextContent(
       "screenSeconds fuera de rango",
@@ -106,6 +134,9 @@ describe("MusicSettings", () => {
 
   it("sin estado todavía, los controles están deshabilitados", () => {
     render(<MusicSettings settings={undefined} save={vi.fn()} />);
-    expect(screen.getByLabelText("Entrada")).toBeDisabled();
+    expect(option("Entrada", "Fundido")).toBeDisabled();
+    expect(
+      screen.getByRole("switch", { name: "Capa de música" }),
+    ).toBeDisabled();
   });
 });

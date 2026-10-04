@@ -3,6 +3,13 @@ import { formatElapsed } from "../../../lib/countdown.ts";
 import { fatigueLevel, Pet, STATE_TITLE } from "../../../lib/Pet/Pet.tsx";
 import styles from "./PetHero.module.css";
 
+const META_ICON = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+} as const;
+
 /** Etiqueta del eje de fatiga: la misma curva que mueve la mascota. */
 export function fatigueLabel(fatigue: number): string {
   const level = fatigueLevel(fatigue);
@@ -44,8 +51,21 @@ export function PetHero({ state, now }: { state: StateResponse; now: Date }) {
         )}
       </div>
       <p className={styles.meta}>
-        <span>desde hace {formatElapsed(pet.since, now)}</span>
-        {pet.project && <span>{pet.project}</span>}
+        <span>
+          <svg {...META_ICON} aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          desde hace {formatElapsed(pet.since, now)}
+        </span>
+        {pet.project && (
+          <span>
+            <svg {...META_ICON} aria-hidden="true">
+              <path d="M3 7h6l2 2h10v10H3z" />
+            </svg>
+            {pet.project}
+          </span>
+        )}
       </p>
       <div className={styles.fatigue}>
         <span>Fatiga</span>

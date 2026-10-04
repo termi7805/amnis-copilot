@@ -5,7 +5,7 @@ import {
   type QuotaSnapshot,
   type StateResponse,
 } from "@amnis/shared";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NowView } from "./NowView.tsx";
 
@@ -255,5 +255,30 @@ describe("NowView · segunda mitad", () => {
     rerender(<NowView state={next} />);
 
     await vi.waitFor(() => expect(calls()).toBeGreaterThan(before));
+  });
+
+  it("«Actualizar cuota» pide un sondeo y gira hasta que llega otra muestra", async () => {
+    const { rerender } = render(<NowView state={stateWith(FIXED)} />);
+    const button = screen.getByRole("button", { name: "Actualizar cuota" });
+    fireEvent.click(button);
+
+    await vi.waitFor(() =>
+      expect(
+        vi
+          .mocked(fetch)
+          .mock.calls.some(
+            ([u, init]) =>
+              String(u).endsWith("/api/quota/refresh") &&
+              (init as RequestInit | undefined)?.method === "POST",
+          ),
+      ).toBe(true),
+    );
+    expect(button).toBeDisabled();
+
+    const next = stateWith(FIXED);
+    const [quota] = next.quotas;
+    if (quota) quota.sampledAt = "2026-01-04T15:03:00Z";
+    rerender(<NowView state={next} />);
+    expect(button).toBeEnabled();
   });
 });

@@ -34,6 +34,26 @@ const VIBE_LABEL: Record<Vibe, string> = {
   neutral: "Neutral",
 };
 
+type Option<T extends string> = { value: T; label: string };
+
+const MOTION_OPTIONS: Option<MusicPrefs["motion"]>[] = [
+  { value: "head", label: "Cabeza y cascos" },
+  { value: "accessory", label: "Solo cascos" },
+];
+const COLOR_OPTIONS: Option<MusicPrefs["color"]>[] = [
+  { value: "vibe", label: "Vibe" },
+  { value: "cover", label: "Portada" },
+  { value: "teal", label: "Teal" },
+];
+const FALLBACK_OPTIONS: Option<MusicPrefs["fallback"]>[] = [
+  { value: "neutral", label: "Notas neutras" },
+  { value: "quiet", label: "Solo cascos" },
+];
+const ENTRY_OPTIONS: Option<MusicPrefs["screenEntry"]>[] = [
+  { value: "tv", label: "Tele" },
+  { value: "fade", label: "Fundido" },
+];
+
 type SliderKey = "damping" | "screenSeconds";
 
 export interface MusicSettingsProps {
@@ -49,6 +69,60 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span>{label}</span>
       {children}
     </label>
+  );
+}
+
+function Switch({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      className={styles.toggle}
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+    />
+  );
+}
+
+/** Opciones de dos o tres valores: con un segmentado se ven todas sin abrir
+ * un desplegable (#102). */
+function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: Option<T>[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className={styles.field}>
+      <span>{label}</span>
+      {/* biome-ignore lint/a11y/useSemanticElements: un <fieldset> arrastra borde y padding del navegador a un conmutador segmentado */}
+      <div className={styles.seg} role="group" aria-label={label}>
+        {options.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={value === o.value}
+            onClick={() => onChange(o.value)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -132,117 +206,113 @@ export function MusicSettings({ settings, save }: MusicSettingsProps) {
 
   return (
     <section className={styles.panel} aria-labelledby="music-settings-title">
-      <h2 id="music-settings-title">Mascota · Música</h2>
+      <div className={styles.head}>
+        <h2 id="music-settings-title">Mascota · Música</h2>
+        <span className={styles.eyebrow}>
+          se aplica al instante en la ventana flotante
+        </span>
+      </div>
       <div className={styles.layout}>
         <fieldset className={styles.controls} disabled={disabled}>
-          <label className={styles.check}>
-            <input
-              type="checkbox"
+          <div className={styles.switchRow}>
+            <div>
+              <div className={styles.t}>Capa de música</div>
+              <div className={styles.s}>
+                Cascos, notas y cabeceo cuando suena Spotify. Se apaga sola en
+                «esperando permiso» y «límite».
+              </div>
+            </div>
+            <Switch
+              label="Capa de música"
               checked={prefs.enabled}
-              onChange={(e) => commit({ enabled: e.target.checked })}
+              onChange={(enabled) => commit({ enabled })}
             />
-            Mostrar la música en Amnis
-          </label>
-          <Field label="Qué muestra la pantalla">
-            <select
-              value={prefs.screen}
-              onChange={(e) => commit({ screen: e.target.value as ScreenMode })}
-            >
-              {(Object.keys(SCREEN_LABEL) as ScreenMode[]).map((mode) => (
-                <option key={mode} value={mode}>
-                  {SCREEN_LABEL[mode]}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label={`Tiempo en pantalla: ${prefs.screenSeconds} s`}>
-            <input
-              type="range"
-              aria-label="Tiempo en pantalla"
-              min={2}
-              max={8}
-              step={0.5}
-              value={prefs.screenSeconds}
-              onChange={(e) =>
-                setSlider("screenSeconds", Number(e.target.value))
-              }
-              onPointerUp={(e) =>
-                flush("screenSeconds", Number(e.currentTarget.value))
-              }
-            />
-          </Field>
-          <Field label="Entrada">
-            <select
-              value={prefs.screenEntry}
-              onChange={(e) =>
-                commit({
-                  screenEntry: e.target.value as MusicPrefs["screenEntry"],
-                })
-              }
-            >
-              <option value="tv">Tele</option>
-              <option value="fade">Fundido</option>
-            </select>
-          </Field>
-          <label className={styles.check}>
-            <input
-              type="checkbox"
-              checked={prefs.scanlines}
-              onChange={(e) => commit({ scanlines: e.target.checked })}
-            />
-            Líneas de pantalla
-          </label>
-          <Field label="Quién baila">
-            <select
+          </div>
+          <div className={styles.fields}>
+            <Segmented
+              label="Qué se mueve"
               value={prefs.motion}
-              onChange={(e) =>
-                commit({ motion: e.target.value as MusicPrefs["motion"] })
-              }
-            >
-              <option value="head">Accesorio + cabeza</option>
-              <option value="accessory">Solo accesorio</option>
-            </select>
-          </Field>
-          <Field
-            label={`Amortiguación por fatiga: ${Math.round(prefs.damping * 100)} %`}
-          >
-            <input
-              type="range"
-              aria-label="Amortiguación por fatiga"
-              min={0}
-              max={1}
-              step={0.05}
-              value={prefs.damping}
-              onChange={(e) => setSlider("damping", Number(e.target.value))}
-              onPointerUp={(e) =>
-                flush("damping", Number(e.currentTarget.value))
-              }
+              options={MOTION_OPTIONS}
+              onChange={(motion) => commit({ motion })}
             />
-          </Field>
-          <Field label="Color de la capa">
-            <select
+            <Segmented
+              label="Color de la capa"
               value={prefs.color}
-              onChange={(e) =>
-                commit({ color: e.target.value as MusicPrefs["color"] })
-              }
-            >
-              <option value="vibe">Por vibe</option>
-              <option value="cover">De la portada</option>
-              <option value="teal">Siempre teal</option>
-            </select>
-          </Field>
-          <Field label="Sin datos de ReccoBeats">
-            <select
+              options={COLOR_OPTIONS}
+              onChange={(color) => commit({ color })}
+            />
+            <Field label="Cuánto frena la fatiga">
+              <div className={styles.rangeRow}>
+                <input
+                  type="range"
+                  aria-label="Amortiguación por fatiga"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={prefs.damping}
+                  onChange={(e) => setSlider("damping", Number(e.target.value))}
+                  onPointerUp={(e) =>
+                    flush("damping", Number(e.currentTarget.value))
+                  }
+                />
+                <output>{Math.round(prefs.damping * 100)} %</output>
+              </div>
+            </Field>
+            <Segmented
+              label="Sin datos de la canción"
               value={prefs.fallback}
-              onChange={(e) =>
-                commit({ fallback: e.target.value as MusicPrefs["fallback"] })
-              }
-            >
-              <option value="neutral">Notas neutras</option>
-              <option value="quiet">Solo cascos</option>
-            </select>
-          </Field>
-          <button type="button" onClick={reset}>
+              options={FALLBACK_OPTIONS}
+              onChange={(fallback) => commit({ fallback })}
+            />
+            <Field label="Pantalla al cambiar de canción">
+              <select
+                value={prefs.screen}
+                onChange={(e) =>
+                  commit({ screen: e.target.value as ScreenMode })
+                }
+              >
+                {(Object.keys(SCREEN_LABEL) as ScreenMode[]).map((mode) => (
+                  <option key={mode} value={mode}>
+                    {SCREEN_LABEL[mode]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Tiempo en pantalla">
+              <div className={styles.rangeRow}>
+                <input
+                  type="range"
+                  aria-label="Tiempo en pantalla"
+                  min={2}
+                  max={8}
+                  step={0.5}
+                  value={prefs.screenSeconds}
+                  onChange={(e) =>
+                    setSlider("screenSeconds", Number(e.target.value))
+                  }
+                  onPointerUp={(e) =>
+                    flush("screenSeconds", Number(e.currentTarget.value))
+                  }
+                />
+                <output>{prefs.screenSeconds} s</output>
+              </div>
+            </Field>
+            <Segmented
+              label="Entrada"
+              value={prefs.screenEntry}
+              options={ENTRY_OPTIONS}
+              onChange={(screenEntry) => commit({ screenEntry })}
+            />
+            <div className={styles.field}>
+              <span>Líneas de pantalla</span>
+              <Switch
+                label="Líneas de pantalla"
+                checked={prefs.scanlines}
+                onChange={(scanlines) => commit({ scanlines })}
+              />
+            </div>
+          </div>
+          <button type="button" className={styles.btn} onClick={reset}>
             Restablecer valores por defecto
           </button>
           {error && (
@@ -300,7 +370,11 @@ export function MusicSettings({ settings, save }: MusicSettingsProps) {
                 onChange={(e) => setBpm(Number(e.target.value))}
               />
             </Field>
-            <button type="button" onClick={() => setTrackIndex((i) => i + 1)}>
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={() => setTrackIndex((i) => i + 1)}
+            >
               Siguiente canción
             </button>
           </div>

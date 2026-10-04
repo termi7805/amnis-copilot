@@ -57,6 +57,18 @@
   font-size: 0.82rem;
 }
 
+.meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.meta svg {
+  width: 14px;
+  height: 14px;
+  color: var(--ink-3);
+}
+
 .fatigue {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;

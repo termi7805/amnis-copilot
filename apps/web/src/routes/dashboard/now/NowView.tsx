@@ -1,5 +1,12 @@
 import type { StateResponse } from "@amnis/shared";
-import type { CSSProperties, ReactNode } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { postAction } from "../../../api/actions.ts";
 import { useTodayActivity } from "../../../api/activity.ts";
 import { fetchMediaDevices, sendMediaCommand } from "../../../api/media.ts";
 import { useQuotaHistory } from "../../../api/quotaHistory.ts";
@@ -16,6 +23,60 @@ import { RecentEvents } from "./RecentEvents.tsx";
 import { TodayCard } from "./TodayCard.tsx";
 import { WaitingCard } from "./WaitingCard.tsx";
 import { WeeklyCard } from "./WeeklyCard.tsx";
+
+/** Tope del giro si el sondeo no llega a cambiar la muestra (endpoint caído). */
+const REFRESH_TIMEOUT_MS = 8_000;
+
+/**
+ * Recarga manual de la cuota (#102), la misma que el panel de la mascota: el
+ * daemon dispara el sondeo y responde sin esperarlo; el dato llega por SSE.
+ * El botón gira hasta que cambia `sampledAt` o vence el tope.
+ */
+function RefreshButton({ sampledAt }: { sampledAt: string | null }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sampledAt solo dispara el fin del giro
+  useEffect(() => {
+    setRefreshing(false);
+    window.clearTimeout(timer.current);
+  }, [sampledAt]);
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  async function refresh() {
+    setRefreshing(true);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(
+      () => setRefreshing(false),
+      REFRESH_TIMEOUT_MS,
+    );
+    const result = await postAction("/api/quota/refresh");
+    if (!result.ok) setRefreshing(false);
+  }
+
+  return (
+    <button
+      type="button"
+      className={styles.refresh}
+      data-refreshing={refreshing}
+      disabled={refreshing || sampledAt === null}
+      onClick={refresh}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        aria-hidden="true"
+      >
+        <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
+      </svg>
+      Actualizar cuota
+    </button>
+  );
+}
 
 const EYEBROW = new Intl.DateTimeFormat("es-ES", {
   weekday: "long",
@@ -82,9 +143,12 @@ export function NowView({ state }: { state: StateResponse | null }) {
   return (
     <section className={styles.view}>
       <header className={styles.pageHead}>
-        <p className={styles.eyebrow}>{EYEBROW.format(now)}</p>
-        <h1>{headline?.title ?? "Conectando con el daemon…"}</h1>
-        {headline && <p>{headline.detail}</p>}
+        <div>
+          <p className={styles.eyebrow}>{EYEBROW.format(now)}</p>
+          <h1>{headline?.title ?? "Conectando con el daemon…"}</h1>
+          {headline && <p>{headline.detail}</p>}
+        </div>
+        <RefreshButton sampledAt={quota?.sampledAt ?? null} />
       </header>
 
       {state && (
