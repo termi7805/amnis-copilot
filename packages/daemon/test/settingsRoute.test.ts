@@ -138,3 +138,26 @@ test("PUT con un body enorme: 413 sin guardar", async () => {
     assert.deepEqual(state.saves, []);
   });
 });
+
+test("PUT con un petFocus inválido: 400 con el campo, sin guardar ni avisar", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ petFocus: { kind: "repo" } }));
+    assert.equal(res.status, 400);
+    assert.equal(((await res.json()) as { field: string }).field, "petFocus");
+    assert.deepEqual(state.saves, []);
+    assert.deepEqual(state.events, []);
+    assert.deepEqual(state.prefs, DEFAULT_SETTINGS);
+  });
+});
+
+test("PUT con un petFocus válido: guarda y avisa por SSE", async () => {
+  await withSettings(async ({ base, state }) => {
+    const petFocus = { kind: "worktree", worktree: "/home/x/repo-1" };
+    const res = await put(base, JSON.stringify({ petFocus }));
+    assert.equal(res.status, 200);
+    const expected = { ...DEFAULT_SETTINGS, petFocus };
+    assert.deepEqual(await res.json(), expected);
+    assert.deepEqual(state.saves, [expected]);
+    assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
+  });
+});

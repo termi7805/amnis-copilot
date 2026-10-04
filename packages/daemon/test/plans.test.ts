@@ -95,3 +95,68 @@ test("sanitizeSettings: un fichero antiguo sin plan da null; un plan inválido, 
   assert.equal(sanitizeSettings({ plan: "inventado" }).plan, null);
   assert.equal(sanitizeSettings({ plan: "pro" }).plan, "pro");
 });
+
+const SESSION_FOCUS = {
+  kind: "session",
+  sessionId: "abc",
+  worktree: "/home/x/repo-1",
+} as const;
+
+test("validateSettings: acepta los cuatro tipos de petFocus", () => {
+  for (const petFocus of [
+    { kind: "auto" },
+    { kind: "repo", repoRoot: "/home/x/repo" },
+    { kind: "worktree", worktree: "/home/x/repo-1" },
+    SESSION_FOCUS,
+  ]) {
+    const res = validateSettings({ petFocus }, DEFAULT_SETTINGS);
+    assert.ok(res.ok, JSON.stringify(petFocus));
+    assert.deepEqual(res.settings.petFocus, petFocus);
+  }
+});
+
+test("validateSettings: un petFocus malformado da error de campo", () => {
+  for (const petFocus of [
+    null,
+    [],
+    "auto",
+    {},
+    { kind: "inventado" },
+    { kind: "repo" },
+    { kind: "repo", repoRoot: "" },
+    { kind: "repo", repoRoot: 3 },
+    { kind: "repo", repo_root: "/x" },
+    { kind: "auto", extra: 1 },
+    { kind: "session", sessionId: "abc" },
+    { kind: "worktree", worktree: "/x", repoRoot: "/y" },
+    { kind: "toString" },
+  ]) {
+    const bad = validateSettings({ petFocus }, DEFAULT_SETTINGS);
+    assert.ok(!bad.ok && bad.field === "petFocus", JSON.stringify(petFocus));
+  }
+});
+
+test("validateSettings: otro cambio conserva el petFocus; uno nuevo lo sustituye entero", () => {
+  const current = { ...DEFAULT_SETTINGS, petFocus: SESSION_FOCUS };
+  const kept = validateSettings({ enabled: false }, current);
+  assert.ok(kept.ok);
+  assert.deepEqual(kept.settings.petFocus, SESSION_FOCUS);
+  const replaced = validateSettings({ petFocus: { kind: "auto" } }, current);
+  assert.ok(replaced.ok);
+  assert.deepEqual(replaced.settings.petFocus, { kind: "auto" });
+});
+
+test("sanitizeSettings: petFocus ausente o malformado da auto; válido se conserva", () => {
+  const auto = { kind: "auto" };
+  assert.deepEqual(sanitizeSettings({}).petFocus, auto);
+  assert.deepEqual(sanitizeSettings(null).petFocus, auto);
+  assert.deepEqual(sanitizeSettings({ petFocus: "x" }).petFocus, auto);
+  assert.deepEqual(
+    sanitizeSettings({ petFocus: { kind: "repo" } }).petFocus,
+    auto,
+  );
+  assert.deepEqual(
+    sanitizeSettings({ petFocus: SESSION_FOCUS }).petFocus,
+    SESSION_FOCUS,
+  );
+});

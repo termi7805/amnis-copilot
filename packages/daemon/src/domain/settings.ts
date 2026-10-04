@@ -1,4 +1,8 @@
-import { type AmnisSettings, DEFAULT_SETTINGS } from "@amnis/shared";
+import {
+  type AmnisSettings,
+  DEFAULT_SETTINGS,
+  type PetFocus,
+} from "@amnis/shared";
 import { sanitizeMusicPrefs, validateMusicPrefs } from "./musicPrefs.ts";
 import { PLANS } from "./plans.ts";
 
@@ -10,9 +14,41 @@ function isKnownPlan(v: unknown): v is string | null {
   return v === null || (typeof v === "string" && v in PLANS);
 }
 
+/** Campos de texto obligatorios de cada `kind` de foco. */
+const FOCUS_FIELDS: Record<PetFocus["kind"], readonly string[]> = {
+  auto: [],
+  repo: ["repoRoot"],
+  worktree: ["worktree"],
+  session: ["sessionId", "worktree"],
+};
+
 /**
- * Valida un cambio de ajustes (`PUT /api/settings`): `plan` aquí, el resto
- * (preferencias de música) en `validateMusicPrefs`. Acepta un parcial.
+ * Forma válida de un foco, o `null`. Estricta como `validateMusicPrefs`: un
+ * `kind` desconocido, un campo vacío o una clave de más (un typo) no pasan.
+ * No comprueba que la ruta exista: eso es cosa de #110.
+ */
+function parsePetFocus(v: unknown): PetFocus | null {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return null;
+  const obj = v as Record<string, unknown>;
+  const kind = obj.kind;
+  if (typeof kind !== "string" || !Object.hasOwn(FOCUS_FIELDS, kind)) {
+    return null;
+  }
+  const fields = FOCUS_FIELDS[kind as PetFocus["kind"]];
+  if (Object.keys(obj).length !== fields.length + 1) return null;
+  const out: Record<string, string> = { kind };
+  for (const field of fields) {
+    const value = obj[field];
+    if (typeof value !== "string" || value === "") return null;
+    out[field] = value;
+  }
+  return out as unknown as PetFocus;
+}
+
+/**
+ * Valida un cambio de ajustes (`PUT /api/settings`): `plan` y `petFocus` aquí,
+ * el resto (preferencias de música) en `validateMusicPrefs`. Acepta un
+ * parcial.
  */
 export function validateSettings(
   input: unknown,
@@ -21,7 +57,7 @@ export function validateSettings(
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return { ok: false, field: "body", message: "El body debe ser un objeto." };
   }
-  const { plan, ...rest } = input as Record<string, unknown>;
+  const { plan, petFocus, ...rest } = input as Record<string, unknown>;
 
   let nextPlan = current.plan;
   if ("plan" in input) {
@@ -35,21 +71,42 @@ export function validateSettings(
     nextPlan = plan;
   }
 
-  const { plan: _plan, ...currentPrefs } = current;
+  let nextFocus = current.petFocus;
+  if ("petFocus" in input) {
+    const parsed = parsePetFocus(petFocus);
+    if (parsed === null) {
+      return {
+        ok: false,
+        field: "petFocus",
+        message:
+          'petFocus debe ser {"kind":"auto"}, {"kind":"repo","repoRoot"}, {"kind":"worktree","worktree"} o {"kind":"session","sessionId","worktree"}, con textos no vacíos.',
+      };
+    }
+    nextFocus = parsed;
+  }
+
+  const { plan: _plan, petFocus: _petFocus, ...currentPrefs } = current;
   const prefs = validateMusicPrefs(rest, currentPrefs);
   if (!prefs.ok) return prefs;
-  return { ok: true, settings: { ...prefs.prefs, plan: nextPlan } };
+  return {
+    ok: true,
+    settings: { ...prefs.prefs, plan: nextPlan, petFocus: nextFocus },
+  };
 }
 
-/** Lo que se lee de disco: nunca lanza; un `plan` inválido cae a `null`. */
+/**
+ * Lo que se lee de disco: nunca lanza; un `plan` inválido cae a `null` y un
+ * `petFocus` inválido o ausente, a `auto`.
+ */
 export function sanitizeSettings(raw: unknown): AmnisSettings {
-  const plan =
+  const source =
     typeof raw === "object" && raw !== null && !Array.isArray(raw)
-      ? (raw as Record<string, unknown>).plan
-      : null;
+      ? (raw as Record<string, unknown>)
+      : {};
   return {
     ...DEFAULT_SETTINGS,
     ...sanitizeMusicPrefs(raw),
-    plan: isKnownPlan(plan) ? plan : null,
+    plan: isKnownPlan(source.plan) ? source.plan : null,
+    petFocus: parsePetFocus(source.petFocus) ?? { kind: "auto" },
   };
 }

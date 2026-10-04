@@ -116,3 +116,16 @@ test("las preferencias están fuera de la BD: `ingest --rebuild` solo borra DB_P
   assert.notEqual(SETTINGS_PATH, DB_PATH);
   assert.equal(dirname(SETTINGS_PATH), dirname(DB_PATH));
 });
+
+test("un petFocus guardado sobrevive a 'reiniciar' (releer del disco)", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    const petFocus = {
+      kind: "session" as const,
+      sessionId: "abc",
+      worktree: "/home/x/repo-1",
+    };
+    writeSettings({ ...DEFAULT_SETTINGS, petFocus }, path);
+    assert.deepEqual(readSettings(path).petFocus, petFocus);
+  });
+});

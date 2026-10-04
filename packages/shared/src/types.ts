@@ -256,18 +256,32 @@ export const DEFAULT_MUSIC_PREFS: MusicPrefs = {
 };
 
 /**
+ * A qué mira la mascota (E10): `auto` deja que el daemon elija la sesión más
+ * reciente; el resto fija un repo, un worktree o una sesión concretos. Es una
+ * sola selección compartida por la mascota y el dashboard.
+ */
+export type PetFocus =
+  | { kind: "auto" }
+  | { kind: "repo"; repoRoot: string }
+  | { kind: "worktree"; worktree: string }
+  | { kind: "session"; sessionId: string; worktree: string };
+
+/**
  * Todos los ajustes de `~/.amnis/settings.json`: las preferencias de la capa
- * de música más el plan elegido a mano (#84). `plan` es solo el respaldo: lo
- * detectado de las credenciales de Claude siempre gana (`StateResponse.plan`).
+ * de música, el plan elegido a mano (#84) y el foco de la mascota (#108).
+ * `plan` es solo el respaldo: lo detectado de las credenciales de Claude
+ * siempre gana (`StateResponse.plan`).
  */
 export interface AmnisSettings extends MusicPrefs {
   /** Id de un plan conocido, o `null` si no se ha elegido ninguno. */
   plan: string | null;
+  petFocus: PetFocus;
 }
 
 export const DEFAULT_SETTINGS: AmnisSettings = {
   ...DEFAULT_MUSIC_PREFS,
   plan: null,
+  petFocus: { kind: "auto" },
 };
 
 /** El plan de la suscripción, ya resuelto (detectado > manual). */
