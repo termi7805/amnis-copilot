@@ -68,6 +68,9 @@ export function spawnIngest(options: { rebuild: boolean }): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: ["ignore", "ignore", "pipe"],
+      // node.exe es una app de consola: sin esto, cada ingesta lanzada desde
+      // el sidecar de Windows abre una ventana de cmd (#133).
+      windowsHide: true,
     });
     let stderr = "";
     child.stderr.on("data", (chunk: Buffer) => {

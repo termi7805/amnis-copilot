@@ -207,6 +207,17 @@ runner nativo, porque el SEA es el `node` del build y no se compila en cruzado. 
 transparente necesita `macos-private-api`, y `ActivationPolicy::Accessory` hace en macOS lo que
 `skip_taskbar` hace en Linux: que la mascota no salga en el Dock.
 
+**Windows (#133).** Tauri busca el sidecar con la extensión de la plataforma, así que el build
+lo nombra `amnis-daemon-<triple>.exe`. El `node.exe` que se copia viene firmado con
+Authenticode, y la inyección invalida esa firma: el binario arranca igual, sin firmar. Sin
+certificado de código, SmartScreen avisa la primera vez. Se empaqueta solo NSIS (`-setup.exe`),
+que instala por usuario sin administrador, y no MSI. Tauri lanza el sidecar sin consola, pero
+`node.exe` es una app de consola: sus hijos (la ingesta, `git`) se lanzan con `windowsHide` o
+cada uno abriría una ventana de cmd. El hook sigue siendo el mismo script `sh`, porque Claude
+Code ejecuta los hooks con Git Bash también en Windows. Su ruta se registra con `/`
+(`C:/Users/…`), que entienden igual msys y Windows. Solo x86_64: ARM64 necesitaría su propio
+runner, por la misma razón que en macOS.
+
 ## 7. Layout y arquitectura interna
 
 ```

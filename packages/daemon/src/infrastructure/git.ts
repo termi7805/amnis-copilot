@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { basename, dirname } from "node:path";
+import { basename, dirname, resolve } from "node:path";
 
 /**
  * `HEAD` corto del repo en `project`. `null` si `project` no es un repo
@@ -12,6 +12,8 @@ export function readCommitHash(project: string): string | null {
       cwd: project,
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
+      // Desde el sidecar de Windows, sin esto cada hook abre una consola (#133).
+      windowsHide: true,
     }).trim();
   } catch {
     return null;
@@ -57,10 +59,19 @@ function readCheckout(cwd: string): Checkout | null {
         "--git-common-dir",
         "--show-toplevel",
       ],
-      { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      {
+        cwd,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+        windowsHide: true,
+      },
     );
-    const [commonDir, worktree] = out.trim().split("\n");
-    if (!commonDir || !worktree) return null;
+    const [rawCommonDir, rawWorktree] = out.trim().split("\n");
+    if (!rawCommonDir || !rawWorktree) return null;
+    // git en Windows responde `C:/x/y` y el hook manda el `cwd` como `C:\x\y`:
+    // `resolve` deja las dos rutas con el separador de la plataforma (#133).
+    const commonDir = resolve(rawCommonDir);
+    const worktree = resolve(rawWorktree);
     // Submódulos (`.git/modules/x`) y repos bare: el padre del common dir no
     // es el repo, así que la raíz es el propio worktree.
     const repoRoot =

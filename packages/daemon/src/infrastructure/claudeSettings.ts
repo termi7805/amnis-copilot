@@ -8,9 +8,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import type {
-  ClaudeSettings,
-  RepairHooksDeps,
+import {
+  type ClaudeSettings,
+  hookCommand,
+  type RepairHooksDeps,
 } from "../application/installHooks.ts";
 import {
   AMNIS_DIR,
@@ -74,7 +75,7 @@ export function makeRepairHooksDeps(): RepairHooksDeps {
   return {
     installScript: () =>
       installHookScript(RESOURCES.hookScript, INSTALLED_HOOK_SCRIPT),
-    command: `/bin/sh '${INSTALLED_HOOK_SCRIPT}'`,
+    command: hookCommand(INSTALLED_HOOK_SCRIPT),
     read: () => readSettings(CLAUDE_SETTINGS),
     backup: () => backupSettings(CLAUDE_SETTINGS),
     write: (settings) => writeSettingsAtomic(CLAUDE_SETTINGS, settings),

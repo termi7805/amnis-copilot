@@ -128,9 +128,10 @@ export function modelFamily(id: string): string {
   return `${family.charAt(0).toUpperCase()}${family.slice(1)}`;
 }
 
+/** El último tramo de la ruta, con `/` o con `\` (cwd de Windows, #133). */
 export function projectLabel(path: string): string {
   if (path === "") return "(sin proyecto)";
-  return path.split("/").filter(Boolean).at(-1) ?? path;
+  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 }
 
 export const OTHER_MODELS = "Otros";

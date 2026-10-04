@@ -14,6 +14,10 @@
 // En macOS el `node` copiado viene firmado: se le quita la firma antes de
 // inyectar y se vuelve a firmar ad-hoc después (#130). Sin firma válida,
 // Apple Silicon mata el proceso nada más arrancar.
+//
+// En Windows (#133) el binario lleva `.exe`: Tauri busca el sidecar con la
+// extensión de la plataforma. El `node.exe` copiado viene firmado con
+// Authenticode y la inyección invalida esa firma; arranca igual, sin firmar.
 import { execFileSync } from "node:child_process";
 import {
   chmodSync,
@@ -103,7 +107,7 @@ async function makeExecutable(main: string, output: string): Promise<void> {
   if (macos) execFileSync("codesign", ["--remove-signature", output]);
   await inject(output, "NODE_SEA_BLOB", readFileSync(blobPath), {
     sentinelFuse: SENTINEL_FUSE,
-    // Mach-O guarda el blob en un segmento propio; ELF no tiene segmentos con nombre.
+    // Mach-O guarda el blob en un segmento propio; ELF y PE no lo necesitan.
     ...(macos && { machoSegmentName: "NODE_SEA" }),
   });
   if (macos) execFileSync("codesign", ["--sign", "-", output]);
@@ -124,7 +128,12 @@ function copyResources(dest: string): void {
 }
 
 const main = await bundle();
-const binary = join(TAURI_DIR, "binaries", `amnis-daemon-${targetTriple()}`);
+const exe = process.platform === "win32" ? ".exe" : "";
+const binary = join(
+  TAURI_DIR,
+  "binaries",
+  `amnis-daemon-${targetTriple()}${exe}`,
+);
 await makeExecutable(main, binary);
 copyResources(join(TAURI_DIR, "resources"));
 console.log(`SEA listo: ${binary}`);

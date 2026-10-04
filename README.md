@@ -67,11 +67,12 @@ lo desglosa por origen.
 
 ## Descarga
 
-Linux x86_64 y macOS (Apple Silicon e Intel). Última versión en
+Linux x86_64, macOS (Apple Silicon e Intel) y Windows x86_64. Última versión en
 [Releases](https://github.com/termi7805/amnis-copilot/releases/latest):
 
 | Formato | Para | Descarga |
 |---|---|---|
+| `.exe` | Windows 10 y 11 (x86_64) | [`amnis-copilot-x86_64-setup.exe`](https://github.com/termi7805/amnis-copilot/releases/latest/download/amnis-copilot-x86_64-setup.exe) |
 | `.dmg` | Mac con Apple Silicon (M1 y posteriores) | [`amnis-copilot-aarch64.dmg`](https://github.com/termi7805/amnis-copilot/releases/latest/download/amnis-copilot-aarch64.dmg) |
 | `.dmg` | Mac con Intel | [`amnis-copilot-x86_64.dmg`](https://github.com/termi7805/amnis-copilot/releases/latest/download/amnis-copilot-x86_64.dmg) |
 | AppImage | Cualquier distro Linux, sin instalar | [`amnis-copilot-x86_64.AppImage`](https://github.com/termi7805/amnis-copilot/releases/latest/download/amnis-copilot-x86_64.AppImage) |
@@ -80,6 +81,15 @@ Linux x86_64 y macOS (Apple Silicon e Intel). Última versión en
 
 **Requisitos:** Claude Code instalado y con la sesión iniciada con una suscripción (Pro o Max).
 No hace falta Node ni Rust: todo va dentro de la app.
+
+### Windows
+
+Ejecuta `amnis-copilot-x86_64-setup.exe`: instala la app para tu usuario, sin pedir permisos de
+administrador. No está firmada con un certificado de código, así que la primera vez SmartScreen
+la bloquea ("Windows protegió su PC"): pulsa **Más información → Ejecutar de todas formas**.
+
+Los hooks de Amnis son un script `sh`, igual que en Linux y macOS: Claude Code los ejecuta con
+Git Bash, que ya tienes porque Claude Code lo necesita en Windows.
 
 ### macOS
 
@@ -143,10 +153,10 @@ ajusta, o se apaga, en **Ajustes → Mascota · Música**.
 
 - **Lo que lee:** los transcripts de `~/.claude/projects/` (solo metadatos de uso: tokens, modelo,
   proyecto, hora; nunca prompts ni código) y las credenciales de Claude Code
-  (`~/.claude/.credentials.json` en Linux, el llavero en macOS).
+  (`~/.claude/.credentials.json` en Linux y Windows, el llavero en macOS).
 - **Lo que escribe:** sus hooks en `~/.claude/settings.json` (con copia de seguridad) y sus datos
-  en `~/.amnis/`. **Nunca escribe en tus credenciales de Claude Code**: si tiene que renovar el
-  token, guarda el suyo aparte.
+  en `~/.amnis/` (`%USERPROFILE%\.amnis\` en Windows). **Nunca escribe en tus credenciales de
+  Claude Code**: si tiene que renovar el token, guarda el suyo aparte.
 - **Lo que sale de tu máquina:** solo la consulta de cuota a Anthropic con tu propia sesión cada
   3 minutos y, si conectas Spotify, las llamadas a Spotify y ReccoBeats. Nada más.
 - **Todo escucha solo en `127.0.0.1`**: el dashboard no es accesible desde otras máquinas.
@@ -207,6 +217,6 @@ Sube la versión en los `package.json`, `apps/pet/src-tauri/tauri.conf.json`, `C
 git tag v0.2.0 && git push origin v0.2.0
 ```
 
-El workflow `Release` construye los paquetes de Linux y macOS y publica la release. Falla si el
-tag no coincide con la versión de `tauri.conf.json`. Lanzado a mano
+El workflow `Release` construye los paquetes de Linux, macOS y Windows y publica la release.
+Falla si el tag no coincide con la versión de `tauri.conf.json`. Lanzado a mano
 (`gh workflow run Release --ref <rama>`) compila y prueba todo sin publicar nada.

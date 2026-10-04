@@ -135,6 +135,7 @@ describe("etiquetas y actividad", () => {
     expect(modelLabel("claude-sonnet-5")).toBe("Sonnet 5");
     expect(modelLabel("")).toBe("(sin modelo)");
     expect(projectLabel("/home/x/amnis-copilot")).toBe("amnis-copilot");
+    expect(projectLabel("C:\\Users\\x\\amnis-copilot")).toBe("amnis-copilot");
     expect(projectLabel("")).toBe("(sin proyecto)");
   });
 

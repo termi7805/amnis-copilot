@@ -56,6 +56,19 @@ export function isAmnisMatcher(m: HookMatcher): boolean {
   );
 }
 
+/**
+ * El `command` que se registra para el script instalado. Claude Code lo
+ * ejecuta con `sh` también en Windows (Git Bash), pero allí la ruta llega
+ * como `C:\Users\…`: con `/` la entienden igual msys y Windows (#133).
+ */
+export function hookCommand(
+  script: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  const path = platform === "win32" ? script.replaceAll("\\", "/") : script;
+  return `/bin/sh '${path}'`;
+}
+
 /** Las entradas que Amnis registra, apuntando todas al mismo script. */
 export function amnisHookEntries(command: string): HookEntry[] {
   return EXPECTED_HOOK_EVENTS.map((event) => ({

@@ -10,6 +10,7 @@ import {
   type ClaudeSettings,
   EXPECTED_HOOK_EVENTS,
   type HookEntry,
+  hookCommand,
   mergeHooks,
   missingHookEvents,
   type RepairHooksDeps,
@@ -290,4 +291,15 @@ test("una instalación anterior (solo PreToolUse, Notification, Stop) pide los h
   assert.deepEqual(result.added, ["SessionStart", "SessionEnd"]);
   assert.equal(state.writes, 1);
   assert.deepEqual(missingHookEvents(state.settings), []);
+});
+
+test("hookCommand: en Windows la ruta del script va con / para que sh la entienda", () => {
+  assert.equal(
+    hookCommand("/home/x/.amnis/hooks/amnis-hook.sh", "linux"),
+    "/bin/sh '/home/x/.amnis/hooks/amnis-hook.sh'",
+  );
+  assert.equal(
+    hookCommand("C:\\Users\\x\\.amnis\\hooks\\amnis-hook.sh", "win32"),
+    "/bin/sh 'C:/Users/x/.amnis/hooks/amnis-hook.sh'",
+  );
 });

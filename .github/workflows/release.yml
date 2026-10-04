@@ -1,7 +1,8 @@
 name: Release
 
 # Al subir un tag `vX.Y.Z` se construyen los paquetes de la app (con el daemon
-# dentro como sidecar SEA, #41) para Linux y macOS y se publican como release.
+# dentro como sidecar SEA, #41) para Linux, macOS y Windows y se publican como
+# release.
 # Así lo que se descarga es exactamente el commit etiquetado, no un build local.
 #
 # Lanzado a mano (workflow_dispatch) compila y prueba todo sin publicar: es la
@@ -30,7 +31,14 @@ jobs:
             arch: aarch64
           - runner: macos-15-intel
             arch: x86_64
+          # Solo x86_64: ARM64 pediría su propio runner por la misma razón.
+          - runner: windows-latest
+            arch: x86_64
     runs-on: ${{ matrix.runner }}
+    # bash también en Windows (Git Bash): los mismos pasos en las tres.
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -67,20 +75,40 @@ jobs:
             exit 1
           }
 
-      # beforeBuildCommand construye la web y el SEA antes de empaquetar.
-      - run: pnpm --filter @amnis/pet build
+      # beforeBuildCommand construye la web y el SEA antes de empaquetar. En
+      # Windows solo NSIS: instala por usuario sin pedir administrador, y el
+      # MSI obligaría a bajar WiX para un paquete que no se publica (#133).
+      - name: Empaqueta la app
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            pnpm --filter @amnis/pet build --bundles nsis
+          else
+            pnpm --filter @amnis/pet build
+          fi
 
       # Como el job `sea` del CI, pero en cada plataforma de la release: en
       # macOS es lo que demuestra que la firma ad-hoc tras inyectar el blob
       # deja un binario que arranca (#130).
+      #
+      # En Windows, `node.exe` no arranca sin `SystemRoot`, `homedir()` sale
+      # de `USERPROFILE` y no de `HOME`, y las rutas se le pasan en formato
+      # Windows: el binario no es de msys y no las traduce.
       - name: Arranca el SEA sin Node y sirve estado, SPA y dashboard
         run: |
           triple=$(rustc -vV | sed -n 's/^host: //p')
           bin=apps/pet/src-tauri/binaries/amnis-daemon-$triple
           tmp=$(mktemp -d)
-          env -i "$bin" --version
-          env -i HOME="$tmp" AMNIS_DIR="$tmp/amnis" AMNIS_PORT=4747 \
-            AMNIS_RESOURCES_DIR="$PWD/apps/pet/src-tauri/resources" \
+          resources=$PWD/apps/pet/src-tauri/resources
+          keep=()
+          if [ "$RUNNER_OS" = Windows ]; then
+            bin=$bin.exe
+            tmp=$(cygpath -w "$tmp")
+            resources=$(cygpath -w "$resources")
+            keep=(SystemRoot="$SYSTEMROOT" USERPROFILE="$tmp")
+          fi
+          env -i "${keep[@]}" "$bin" --version
+          env -i "${keep[@]}" HOME="$tmp" AMNIS_DIR="$tmp/amnis" AMNIS_PORT=4747 \
+            AMNIS_RESOURCES_DIR="$resources" \
             "$bin" serve &
           for _ in $(seq 50); do
             curl -sf -o /dev/null http://127.0.0.1:4747/api/state && break
@@ -102,6 +130,8 @@ jobs:
             cp "$bundle"/appimage/*.AppImage out/amnis-copilot-x86_64.AppImage
             cp "$bundle"/deb/*.deb out/amnis-copilot-amd64.deb
             cp "$bundle"/rpm/*.rpm out/amnis-copilot-x86_64.rpm
+          elif [ "$RUNNER_OS" = Windows ]; then
+            cp "$bundle"/nsis/*-setup.exe out/amnis-copilot-x86_64-setup.exe
           else
             cp "$bundle"/dmg/*.dmg out/amnis-copilot-${{ matrix.arch }}.dmg
           fi
