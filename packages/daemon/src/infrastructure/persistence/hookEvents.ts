@@ -8,6 +8,7 @@ export interface HookEventRecord {
   toolName: string | null;
   sessionId: string | null;
   project: string | null;
+  sessionReason: string | null;
   derivedState: string;
 }
 
@@ -17,8 +18,8 @@ export function insertHookEvent(
 ): void {
   db.prepare(`
     INSERT INTO hook_events (
-      account_id, provider, ts, hook, tool_name, session_id, project, derived_state
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      account_id, provider, ts, hook, tool_name, session_id, project, session_reason, derived_state
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     event.accountId,
     event.provider,
@@ -27,6 +28,7 @@ export function insertHookEvent(
     event.toolName,
     event.sessionId,
     event.project,
+    event.sessionReason,
     event.derivedState,
   );
 }

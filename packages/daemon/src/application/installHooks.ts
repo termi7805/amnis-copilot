@@ -13,6 +13,8 @@ export const EXPECTED_HOOK_EVENTS: readonly string[] = [
   "PreToolUse",
   "Notification",
   "Stop",
+  "SessionStart",
+  "SessionEnd",
 ];
 
 interface HookCommand {

@@ -16,7 +16,7 @@ import {
  * "Equivalente al original", no solo "parecido": si un evento se queda sin
  * matchers tras quitar los de Amnis, se borra la clave del evento en vez de
  * dejar un array vacío huérfano. Recorre todos los eventos presentes, no
- * solo los tres que install-hooks instala hoy — una versión anterior pudo
+ * solo los que install-hooks instala hoy — una versión anterior pudo
  * haber registrado otro.
  */
 export function removeHooks(settings: ClaudeSettings): ClaudeSettings {

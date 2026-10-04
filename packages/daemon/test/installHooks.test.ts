@@ -6,9 +6,12 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  amnisHookEntries,
   type ClaudeSettings,
+  EXPECTED_HOOK_EVENTS,
   type HookEntry,
   mergeHooks,
+  missingHookEvents,
   type RepairHooksDeps,
   repairHooks,
 } from "../src/application/installHooks.ts";
@@ -20,7 +23,12 @@ const AMNIS_ENTRIES: HookEntry[] = [
   { event: "PreToolUse", matcher: "*", command: "/bin/sh '/x/amnis-hook.sh'" },
   { event: "Notification", command: "/bin/sh '/x/amnis-hook.sh'" },
   { event: "Stop", command: "/bin/sh '/x/amnis-hook.sh'" },
+  { event: "SessionStart", command: "/bin/sh '/x/amnis-hook.sh'" },
+  { event: "SessionEnd", command: "/bin/sh '/x/amnis-hook.sh'" },
 ];
+
+/** Lo que instalaba Amnis antes de #105. */
+const LEGACY_ENTRIES = AMNIS_ENTRIES.slice(0, 3);
 
 test("instalar sobre una configuración con Orca deja las dos conviviendo", () => {
   const settings: ClaudeSettings = {
@@ -157,7 +165,7 @@ test("amnis install-hooks copia el script a AMNIS_DIR/hooks y lo registra desde 
     const commands = Object.values(settings.hooks ?? {}).flatMap((ms) =>
       ms.flatMap((m) => m.hooks.map((h) => h.command)),
     );
-    assert.equal(commands.length, 3);
+    assert.equal(commands.length, EXPECTED_HOOK_EVENTS.length);
     for (const command of commands) {
       assert.equal(command, `/bin/sh '${installed}'`);
     }
@@ -253,11 +261,33 @@ test("repairHooks con todo instalado no escribe ni hace copia", () => {
   assert.equal(state.scripts, 1);
 });
 
-test("repairHooks sobre un settings.json vacío instala los tres eventos", () => {
+test("repairHooks sobre un settings.json vacío instala todos los eventos", () => {
   const { state, deps } = fakeRepairDeps({});
 
   const result = repairHooks(deps);
 
-  assert.deepEqual(result.added, ["PreToolUse", "Notification", "Stop"]);
+  assert.deepEqual(result.added, [...EXPECTED_HOOK_EVENTS]);
   assert.equal(state.writes, 1);
+});
+
+test("SessionStart y SessionEnd se esperan y se registran sin matcher", () => {
+  const entries = amnisHookEntries("/bin/sh '/x/amnis-hook.sh'");
+  for (const event of ["SessionStart", "SessionEnd"]) {
+    assert.ok(EXPECTED_HOOK_EVENTS.includes(event));
+    const entry = entries.find((e) => e.event === event);
+    assert.ok(entry);
+    assert.equal(entry.matcher, undefined);
+  }
+});
+
+test("una instalación anterior (solo PreToolUse, Notification, Stop) pide los hooks de sesión y repair los añade", () => {
+  const old = mergeHooks({}, LEGACY_ENTRIES);
+  assert.deepEqual(missingHookEvents(old), ["SessionStart", "SessionEnd"]);
+
+  const { state, deps } = fakeRepairDeps(old);
+  const result = repairHooks(deps);
+
+  assert.deepEqual(result.added, ["SessionStart", "SessionEnd"]);
+  assert.equal(state.writes, 1);
+  assert.deepEqual(missingHookEvents(state.settings), []);
 });

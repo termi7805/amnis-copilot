@@ -58,6 +58,15 @@ function normalizeHookEvent(raw: unknown): NormalizedHookEvent | null {
       ? ((toolInput as Record<string, unknown>).command as string)
       : null;
 
+  // Solo los hooks de sesión traen un motivo con sentido: `reason` al cerrar,
+  // `source` al abrir. Filtrar por hook evita colar campos homónimos de otros.
+  const reasonField =
+    hook === "SessionEnd"
+      ? payload.reason
+      : hook === "SessionStart"
+        ? payload.source
+        : null;
+
   return {
     provider: ID,
     hook,
@@ -70,6 +79,7 @@ function normalizeHookEvent(raw: unknown): NormalizedHookEvent | null {
         ? payload.permission_mode
         : null,
     command,
+    sessionReason: typeof reasonField === "string" ? reasonField : null,
     at: new Date().toISOString(),
   };
 }

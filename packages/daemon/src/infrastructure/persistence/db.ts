@@ -157,6 +157,14 @@ function migrate(db: DatabaseSync): void {
   if (!usageColumns.some((c) => c.name === "git_branch")) {
     db.exec("ALTER TABLE usage_events ADD COLUMN git_branch TEXT");
   }
+  // Motivo de los hooks de sesión (#105): `source` de SessionStart, `reason`
+  // de SessionEnd. hook_events no se reconstruye: la columna se añade.
+  const hookColumns = db.prepare("PRAGMA table_info(hook_events)").all() as {
+    name: string;
+  }[];
+  if (!hookColumns.some((c) => c.name === "session_reason")) {
+    db.exec("ALTER TABLE hook_events ADD COLUMN session_reason TEXT");
+  }
   // Parte de 1 h de las escrituras de caché (#73). Las filas anteriores
   // quedan en 0 (= todo a 5 min) hasta `amnis ingest --rebuild`.
   if (!usageColumns.some((c) => c.name === "cache_creation_1h_tokens")) {

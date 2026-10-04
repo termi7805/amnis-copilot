@@ -14,6 +14,9 @@ const { gatherDiagnoseFacts } = await import(
   "../src/infrastructure/doctorFacts.ts"
 );
 const { openDb } = await import("../src/infrastructure/persistence/db.ts");
+const { EXPECTED_HOOK_EVENTS } = await import(
+  "../src/application/installHooks.ts"
+);
 
 after(() => rmSync(root, { recursive: true, force: true }));
 
@@ -38,7 +41,7 @@ const deps = {
 const NOW = new Date("2026-01-02T00:00:00.000Z");
 
 test("los hooks de Amnis salen de settings.json; quitar Notification lo refleja", async () => {
-  writeHooks(["PreToolUse", "Notification", "Stop"]);
+  writeHooks([...EXPECTED_HOOK_EVENTS]);
   const full = await gatherDiagnoseFacts(deps, NOW);
   assert.deepEqual(
     [...full.amnisHookEvents].sort(),

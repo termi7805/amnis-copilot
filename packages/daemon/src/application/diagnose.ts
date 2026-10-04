@@ -27,7 +27,7 @@ export interface DiagnoseFacts {
   daemonAlive: boolean;
   /** Eventos donde hay al menos un matcher marcado como Amnis. */
   amnisHookEvents: readonly string[];
-  /** Los que `install-hooks` registra hoy: PreToolUse, Notification, Stop. */
+  /** Los que `install-hooks` registra hoy: PreToolUse, Notification, Stop, SessionStart, SessionEnd. */
   expectedHookEvents: readonly string[];
   credentials:
     | { ok: true; expiresAt: number | null; hasRefreshToken: boolean }
@@ -77,7 +77,8 @@ function checkHooks(facts: DiagnoseFacts): Check {
     name: "hooks",
     ok: false,
     message: `Faltan hooks de Amnis: ${missing.join(", ")}.`,
-    remedy: "Instálalos con `amnis install-hooks`.",
+    remedy:
+      "Instálalos o repáralos con `amnis install-hooks` o con el botón «Reparar hooks» de Ajustes.",
   };
 }
 

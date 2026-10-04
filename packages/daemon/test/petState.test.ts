@@ -18,6 +18,7 @@ function makeEvent(
     project: null,
     permissionMode: null,
     command: null,
+    sessionReason: null,
     at: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
@@ -147,4 +148,14 @@ test("sleepAfter: justo en el límite, true", () => {
   const lastEventAt = new Date("2026-01-01T00:00:00.000Z");
   const now = new Date(lastEventAt.getTime() + SLEEP_AFTER_MS);
   assert.equal(sleepAfter(lastEventAt, now), true);
+});
+
+test("SessionStart y SessionEnd no son actividad, ni siquiera en plan mode", () => {
+  for (const hook of ["SessionStart", "SessionEnd"]) {
+    assert.equal(derivePetState(makeEvent({ hook })), null);
+    assert.equal(
+      derivePetState(makeEvent({ hook, permissionMode: "plan" })),
+      null,
+    );
+  }
 });

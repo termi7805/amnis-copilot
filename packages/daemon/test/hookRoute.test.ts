@@ -21,6 +21,7 @@ async function withHookServer(
         project: null,
         permissionMode: null,
         command: null,
+        sessionReason: null,
         at: new Date().toISOString(),
       };
     },

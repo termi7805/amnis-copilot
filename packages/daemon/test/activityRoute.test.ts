@@ -48,6 +48,7 @@ function hook(
     toolName: null,
     sessionId,
     project,
+    sessionReason: null,
     derivedState,
   });
 }

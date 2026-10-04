@@ -28,6 +28,7 @@ function insert(
     toolName: overrides.toolName ?? "Edit",
     sessionId: null,
     project: overrides.project ?? null,
+    sessionReason: null,
     derivedState,
   });
 }
@@ -178,4 +179,28 @@ test("eventsBetween devuelve [from, to) de la cuenta, en orden y sin hook ni her
     "sessionId",
     "ts",
   ]);
+});
+
+test("insertHookEvent guarda session_reason y la migración añade la columna", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  insertHookEvent(db, {
+    accountId,
+    provider: "anthropic",
+    ts: "2026-01-01T00:00:00.000Z",
+    hook: "SessionEnd",
+    toolName: null,
+    sessionId: "s1",
+    project: null,
+    sessionReason: "clear",
+    derivedState: "unknown",
+  });
+
+  const row = db
+    .prepare("SELECT session_reason, derived_state FROM hook_events")
+    .get() as { session_reason: string; derived_state: string };
+  assert.deepEqual(
+    { ...row },
+    { session_reason: "clear", derived_state: "unknown" },
+  );
 });

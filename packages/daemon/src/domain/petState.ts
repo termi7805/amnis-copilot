@@ -33,6 +33,13 @@ export interface DerivedState {
 export function derivePetState(
   event: NormalizedHookEvent,
 ): DerivedState | null {
+  // Abrir o cerrar una sesión no es una actividad. Va antes que plan mode:
+  // un `SessionEnd` en plan mode trae `permission_mode: "plan"` y movería la
+  // mascota a `planning` por algo que no es trabajo.
+  if (event.hook === "SessionStart" || event.hook === "SessionEnd") {
+    return null;
+  }
+
   // Va primero porque es transversal: en plan mode también llegan
   // PreToolUse de Read, y si ganase `researching` el modo plan sería
   // invisible en la mascota.

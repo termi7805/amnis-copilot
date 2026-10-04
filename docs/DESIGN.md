@@ -376,6 +376,7 @@ renderiza lo que recibe por SSE, lo que la mantiene tonta y ligera.
 | `ExitPlanMode`/`EnterPlanMode`, o `permissionMode: plan` | `planning` |
 | `Notification` (pide permiso) | `waiting` |
 | `Stop` | `resting` |
+| `SessionStart` / `SessionEnd` | ninguno: se guardan con `source`/`reason`, `derived_state = 'unknown'` |
 | Sin eventos > N min | `sleeping` |
 
 ### Renderizado

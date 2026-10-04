@@ -7,6 +7,7 @@ export interface HookEventInput {
   toolName: string | null;
   sessionId: string | null;
   project: string | null;
+  sessionReason: string | null;
   derivedState: string;
 }
 
@@ -41,6 +42,7 @@ export function recordHook(
     toolName: event.toolName,
     sessionId: event.sessionId,
     project: event.project,
+    sessionReason: event.sessionReason,
     derivedState: deps.deriveState(event) ?? "unknown",
   });
 

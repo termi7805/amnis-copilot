@@ -349,6 +349,8 @@ export interface NormalizedHookEvent {
   project: string | null;
   permissionMode: string | null;
   command: string | null;
+  /** `reason` de `SessionEnd` o `source` de `SessionStart`; `null` en el resto. */
+  sessionReason: string | null;
   at: string;
 }
 
