@@ -1,6 +1,6 @@
 .dashboard {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: 232px minmax(0, 1fr);
   min-height: 100vh;
   font-family: var(--f-body);
   color: var(--ink);
@@ -14,8 +14,8 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1rem;
+  gap: 22px;
+  padding: 22px 16px;
   background: var(--surface);
   border-right: 1px solid var(--line);
 }
@@ -23,17 +23,28 @@
 .logo {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 10px;
+  padding: 0 6px;
   color: var(--ink);
   text-decoration: none;
-  font: 400 1.1rem / 1 var(--f-display);
+  font: 400 18px / 1 var(--f-display);
   letter-spacing: 0.04em;
+}
+
+.logo small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-3);
+  font: 500 10px / 1.4 var(--f-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .mini {
   display: block;
+  flex: none;
   width: 44px;
-  height: 33px;
+  height: 32px;
   border-radius: 6px;
   background: var(--stage);
   overflow: hidden;
@@ -49,52 +60,97 @@
 }
 
 .links a {
-  display: block;
-  padding: 0.5rem 0.7rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
   border-radius: 8px;
   color: var(--ink-2);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-weight: 500;
 }
 
-.links a {
-  position: relative;
+.links a svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.links a:hover {
+  background: var(--raised);
+  color: var(--ink);
 }
 
 .badge {
-  margin-left: 0.5rem;
-  padding: 0.15rem 0.4rem;
+  margin-left: auto;
+  padding: 3px 6px;
   border-radius: 99px;
   background: var(--warn-soft);
   color: var(--warn);
-  font: 600 0.62rem / 1 var(--f-mono);
+  font: 600 10px / 1 var(--f-mono);
 }
 
 .links a[aria-current="page"] {
   background: var(--accent-soft);
   color: var(--ink);
-  font-weight: 500;
+}
+
+.links a[aria-current="page"] svg {
+  color: var(--accent);
 }
 
 .railStatus {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-top: auto;
-  font-size: 0.75rem;
-  color: var(--ink-3);
+  font-size: 12px;
+  color: var(--ink-2);
 }
 
 .railStatus p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
+  padding: 0 6px;
+}
+
+/* Punto del estado del SSE: verde conectado, ámbar reconectando, rojo sin conexión. */
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 0 3px var(--ok-soft);
+}
+
+.dot[data-status="reconnecting"] {
+  background: var(--warn-mark);
+  box-shadow: 0 0 0 3px var(--warn-soft);
+}
+
+.dot[data-status="offline"] {
+  background: var(--crit);
+  box-shadow: 0 0 0 3px var(--crit-soft);
 }
 
 .health {
   display: block;
-  margin-top: 0.5rem;
+  padding: 0 6px;
   color: var(--crit);
 }
 
+/* El mockup v6 se diseñó a ~1300 px: sin tope, en pantallas anchas las
+   tarjetas se estiran al doble y dejan de parecerse a lo aprobado (#101). */
 .main {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1320px;
   min-width: 0;
-  padding: 1rem;
+  padding: 26px 32px 48px;
 }
 
 @media (max-width: 760px) {
@@ -127,18 +183,21 @@
   }
 
   .links a {
-    padding: 0.5rem 0.6rem;
-    font-size: 0.8rem;
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px 8px;
+    font-size: 11px;
   }
 
   .badge {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: 2px;
+    left: 50%;
     margin: 0;
+    transform: translateX(6px);
   }
 
   .main {
-    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    padding: 18px 16px calc(96px + env(safe-area-inset-bottom));
   }
 }

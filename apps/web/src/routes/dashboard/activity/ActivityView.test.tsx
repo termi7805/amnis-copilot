@@ -7,7 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import { dayKey, yesterday } from "../../../lib/activity.ts";
 import { ActivityView } from "./ActivityView.tsx";
 
@@ -144,6 +144,13 @@ describe("ActivityView", () => {
   });
 
   it("Ayer pide el día anterior y quita la marca de ahora", async () => {
+    // La línea solo abarca las horas con actividad (9–10 h en el fixture):
+    // de madrugada "ahora" cae fuera y no habría marca que quitar.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(at(9, 50)));
+    onTestFinished(() => {
+      vi.useRealTimers();
+    });
     const fetchMock = stubDaemon();
     render(<ActivityView state={null} />);
     await screen.findByTestId("now-mark");

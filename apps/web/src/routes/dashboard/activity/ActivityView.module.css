@@ -334,7 +334,7 @@
 }
 
 .cell {
-  aspect-ratio: 5 / 3;
+  aspect-ratio: 1;
   border-radius: 3px;
   background: var(--heat-0);
 }

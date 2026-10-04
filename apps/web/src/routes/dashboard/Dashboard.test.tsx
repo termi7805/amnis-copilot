@@ -137,7 +137,7 @@ describe("Dashboard", () => {
     act(() => source?.emit("hello", fakeState));
 
     expect(screen.getByTestId("connection-status")).toHaveTextContent(
-      "conectado",
+      `Daemon conectado · v${fakeState.daemon.version}`,
     );
     // El primero es la tarjeta; el segundo, la vista previa de MusicSettings.
     expect(screen.getAllByTestId("pet")[0]?.dataset.state).toBe("coding");
