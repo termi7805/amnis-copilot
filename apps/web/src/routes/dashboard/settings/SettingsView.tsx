@@ -1,4 +1,4 @@
-import type { StateResponse } from "@amnis/shared";
+import type { StateResponse, ThemeId } from "@amnis/shared";
 import type { HealthState } from "../../../api/health.ts";
 import { saveSettings } from "../../../api/settings.ts";
 import type { AmnisStream } from "../../../api/useAmnisStream.ts";
@@ -13,6 +13,8 @@ export interface SettingsViewProps {
   state: StateResponse | null;
   health: HealthState;
   rebuild: AmnisStream["rebuild"];
+  theme: ThemeId;
+  onTheme: (theme: ThemeId) => void;
 }
 
 /**
@@ -20,7 +22,13 @@ export interface SettingsViewProps {
  * navegador. La salud ocupa la columna ancha; el plan, el tema y la caché, la
  * estrecha; la música, todo el ancho.
  */
-export function SettingsView({ state, health, rebuild }: SettingsViewProps) {
+export function SettingsView({
+  state,
+  health,
+  rebuild,
+  theme,
+  onTheme,
+}: SettingsViewProps) {
   return (
     <div className={styles.view}>
       <header className={styles.pageHead}>
@@ -41,7 +49,7 @@ export function SettingsView({ state, health, rebuild }: SettingsViewProps) {
         </div>
         <div className={styles.side}>
           <PlanCard state={state} />
-          <AppearanceCard />
+          <AppearanceCard theme={theme} onTheme={onTheme} />
           <DataCard rebuild={rebuild} />
         </div>
         <div className={styles.music}>

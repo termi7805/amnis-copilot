@@ -1,7 +1,9 @@
 import {
   type AmnisSettings,
   DEFAULT_SETTINGS,
+  isThemeId,
   type PetFocus,
+  THEMES,
 } from "@amnis/shared";
 import { sanitizeMusicPrefs, validateMusicPrefs } from "./musicPrefs.ts";
 import { PLANS } from "./plans.ts";
@@ -46,7 +48,7 @@ function parsePetFocus(v: unknown): PetFocus | null {
 }
 
 /**
- * Valida un cambio de ajustes (`PUT /api/settings`): `plan` y `petFocus` aquí,
+ * Valida un cambio de ajustes (`PUT /api/settings`): `plan`, `petFocus` y `theme` aquí,
  * el resto (preferencias de música) en `validateMusicPrefs`. Acepta un
  * parcial.
  */
@@ -57,7 +59,7 @@ export function validateSettings(
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return { ok: false, field: "body", message: "El body debe ser un objeto." };
   }
-  const { plan, petFocus, ...rest } = input as Record<string, unknown>;
+  const { plan, petFocus, theme, ...rest } = input as Record<string, unknown>;
 
   let nextPlan = current.plan;
   if ("plan" in input) {
@@ -85,18 +87,40 @@ export function validateSettings(
     nextFocus = parsed;
   }
 
-  const { plan: _plan, petFocus: _petFocus, ...currentPrefs } = current;
+  let nextTheme = current.theme;
+  if ("theme" in input) {
+    if (!isThemeId(theme)) {
+      return {
+        ok: false,
+        field: "theme",
+        message: `theme debe ser uno de: ${THEMES.map((t) => t.id).join(", ")}.`,
+      };
+    }
+    nextTheme = theme;
+  }
+
+  const {
+    plan: _plan,
+    petFocus: _petFocus,
+    theme: _theme,
+    ...currentPrefs
+  } = current;
   const prefs = validateMusicPrefs(rest, currentPrefs);
   if (!prefs.ok) return prefs;
   return {
     ok: true,
-    settings: { ...prefs.prefs, plan: nextPlan, petFocus: nextFocus },
+    settings: {
+      ...prefs.prefs,
+      plan: nextPlan,
+      petFocus: nextFocus,
+      theme: nextTheme,
+    },
   };
 }
 
 /**
- * Lo que se lee de disco: nunca lanza; un `plan` inválido cae a `null` y un
- * `petFocus` inválido o ausente, a `auto`.
+ * Lo que se lee de disco: nunca lanza; un `plan` inválido cae a `null`, un
+ * `petFocus` inválido o ausente, a `auto`, y un `theme` desconocido, a `system`.
  */
 export function sanitizeSettings(raw: unknown): AmnisSettings {
   const source =
@@ -108,5 +132,6 @@ export function sanitizeSettings(raw: unknown): AmnisSettings {
     ...sanitizeMusicPrefs(raw),
     plan: isKnownPlan(source.plan) ? source.plan : null,
     petFocus: parsePetFocus(source.petFocus) ?? { kind: "auto" },
+    theme: isThemeId(source.theme) ? source.theme : "system",
   };
 }

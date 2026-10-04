@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
 import { useNow } from "../../lib/countdown.ts";
 import { Pet, PetOffline } from "../../lib/Pet/Pet.tsx";
+import { useTheme } from "../../lib/theme.ts";
 import { MediaPanel } from "./MediaPanel.tsx";
 import type { PanelId } from "./PanelHeader.tsx";
 import styles from "./PetWindow.module.css";
@@ -54,6 +55,8 @@ function readLastPanel(): OpenPanel {
 export function PetWindow() {
   const { state, status } = useAmnisStream();
   const now = useNow();
+  // Solo recibe: el tema se elige en el dashboard y llega por SSE (#121).
+  useTheme(state?.settings);
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
   const dragStarted = useRef(false);
   const contentRef = useRef<HTMLDivElement>(null);

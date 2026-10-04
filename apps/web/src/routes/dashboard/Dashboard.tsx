@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { countWarnings, useHealth } from "../../api/health.ts";
 import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
 import { Pet } from "../../lib/Pet/Pet.tsx";
+import { useTheme } from "../../lib/theme.ts";
 import { ActivityView } from "./activity/ActivityView.tsx";
 import styles from "./Dashboard.module.css";
 import { HistoryView } from "./history/HistoryView.tsx";
@@ -62,6 +63,9 @@ const VIEW_ICON: Record<View, ReactNode> = {
 export function Dashboard() {
   const { state, status, rebuild } = useAmnisStream();
   const view = useHashView();
+  // Aquí y no en Ajustes: el tema se aplica en cualquier vista, y dos
+  // instancias del hook harían dos migraciones.
+  const [theme, setTheme] = useTheme(state?.settings);
   // Cada sondeo de cuota y cada cambio del estado de Spotify (conectar,
   // desconectar) pueden cambiar un chequeo: se vuelve a pedir la salud.
   const health = useHealth(
@@ -129,7 +133,13 @@ export function Dashboard() {
         {view === "historico" && <HistoryView state={state} />}
         {view === "actividad" && <ActivityView state={state} />}
         {view === "ajustes" && (
-          <SettingsView state={state} health={health} rebuild={rebuild} />
+          <SettingsView
+            state={state}
+            health={health}
+            rebuild={rebuild}
+            theme={theme}
+            onTheme={setTheme}
+          />
         )}
       </main>
     </div>

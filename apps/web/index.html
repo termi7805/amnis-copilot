@@ -6,10 +6,11 @@
 <title>Amnis</title>
 <script>
   // Antes del primer render, o se ve un destello del tema equivocado (#80).
-  // La ventana flotante (/pet) no tiene tema oscuro todavía: siempre clara.
+  // Caché del tema del daemon (#121); cuando llegan los ajustes, gana el daemon.
+  // Los ids salen del catálogo de @amnis/shared (plugin de vite.config.ts).
   try {
-    const t = location.pathname === "/pet" ? "light" : localStorage.getItem("amnis-theme");
-    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    const t = localStorage.getItem("amnis-theme");
+    if (t !== "system" && __AMNIS_THEME_IDS__.includes(t)) document.documentElement.dataset.theme = t;
   } catch {}
 </script>
 </head>

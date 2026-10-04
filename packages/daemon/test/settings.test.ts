@@ -129,3 +129,15 @@ test("un petFocus guardado sobrevive a 'reiniciar' (releer del disco)", () => {
     assert.deepEqual(readSettings(path).petFocus, petFocus);
   });
 });
+
+test("un theme guardado sobrevive a 'reiniciar'; uno desconocido cae a system", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    writeSettings({ ...DEFAULT_SETTINGS, theme: "nord" }, path);
+    assert.equal(readSettings(path).theme, "nord");
+    writeFileSync(path, JSON.stringify({ theme: "sepia" }));
+    assert.equal(readSettings(path).theme, "system");
+    writeFileSync(path, JSON.stringify({}));
+    assert.equal(readSettings(path).theme, "system");
+  });
+});

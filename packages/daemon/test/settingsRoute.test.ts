@@ -161,3 +161,27 @@ test("PUT con un petFocus válido: guarda y avisa por SSE", async () => {
     assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
   });
 });
+
+test("PUT con un theme desconocido: 400 con la lista, sin guardar ni avisar", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ theme: "sepia" }));
+    assert.equal(res.status, 400);
+    const body = (await res.json()) as { field: string; error: string };
+    assert.equal(body.field, "theme");
+    assert.match(body.error, /catppuccin-mocha/);
+    assert.deepEqual(state.saves, []);
+    assert.deepEqual(state.events, []);
+    assert.deepEqual(state.prefs, DEFAULT_SETTINGS);
+  });
+});
+
+test("PUT con un theme del catálogo: guarda y avisa por SSE", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ theme: "tokyo-night" }));
+    assert.equal(res.status, 200);
+    const expected = { ...DEFAULT_SETTINGS, theme: "tokyo-night" };
+    assert.deepEqual(await res.json(), expected);
+    assert.deepEqual(state.saves, [expected]);
+    assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
+  });
+});

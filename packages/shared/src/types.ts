@@ -291,21 +291,62 @@ export type PetFocus =
   | { kind: "session"; sessionId: string; worktree: string };
 
 /**
+ * Catálogo de temas (#121), compartido por el validador del daemon y el
+ * selector de la web: dos listas a mano acabarían divergiendo. `scheme` es el
+ * `color-scheme` de la paleta; `system` sigue la preferencia del sistema. Los
+ * bloques CSS llegan en #123 y #124: hasta entonces un id sin bloque se ve con
+ * el claro.
+ */
+export const THEMES = [
+  { id: "system", label: "Sistema", scheme: "system" },
+  { id: "light", label: "Claro", scheme: "light" },
+  { id: "dark", label: "Oscuro", scheme: "dark" },
+  { id: "nord", label: "Nord", scheme: "dark" },
+  { id: "dracula", label: "Dracula", scheme: "dark" },
+  { id: "solarized", label: "Solarized", scheme: "dark" },
+  { id: "gruvbox", label: "Gruvbox", scheme: "dark" },
+  { id: "gruvbox-light", label: "Gruvbox claro", scheme: "light" },
+  { id: "catppuccin-mocha", label: "Catppuccin Mocha", scheme: "dark" },
+  { id: "catppuccin-latte", label: "Catppuccin Latte", scheme: "light" },
+  { id: "tokyo-night", label: "Tokyo Night", scheme: "dark" },
+  { id: "rose-pine", label: "Rosé Pine", scheme: "dark" },
+  { id: "rose-pine-dawn", label: "Rosé Pine Dawn", scheme: "light" },
+  { id: "everforest-light", label: "Everforest claro", scheme: "light" },
+  { id: "medianoche", label: "Medianoche", scheme: "dark" },
+  { id: "papel", label: "Papel", scheme: "light" },
+  { id: "niebla", label: "Niebla", scheme: "light" },
+  { id: "alto-contraste", label: "Alto contraste", scheme: "dark" },
+] as const satisfies readonly {
+  id: string;
+  label: string;
+  scheme: "light" | "dark" | "system";
+}[];
+
+export type ThemeId = (typeof THEMES)[number]["id"];
+
+export function isThemeId(v: unknown): v is ThemeId {
+  return THEMES.some((t) => t.id === v);
+}
+
+/**
  * Todos los ajustes de `~/.amnis/settings.json`: las preferencias de la capa
- * de música, el plan elegido a mano (#84) y el foco de la mascota (#108).
- * `plan` es solo el respaldo: lo detectado de las credenciales de Claude
- * siempre gana (`StateResponse.plan`).
+ * de música, el plan elegido a mano (#84), el foco de la mascota (#108) y el
+ * tema (#121). `plan` es solo el respaldo: lo detectado de las credenciales
+ * de Claude siempre gana (`StateResponse.plan`).
  */
 export interface AmnisSettings extends MusicPrefs {
   /** Id de un plan conocido, o `null` si no se ha elegido ninguno. */
   plan: string | null;
   petFocus: PetFocus;
+  /** Una sola elección para dashboard y mascota, que no comparten `localStorage`. */
+  theme: ThemeId;
 }
 
 export const DEFAULT_SETTINGS: AmnisSettings = {
   ...DEFAULT_MUSIC_PREFS,
   plan: null,
   petFocus: { kind: "auto" },
+  theme: "system",
 };
 
 /** El plan de la suscripción, ya resuelto (detectado > manual). */

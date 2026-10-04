@@ -1,15 +1,18 @@
-import { type ThemePref, useTheme } from "../../../lib/theme.ts";
+import type { ThemeId } from "@amnis/shared";
 import styles from "./SettingsView.module.css";
 
-const THEME_OPTIONS: { pref: ThemePref; label: string }[] = [
+const THEME_OPTIONS: { pref: ThemeId; label: string }[] = [
   { pref: "system", label: "Sistema" },
   { pref: "light", label: "Claro" },
   { pref: "dark", label: "Oscuro" },
 ];
 
-export function AppearanceCard() {
-  const [theme, setTheme] = useTheme();
+export interface AppearanceCardProps {
+  theme: ThemeId;
+  onTheme: (theme: ThemeId) => void;
+}
 
+export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
   return (
     <section className={styles.card} aria-labelledby="appearance-title">
       <div className={styles.cardHead}>
@@ -22,7 +25,7 @@ export function AppearanceCard() {
             key={pref}
             type="button"
             aria-pressed={theme === pref}
-            onClick={() => setTheme(pref)}
+            onClick={() => onTheme(pref)}
           >
             {label}
           </button>

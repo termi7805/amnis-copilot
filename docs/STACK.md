@@ -92,6 +92,11 @@ La preferencia plegado/desplegado va en **`localStorage`, no en SQLite**: la BD 
 que se reconstruye con `amnis ingest --rebuild`, y perder un ajuste de UI al reconstruir datos
 sería un bug difícil de atribuir.
 
+El **tema** es lo contrario (#121): va en `settings.json` del daemon, porque el navegador y la
+ventana Tauri son dos webviews sin `localStorage` común y deben ver una sola elección (por SSE,
+como `petFocus`). `localStorage` (`amnis-theme`) queda solo como caché de primer pintado para el
+script inline de `index.html`: cuando llegan los ajustes, gana el daemon.
+
 ## 4. Rutas: la API bajo `/api`
 
 El daemon sirve dos cosas por el mismo puerto, así que se separan por prefijo:
