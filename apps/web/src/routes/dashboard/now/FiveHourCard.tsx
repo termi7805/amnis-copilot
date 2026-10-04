@@ -129,7 +129,7 @@ export function FiveHourCard({
           <p className={styles.source}>
             {window.estimated
               ? `estimación local${window.provisional ? ` · provisional, ${window.provisional.windows}/${CEILING_WINDOWS_NEEDED} ventanas` : ""}${quota.error ? ` · ${quota.error}` : ""}`
-              : `del endpoint de Anthropic · hace ${formatElapsed(quota.sampledAt, now)}`}
+              : `del endpoint de Anthropic · hace ${formatElapsed(quota.sampledAt, now)}${quota.rateLimitedAt ? " · la última consulta dio 429" : ""}`}
           </p>
         </div>
         <div className={styles.side}>

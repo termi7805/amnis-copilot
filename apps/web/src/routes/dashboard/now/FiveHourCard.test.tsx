@@ -24,6 +24,7 @@ const base: QuotaSnapshot = {
   projection: { fiveHourAtReset: 62 },
   sampledAt: "2026-01-01T15:44:00Z",
   error: null,
+  rateLimitedAt: null,
 };
 const samples = [
   { at: "2026-01-01T13:30:00Z", fiveHour: 10, sevenDay: 1, local: 8 },
@@ -41,6 +42,21 @@ describe("FiveHourCard", () => {
     expect(screen.getByTestId("fact-projection")).toHaveTextContent("62 %");
     expect(screen.getByTestId("spark-projection")).toBeInTheDocument();
     expect(screen.getByTestId("mark-estimate")).toBeInTheDocument();
+  });
+
+  it("con 429 sobre un dato real: sigue siendo el real, con su antigüedad y el aviso (#116)", () => {
+    render(
+      <FiveHourCard
+        quota={{ ...base, rateLimitedAt: "2026-01-01T15:45:00Z" }}
+        samples={samples}
+        now={NOW}
+      />,
+    );
+    expect(screen.getByTestId("five-hour-value")).toHaveTextContent("34%");
+    expect(screen.getByTestId("five-hour-value")).not.toHaveTextContent("~");
+    expect(
+      screen.getByText(/hace 1 min · la última consulta dio 429/),
+    ).toBeInTheDocument();
   });
 
   it("sin endpoint: `~`, sin divergencia ni proyección", () => {

@@ -44,7 +44,7 @@ import { createUsageRoute } from "../http/routes/usage.ts";
 import { createHttpServer } from "../http/server.ts";
 import { createStaticRoute } from "../http/static.ts";
 import { spawnIngest } from "../ingestProcess.ts";
-import { createIngestRunner, type IngestRunner } from "../ingestRunner.ts";
+import { createIngestRunner } from "../ingestRunner.ts";
 import { startMediaPoller } from "../mediaPoller.ts";
 import { openBrowser } from "../openBrowser.ts";
 import { ensureAccount } from "../persistence/accounts.ts";
@@ -69,7 +69,6 @@ import { startQuotaPoller } from "../poller.ts";
 import { startPricesRefresher } from "../pricesRefresher.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { fetchPrices } from "../providers/anthropic/pricing.ts";
-import { providers } from "../providers/index.ts";
 import { fetchFeatures } from "../providers/reccobeats/features.ts";
 import { createMediaControl } from "../providers/spotify/control.ts";
 import { exchangeCode } from "../providers/spotify/oauth.ts";
@@ -102,18 +101,9 @@ function makeStateDeps(
   media: GetStateDeps["media"],
   listening: GetStateDeps["listening"],
   settings: GetStateDeps["settings"],
-  ingest: IngestRunner,
+  latestQuotas: GetStateDeps["latestQuotas"],
 ): GetStateDeps {
   const plan = () => currentPlan(settings().plan);
-  const quotaSamplers = providers.map((provider) =>
-    createQuotaSampler(
-      db,
-      accountId,
-      provider,
-      () => plan()?.id ?? null,
-      ingest.ensureFresh,
-    ),
-  );
   return {
     version: VERSION,
     startedAt,
@@ -123,7 +113,7 @@ function makeStateDeps(
       liveSessionCandidates(db, accountId, since),
     countHookEvents: () => countHookEvents(db, accountId),
     countUsageEvents: () => countUsageEvents(db, accountId),
-    sampleQuotas: () => Promise.all(quotaSamplers.map((sample) => sample())),
+    latestQuotas,
     media,
     listening,
     settings,
@@ -175,7 +165,8 @@ export function runServeCli(args: readonly string[] = []): void {
       return watcher.listening();
     },
     () => settings,
-    ingest,
+    // El poller se crea después (necesita el watcher): cierre perezoso.
+    () => poller.current().then((snapshot) => [snapshot]),
   );
 
   // Cacheadas del último poll de cuota: un `state` disparado por hooks no
@@ -235,7 +226,7 @@ export function runServeCli(args: readonly string[] = []): void {
   // poll en vivo (el CLI, que no lo tiene, sí lo hace).
   let lastQuotaError: string | null = null;
   const poller = startQuotaPoller({
-    sample,
+    sample: (previous) => sample(previous),
     onSample: (snapshot) => {
       lastQuotaError = snapshot.error;
       cachedFatigue = fatigueFrom([snapshot]);

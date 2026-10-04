@@ -136,6 +136,15 @@ test("404 degrada sin lanzar", async () => {
   assert.match(result.error ?? "", /404/);
 });
 
+test("429 se marca como rateLimited, tipado y no por el texto (#116)", async () => {
+  const fetchImpl = (() =>
+    fakeResponse(429, { error: "rate" })) as unknown as typeof fetch;
+  const result = await fetchQuota("tok", { fetchImpl });
+
+  assert.equal(result.authoritative, null);
+  assert.equal(result.rateLimited, true);
+});
+
 test("500 degrada sin lanzar", async () => {
   const fetchImpl = (async () =>
     fakeResponse(500, { error: "boom" })) as unknown as typeof fetch;
@@ -144,6 +153,7 @@ test("500 degrada sin lanzar", async () => {
 
   assert.equal(result.authoritative, null);
   assert.match(result.error ?? "", /500/);
+  assert.equal(result.rateLimited, false);
 });
 
 test("JSON con forma inesperada degrada igual, no lanza", async () => {

@@ -54,8 +54,12 @@ export interface GetStateDeps {
   liveSessionCandidates(since: Date): LiveSessionCandidate[];
   countHookEvents(): number;
   countUsageEvents(): number;
-  /** Uno por proveedor, ya con `.provider` puesto (quotaSampler.ts). */
-  sampleQuotas(): Promise<QuotaSnapshot[]>;
+  /**
+   * La última muestra de cuota de cada proveedor, ya con `.provider` puesto.
+   * Nunca sondea el endpoint: eso es cosa del poller de 180 s y del botón de
+   * recarga (#116). Antes de la primera muestra espera a la inicial.
+   */
+  latestQuotas(): Promise<QuotaSnapshot[]>;
   /** Qué suena ahora; nunca rechaza (degrada a `status: "unavailable"`). */
   media(): Promise<MediaSnapshot>;
   /** El eje `listening` ya derivado (petStateWatcher.ts). */
@@ -86,8 +90,7 @@ export function projectName(cwd: string | null): string | null {
 /**
  * Todo lo que determina `state`/`since`/`reason` sin tocar la cuota —
  * separado de `getState()` porque `petStateWatcher.ts` (#28) necesita esta
- * misma lógica para disparar un evento SSE sin pagar el poll de cuota que
- * `getState()` sí hace en cada llamada.
+ * misma lógica para disparar un evento SSE sin leer la cuota.
  *
  * `since` es `stateEnteredAt` (racha actual en el mismo estado), no `ts`
  * (último evento cualquiera) — un `PreToolUse` por herramienta reiniciaría
@@ -218,7 +221,7 @@ export async function getState(
   now: Date,
 ): Promise<StateResponse> {
   const [quotas, media] = await Promise.all([
-    deps.sampleQuotas(),
+    deps.latestQuotas(),
     deps.media(),
   ]);
   const focus = deps.focus();

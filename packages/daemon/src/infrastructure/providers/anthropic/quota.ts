@@ -184,6 +184,7 @@ export async function fetchQuota(
     return {
       authoritative: null,
       error: `Fallo de red al consultar la cuota: ${(err as Error).message}.`,
+      rateLimited: false,
     };
   }
 
@@ -191,6 +192,7 @@ export async function fetchQuota(
     return {
       authoritative: null,
       error: `El endpoint de cuota respondió ${response.status}.`,
+      rateLimited: response.status === 429,
     };
   }
 
@@ -201,6 +203,7 @@ export async function fetchQuota(
     return {
       authoritative: null,
       error: "Respuesta de cuota no es JSON válido.",
+      rateLimited: false,
     };
   }
 
@@ -209,8 +212,9 @@ export async function fetchQuota(
     return {
       authoritative: null,
       error: "Respuesta de cuota con forma inesperada.",
+      rateLimited: false,
     };
   }
 
-  return { authoritative, error: null };
+  return { authoritative, error: null, rateLimited: false };
 }

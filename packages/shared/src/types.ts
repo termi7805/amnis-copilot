@@ -141,6 +141,12 @@ export interface QuotaSnapshot {
   projection: QuotaProjection;
   sampledAt: string;
   error: string | null;
+  /**
+   * Instante del último intento que dio 429 (#116). Un 429 no es un dato nuevo:
+   * `authoritative`, si lo hay, sigue siendo el de `sampledAt`. `null` si el
+   * último intento no fue un 429.
+   */
+  rateLimitedAt: string | null;
 }
 
 /**

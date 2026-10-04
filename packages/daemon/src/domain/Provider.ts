@@ -56,6 +56,12 @@ export interface QuotaReading {
     weeklyBreakdown: WeeklyBreakdown | null;
   } | null;
   error: string | null;
+  /**
+   * El endpoint limitó la consulta (#116). Tipado aparte de `error`: un 429 no
+   * es un dato nuevo ni un fallo, es un «ahora no», y distinguirlo comparando
+   * el texto del error sería frágil.
+   */
+  rateLimited: boolean;
 }
 
 /**

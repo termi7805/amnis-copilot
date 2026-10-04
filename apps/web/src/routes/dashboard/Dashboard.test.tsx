@@ -173,6 +173,7 @@ describe("Dashboard", () => {
       projection: { fiveHourAtReset: null },
       sampledAt: "2026-01-01T00:00:00Z",
       error: "endpoint caído",
+      rateLimitedAt: null,
     };
     render(<Dashboard />);
 
@@ -228,6 +229,7 @@ describe("Dashboard", () => {
     projection: { fiveHourAtReset: null },
     sampledAt: "2026-01-01T00:00:00Z",
     error: null,
+    rateLimitedAt: null,
   };
 
   it("sin login de Spotify la tarjeta muestra su estado vacío y la cuota carga igual", async () => {

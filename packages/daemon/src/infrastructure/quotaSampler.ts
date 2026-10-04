@@ -35,8 +35,8 @@ export function createQuotaSampler(
    * CLI) se da por buena: es lo que pasaba antes de la ingesta automática.
    */
   ensureFresh: () => Promise<IngestOutcome> = () => Promise.resolve("fresh"),
-): () => Promise<QuotaSnapshot> {
-  return async (now: Date = new Date()) => {
+): (previous?: QuotaSnapshot | null) => Promise<QuotaSnapshot> {
+  return async (previous = null, now: Date = new Date()) => {
     // Antes del sondeo: el `%` real y los tokens locales deben ser del mismo
     // instante (DESIGN §2), y la ingesta es lo que lo hace cierto.
     const outcome = await ensureFresh();
@@ -76,6 +76,7 @@ export function createQuotaSampler(
           insertQuotaSample(db, { accountId, ...sample }),
       },
       now,
+      previous,
     );
     // sampleQuota() (application/) es agnóstica de proveedor; el provider
     // solo lo conoce quien cablea, aquí.

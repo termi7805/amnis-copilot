@@ -56,6 +56,7 @@ function quota(over: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
     projection: { fiveHourAtReset: 62 },
     sampledAt: NOW.toISOString(),
     error: null,
+    rateLimitedAt: null,
     ...over,
   };
 }

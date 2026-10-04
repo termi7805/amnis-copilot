@@ -21,7 +21,7 @@ function makeDeps(): GetStateDeps {
     plan: () => null,
     media: () =>
       Promise.resolve(emptyMedia("not-configured", "2026-01-01T00:00:00.000Z")),
-    sampleQuotas: () =>
+    latestQuotas: () =>
       Promise.resolve([
         {
           provider: "anthropic",
@@ -38,6 +38,7 @@ function makeDeps(): GetStateDeps {
           projection: { fiveHourAtReset: null },
           sampledAt: "2026-01-01T00:00:00.000Z",
           error: null,
+          rateLimitedAt: null,
         },
       ]),
   };

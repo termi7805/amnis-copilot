@@ -5,8 +5,9 @@ import type {
   QuotaSnapshot,
 } from "@amnis/shared";
 import { useEffect, useRef, useState } from "react";
-import { daemonUrl } from "../../api/config.ts";
+import { postAction } from "../../api/actions.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
+import { formatElapsed } from "../../lib/countdown.ts";
 import { extraLimits } from "../../lib/quotaLimits.ts";
 import { QuotaRing } from "../dashboard/QuotaRing.tsx";
 import { ActivityRow } from "./ActivityRow.tsx";
@@ -51,6 +52,9 @@ export function QuotaPanel({
   onSelectPanel,
 }: QuotaPanelProps) {
   const [refreshing, setRefreshing] = useState(false);
+  // El aviso del último intento que dio 429 (#116): los anillos conservan el
+  // dato que había y esto explica por qué no se ha actualizado.
+  const [notice, setNotice] = useState<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -65,6 +69,7 @@ export function QuotaPanel({
   useEffect(() => {
     if (prevQuotasRef.current !== quotas) {
       setRefreshing(false);
+      setNotice(null);
       clearTimeout(timeoutRef.current);
       prevQuotasRef.current = quotas;
     }
@@ -74,14 +79,18 @@ export function QuotaPanel({
 
   function handleRefresh() {
     setRefreshing(true);
-    fetch(`${daemonUrl()}/api/quota/refresh`, { method: "POST" }).catch(
-      () => {},
-    );
+    setNotice(null);
     clearTimeout(timeoutRef.current);
     timeoutRef.current = setTimeout(
       () => setRefreshing(false),
       REFRESH_TIMEOUT_MS,
     );
+    // El daemon responde al terminar el sondeo: con 429 deja de girar y avisa.
+    postAction("/api/quota/refresh").then((result) => {
+      setRefreshing(false);
+      clearTimeout(timeoutRef.current);
+      if (!result.ok) setNotice(result.message);
+    });
   }
 
   return (
@@ -142,7 +151,17 @@ export function QuotaPanel({
               </button>
             )}
           </div>
+          {i === 0 && notice && (
+            <p className={styles.error} role="status">
+              {notice}
+            </p>
+          )}
           {quota.error && <p className={styles.error}>{quota.error}</p>}
+          {quota.rateLimitedAt && quota.authoritative && (
+            <p className={styles.stale}>
+              Dato de hace {formatElapsed(quota.sampledAt, now)}
+            </p>
+          )}
           <div className={styles.rings}>
             <div className={styles.ringCell}>
               <QuotaRing

@@ -36,6 +36,7 @@ function makeQuota(overrides: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
     projection: { fiveHourAtReset: null },
     sampledAt: NOW.toISOString(),
     error: null,
+    rateLimitedAt: null,
     ...overrides,
   };
 }
@@ -49,7 +50,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     liveSessionCandidates: () => [],
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
-    sampleQuotas: () => Promise.resolve([makeQuota()]),
+    latestQuotas: () => Promise.resolve([makeQuota()]),
     media: () => Promise.resolve(emptyMedia("not-configured", STARTED_AT)),
     listening: () => null,
     settings: () => DEFAULT_SETTINGS,
@@ -145,7 +146,7 @@ test("eventsReceived y usageEvents reflejan lo que devuelven las deps", async ()
 test("quotas conserva el provider de cada entrada", async () => {
   const state = await getState(
     makeDeps({
-      sampleQuotas: () =>
+      latestQuotas: () =>
         Promise.resolve([makeQuota({ provider: "anthropic" })]),
     }),
     NOW,
@@ -158,7 +159,7 @@ test("quotas conserva el provider de cada entrada", async () => {
 test("fatiga se clampea a [0,1] aunque la utilización venga por encima de 100", async () => {
   const state = await getState(
     makeDeps({
-      sampleQuotas: () =>
+      latestQuotas: () =>
         Promise.resolve([
           makeQuota({
             authoritative: {
@@ -179,7 +180,7 @@ test("fatiga se clampea a [0,1] aunque la utilización venga por encima de 100",
 test("fatiga usa la vía local cuando no hay autoritativa", async () => {
   const state = await getState(
     makeDeps({
-      sampleQuotas: () =>
+      latestQuotas: () =>
         Promise.resolve([
           makeQuota({
             local: {
@@ -202,7 +203,7 @@ test("fatiga usa la vía local cuando no hay autoritativa", async () => {
 test("cuota autoritativa al 100%: limited gana a sleeping", async () => {
   const state = await getState(
     makeDeps({
-      sampleQuotas: () =>
+      latestQuotas: () =>
         Promise.resolve([
           makeQuota({
             authoritative: {

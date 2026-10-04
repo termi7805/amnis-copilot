@@ -75,8 +75,22 @@ export interface SampleQuotaDeps {
 export async function sampleQuota(
   deps: SampleQuotaDeps,
   now: Date,
+  /** La última muestra del poller: lo que un 429 conserva (#116). */
+  previous: ProviderlessQuotaSnapshot | null = null,
 ): Promise<ProviderlessQuotaSnapshot> {
   const reading = await deps.pollQuota();
+
+  // Un 429 no es un dato nuevo, es un «ahora no»: se conserva lo que había y
+  // no se deja fila (ensuciaría el historial y la proyección). Solo mientras
+  // su ventana siga abierta: pasado el `resets_at` ese `%` es de una ventana
+  // cerrada y enseñarlo es mentir.
+  const rateLimitedAt = reading.rateLimited ? now.toISOString() : null;
+  if (reading.rateLimited) {
+    const resets = previous?.authoritative?.fiveHour.resetsAt;
+    if (previous && resets && new Date(resets).getTime() > now.getTime()) {
+      return { ...previous, error: reading.error, rateLimitedAt };
+    }
+  }
   const authoritative = reading.authoritative;
 
   // Con endpoint el inicio es autoritativo (`resets_at − 5h`). Sin él se infiere
@@ -146,18 +160,22 @@ export async function sampleQuota(
     }
   }
 
-  deps.insertQuotaSample({
-    ts: now.toISOString(),
-    fiveHourUtil: authoritative?.fiveHour.utilization ?? null,
-    fiveHourResetsAt: authoritative?.fiveHour.resetsAt ?? null,
-    sevenDayUtil: authoritative?.sevenDay.utilization ?? null,
-    sevenDayResetsAt: authoritative?.sevenDay.resetsAt ?? null,
-    limitsJson: authoritative ? JSON.stringify(authoritative.limits) : null,
-    localTokens,
-    localUtil: localUtilization,
-    source: authoritative ? "both" : "local",
-    error: reading.error,
-  });
+  // Un 429 sin muestra vigente que conservar cae a la estimación local, pero
+  // tampoco deja fila.
+  if (!reading.rateLimited) {
+    deps.insertQuotaSample({
+      ts: now.toISOString(),
+      fiveHourUtil: authoritative?.fiveHour.utilization ?? null,
+      fiveHourResetsAt: authoritative?.fiveHour.resetsAt ?? null,
+      sevenDayUtil: authoritative?.sevenDay.utilization ?? null,
+      sevenDayResetsAt: authoritative?.sevenDay.resetsAt ?? null,
+      limitsJson: authoritative ? JSON.stringify(authoritative.limits) : null,
+      localTokens,
+      localUtil: localUtilization,
+      source: authoritative ? "both" : "local",
+      error: reading.error,
+    });
+  }
 
   return {
     authoritative,
@@ -173,5 +191,6 @@ export async function sampleQuota(
     projection: { fiveHourAtReset },
     sampledAt: now.toISOString(),
     error: reading.error,
+    rateLimitedAt,
   };
 }

@@ -29,16 +29,19 @@ const REFRESH_TIMEOUT_MS = 8_000;
 
 /**
  * Recarga manual de la cuota (#102), la misma que el panel de la mascota: el
- * daemon dispara el sondeo y responde sin esperarlo; el dato llega por SSE.
- * El botón gira hasta que cambia `sampledAt` o vence el tope.
+ * daemon sondea y responde al terminar; el dato llega por SSE. El botón gira
+ * hasta que cambia `sampledAt`, responde el daemon o vence el tope. Con 429
+ * (#116) deja de girar y avisa; los datos que había se quedan.
  */
 function RefreshButton({ sampledAt }: { sampledAt: string | null }) {
   const [refreshing, setRefreshing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: sampledAt solo dispara el fin del giro
   useEffect(() => {
     setRefreshing(false);
+    setNotice(null);
     window.clearTimeout(timer.current);
   }, [sampledAt]);
 
@@ -46,35 +49,46 @@ function RefreshButton({ sampledAt }: { sampledAt: string | null }) {
 
   async function refresh() {
     setRefreshing(true);
+    setNotice(null);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(
       () => setRefreshing(false),
       REFRESH_TIMEOUT_MS,
     );
     const result = await postAction("/api/quota/refresh");
-    if (!result.ok) setRefreshing(false);
+    // El daemon responde al terminar el sondeo: ya no hay nada que esperar.
+    setRefreshing(false);
+    window.clearTimeout(timer.current);
+    if (!result.ok) setNotice(result.message);
   }
 
   return (
-    <button
-      type="button"
-      className={styles.refresh}
-      data-refreshing={refreshing}
-      disabled={refreshing || sampledAt === null}
-      onClick={refresh}
-    >
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        aria-hidden="true"
+    <div className={styles.refreshGroup}>
+      <button
+        type="button"
+        className={styles.refresh}
+        data-refreshing={refreshing}
+        disabled={refreshing || sampledAt === null}
+        onClick={refresh}
       >
-        <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
-      </svg>
-      Actualizar cuota
-    </button>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
+        </svg>
+        Actualizar cuota
+      </button>
+      {notice && (
+        <p className={styles.refreshNotice} role="status">
+          {notice}
+        </p>
+      )}
+    </div>
   );
 }
 

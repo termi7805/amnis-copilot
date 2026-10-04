@@ -33,7 +33,9 @@ function ingestHistorical(store: UsageStore): IngestResult {
 
 async function pollQuota(): Promise<QuotaReading> {
   const result = await loadToken();
-  if (!result.ok) return { authoritative: null, error: result.message };
+  if (!result.ok) {
+    return { authoritative: null, error: result.message, rateLimited: false };
+  }
   return fetchQuota(result.token.accessToken);
 }
 

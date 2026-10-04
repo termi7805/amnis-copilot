@@ -19,7 +19,8 @@ function makeDeps(overrides: Partial<SampleQuotaDeps> = {}): {
   const saved: QuotaSampleInput[] = [];
   const savedCeilings: (CeilingWindow & { windowEnd: string })[] = [];
   const deps: SampleQuotaDeps = {
-    pollQuota: () => Promise.resolve({ authoritative: null, error: null }),
+    pollQuota: () =>
+      Promise.resolve({ authoritative: null, error: null, rateLimited: false }),
     tokensInWindow: () => 0,
     localFresh: true,
     usageTimestamps: () => [],
@@ -44,6 +45,7 @@ test("con endpoint: inicio de ventana = resets_at - 5h, divergencia = autoritati
       weeklyBreakdown: null,
     },
     error: null,
+    rateLimited: false,
   };
   const { deps, saved } = makeDeps({
     pollQuota: () => Promise.resolve(reading),
@@ -152,6 +154,7 @@ function endpointReading(utilization: number): QuotaReading {
       weeklyBreakdown: null,
     },
     error: null,
+    rateLimited: false,
   };
 }
 
@@ -279,6 +282,7 @@ test("proyección: con endpoint y muestras previas da el valor al reset; sin end
           weeklyBreakdown: null,
         },
         error: null,
+        rateLimited: false,
       }),
     fiveHourSamplesSince: () => previas,
   });
@@ -346,4 +350,80 @@ test("con 1 ventana y endpoint la divergencia sigue calculándose con el techo d
 
   assert.equal(snapshot.local.calibrated, false);
   assert.equal(snapshot.divergence, 50 - snapshot.local.fiveHourUtilization);
+});
+
+const RESETS_AT = "2026-01-01T15:00:00.000Z";
+const RATE_LIMITED: QuotaReading = {
+  authoritative: null,
+  error: "El endpoint de cuota respondió 429.",
+  rateLimited: true,
+};
+
+test("429 con muestra vigente: conserva el % real, avisa y no deja fila ni calibra (#116)", async () => {
+  const { deps, saved, savedCeilings } = makeDeps({
+    pollQuota: () => Promise.resolve(endpointReading(40)),
+    tokensInWindow: () => 22_000,
+  });
+  const before = new Date("2026-01-01T11:55:00.000Z");
+  const previous = await sampleQuota(deps, before);
+  saved.length = 0;
+  savedCeilings.length = 0;
+
+  const { deps: limited } = makeDeps({
+    pollQuota: () => Promise.resolve(RATE_LIMITED),
+    insertQuotaSample: (sample) => saved.push(sample),
+    saveWindowCeiling: (window) => savedCeilings.push(window),
+  });
+  const snapshot = await sampleQuota(limited, NOW, previous);
+
+  assert.equal(snapshot.authoritative?.fiveHour.utilization, 40);
+  assert.equal(snapshot.sampledAt, before.toISOString());
+  assert.equal(snapshot.rateLimitedAt, NOW.toISOString());
+  assert.equal(snapshot.error, RATE_LIMITED.error);
+  assert.equal(saved.length, 0);
+  assert.equal(savedCeilings.length, 0);
+});
+
+test("429 con la ventana conservada ya cerrada: se descarta y cae a la estimación local, sin fila (#116)", async () => {
+  const { deps } = makeDeps({
+    pollQuota: () => Promise.resolve(endpointReading(40)),
+  });
+  const previous = await sampleQuota(
+    deps,
+    new Date("2026-01-01T11:55:00.000Z"),
+  );
+  const { deps: limited, saved } = makeDeps({
+    pollQuota: () => Promise.resolve(RATE_LIMITED),
+  });
+  const afterReset = new Date(new Date(RESETS_AT).getTime() + 60_000);
+
+  const snapshot = await sampleQuota(limited, afterReset, previous);
+
+  assert.equal(snapshot.authoritative, null);
+  assert.equal(snapshot.sampledAt, afterReset.toISOString());
+  assert.equal(snapshot.rateLimitedAt, afterReset.toISOString());
+  assert.equal(saved.length, 0);
+});
+
+test("429 sin muestra previa: estimación local, avisa y no deja fila (#116)", async () => {
+  const { deps, saved } = makeDeps({
+    pollQuota: () => Promise.resolve(RATE_LIMITED),
+  });
+
+  const snapshot = await sampleQuota(deps, NOW, null);
+
+  assert.equal(snapshot.authoritative, null);
+  assert.equal(snapshot.rateLimitedAt, NOW.toISOString());
+  assert.equal(saved.length, 0);
+});
+
+test("sin 429, rateLimitedAt es null y la muestra se guarda (#116)", async () => {
+  const { deps, saved } = makeDeps({
+    pollQuota: () => Promise.resolve(endpointReading(40)),
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.equal(snapshot.rateLimitedAt, null);
+  assert.equal(saved.length, 1);
 });

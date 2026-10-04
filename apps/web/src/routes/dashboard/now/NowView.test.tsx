@@ -61,6 +61,7 @@ function stateWith(limits: QuotaLimit[]): StateResponse {
     projection: { fiveHourAtReset: 60 },
     sampledAt: "2026-01-04T15:00:00Z",
     error: null,
+    rateLimitedAt: null,
   };
   return {
     pet: {
@@ -284,5 +285,30 @@ describe("NowView · segunda mitad", () => {
     if (quota) quota.sampledAt = "2026-01-04T15:03:00Z";
     rerender(<NowView state={next} />);
     expect(button).toBeEnabled();
+  });
+
+  it("con 429 el botón deja de girar, avisa y los datos que había se quedan (#116)", async () => {
+    const aviso =
+      "Anthropic está limitando las consultas, prueba en unos minutos.";
+    const original = fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) =>
+        String(url).endsWith("/api/quota/refresh")
+          ? Promise.resolve(
+              new Response(JSON.stringify({ error: aviso }), { status: 429 }),
+            )
+          : original(url, init),
+      ),
+    );
+    render(<NowView state={stateWith(FIXED)} />);
+    const button = screen.getByRole("button", { name: "Actualizar cuota" });
+
+    fireEvent.click(button);
+
+    expect(await screen.findByText(aviso)).toBeInTheDocument();
+    expect(button).toBeEnabled();
+    expect(button).toHaveAttribute("data-refreshing", "false");
+    expect(screen.getByTestId("five-hour-value")).toHaveTextContent("34%");
   });
 });

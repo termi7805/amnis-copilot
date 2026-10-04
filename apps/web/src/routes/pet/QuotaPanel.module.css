@@ -85,3 +85,10 @@
   padding: 6px 14px 0;
   margin: 0;
 }
+
+.stale {
+  color: #6b6660;
+  font-size: 0.7rem;
+  padding: 2px 14px 0;
+  margin: 0;
+}

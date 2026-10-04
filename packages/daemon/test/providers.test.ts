@@ -40,7 +40,11 @@ function makeFakeProvider(): Provider {
       };
     },
     pollQuota(): Promise<QuotaReading> {
-      return Promise.resolve({ authoritative: null, error: null });
+      return Promise.resolve({
+        authoritative: null,
+        error: null,
+        rateLimited: false,
+      });
     },
     normalizeHookEvent: () => null,
   };

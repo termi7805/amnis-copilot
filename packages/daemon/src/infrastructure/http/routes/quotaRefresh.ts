@@ -1,16 +1,34 @@
+import type { QuotaSnapshot } from "@amnis/shared";
 import type { RouteHandler } from "../server.ts";
+
+export const RATE_LIMITED_MESSAGE =
+  "Anthropic está limitando las consultas, prueba en unos minutos.";
 
 /**
  * POST /api/quota/refresh — botón de recarga manual del panel de cuota.
- * `pollNow()` respeta el mismo guard de solapamiento que el intervalo de
- * 180s (poller.ts): dispara la muestra y responde, sin esperarla — el
- * dato fresco llega por el evento SSE `quota` que el poller ya
- * broadcastea al terminar, igual que cualquier otro tick.
+ * Es la excepción a propósito a «solo el poller sondea» (#116): una petición
+ * explícita del usuario. `pollNow()` espera a la muestra (o se une a la que ya
+ * va en vuelo, sin apilar otra contra el endpoint) para poder decir cómo
+ * acabó: con 429 responde el error y el botón lo enseña, y los datos que la
+ * vista ya tenía se quedan (sampleQuota.ts los conserva).
  */
-export function createQuotaRefreshRoute(pollNow: () => void): RouteHandler {
+export function createQuotaRefreshRoute(
+  pollNow: () => Promise<QuotaSnapshot>,
+): RouteHandler {
   return async ({ res }) => {
-    pollNow();
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end("{}");
+    let status = 200;
+    let body: Record<string, string> = {};
+    try {
+      const snapshot = await pollNow();
+      if (snapshot.rateLimitedAt !== null) {
+        status = 429;
+        body = { error: RATE_LIMITED_MESSAGE };
+      }
+    } catch (err) {
+      status = 500;
+      body = { error: (err as Error).message };
+    }
+    res.writeHead(status, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(body));
   };
 }

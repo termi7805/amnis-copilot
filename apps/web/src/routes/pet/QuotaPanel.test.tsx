@@ -41,6 +41,7 @@ const baseQuota: QuotaSnapshot = {
   projection: { fiveHourAtReset: null },
   sampledAt: "2026-01-01T00:00:00Z",
   error: null,
+  rateLimitedAt: null,
 };
 
 beforeEach(() => {
@@ -232,5 +233,40 @@ describe("QuotaPanel", () => {
     );
 
     expect(button).toHaveAttribute("data-refreshing", "false");
+  });
+
+  it("con 429 deja de girar, avisa y el dato anterior se queda con su antigüedad (#116)", async () => {
+    const aviso =
+      "Anthropic está limitando las consultas, prueba en unos minutos.";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ error: aviso }), { status: 429 }),
+        ),
+      ),
+    );
+    render(
+      <QuotaPanel
+        pet={basePet}
+        status="connected"
+        quotas={[
+          {
+            ...baseQuota,
+            sampledAt: "2025-12-31T23:50:00Z",
+            error: "El endpoint de cuota respondió 429.",
+            rateLimitedAt: "2026-01-01T00:00:00Z",
+          },
+        ]}
+        now={NOW}
+      />,
+    );
+    const button = screen.getByRole("button", { name: "Recargar cuota" });
+
+    fireEvent.click(button);
+
+    expect(await screen.findByText(aviso)).toBeInTheDocument();
+    expect(button).toHaveAttribute("data-refreshing", "false");
+    expect(screen.getByText("Dato de hace 10 min")).toBeInTheDocument();
   });
 });
