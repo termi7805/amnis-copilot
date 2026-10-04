@@ -34,7 +34,7 @@ dependencies = [
 
 [[package]]
 name = "amnis-pet"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "env_logger",
  "log",
