@@ -36,6 +36,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
   return {
     version: "0.0.1",
     startedAt: STARTED_AT,
+    focus: () => ({ kind: "auto" }),
     lastKnownStateEvent: () => null,
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
@@ -344,4 +345,21 @@ test("plan: el plan resuelto de deps.plan() viaja en la respuesta", async () => 
   };
   const state = await getState(makeDeps({ plan: () => plan }), NOW);
   assert.deepEqual(state.plan, plan);
+});
+
+test("getState filtra con el foco de deps.focus() y lo devuelve en el snapshot", async () => {
+  const focus = { kind: "worktree", worktree: "/r/wt" } as const;
+  const seen: unknown[] = [];
+  const deps = makeDeps({
+    focus: () => focus,
+    lastKnownStateEvent: (f) => {
+      seen.push(f);
+      return null;
+    },
+  });
+
+  const state = await getState(deps, NOW);
+
+  assert.deepEqual(seen, [focus]);
+  assert.deepEqual(state.pet.focus, focus);
 });

@@ -10,6 +10,7 @@ function makeDeps(): GetStateDeps {
   return {
     version: "0.0.1",
     startedAt: "2026-01-01T00:00:00.000Z",
+    focus: () => ({ kind: "auto" }),
     lastKnownStateEvent: () => null,
     countHookEvents: () => 0,
     countUsageEvents: () => 0,

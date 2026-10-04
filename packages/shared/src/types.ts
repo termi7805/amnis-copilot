@@ -39,6 +39,8 @@ export interface PetSnapshot {
   /** Eje ortogonal al estado: qué suena. Lo deciden Spotify y ReccoBeats, no
    * los agentes; `null` tras ~15 s sin sonar. */
   listening: Listening | null;
+  /** A qué mira la mascota: el foco con el que se calculó este estado. */
+  focus: PetFocus;
 }
 
 export interface QuotaWindow {

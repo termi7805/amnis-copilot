@@ -1,6 +1,7 @@
 import type {
   Listening,
   MediaSnapshot,
+  PetFocus,
   PetSnapshot,
   PetState,
 } from "@amnis/shared";
@@ -17,7 +18,10 @@ import {
 } from "../domain/listening.ts";
 
 export interface PetStateWatcherDeps {
-  lastKnownStateEvent(): LastKnownStateEvent | null;
+  /** Mismas dos dependencias que `GetStateDeps`: un único foco y un único
+   * filtro para `/api/state` y el SSE. */
+  focus(): PetFocus;
+  lastKnownStateEvent(focus: PetFocus): LastKnownStateEvent | null;
   startedAt: string;
   getCachedFatigue(): number;
   /** Hermano exacto de `getCachedFatigue`: cuota agotada, cacheada del
@@ -56,13 +60,15 @@ export function startPetStateWatcher(
   let lastBroadcastState: PetState | null = null;
   let lastBroadcastListening: string | null = null;
   let lastBroadcastProject: string | null = null;
+  let lastBroadcastFocus: string | null = null;
   let memory: ListeningMemory = NO_LISTENING;
   // El apagado de `listening` no lo dispara ningún evento: sin esto llegaría
   // con el intervalo de 30 s, no a los ~15 s de la pausa.
   let graceTimer: NodeJS.Timeout | null = null;
 
   function check(now: Date = new Date()): void {
-    const lastEvent = deps.lastKnownStateEvent();
+    const focus = deps.focus();
+    const lastEvent = deps.lastKnownStateEvent(focus);
     const phase = petPhaseFrom(
       lastEvent,
       deps.startedAt,
@@ -72,7 +78,11 @@ export function startPetStateWatcher(
     memory = deriveListening(memory, deps.getCachedMedia(), now);
     scheduleGrace(now);
     const listeningKey = JSON.stringify(memory.listening);
+    // El foco cuenta: al cambiarlo el estado puede ser el mismo aunque lo que
+    // se mira no lo sea, y los clientes tienen que enterarse.
+    const focusKey = JSON.stringify(focus);
     if (
+      focusKey === lastBroadcastFocus &&
       phase.state === lastBroadcastState &&
       phase.project === lastBroadcastProject &&
       listeningKey === lastBroadcastListening
@@ -82,12 +92,14 @@ export function startPetStateWatcher(
     lastBroadcastState = phase.state;
     lastBroadcastListening = listeningKey;
     lastBroadcastProject = phase.project;
+    lastBroadcastFocus = focusKey;
     deps.broadcast({
       ...phase,
       fatigue: deps.getCachedFatigue(),
       level: 1,
       commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
       listening: memory.listening,
+      focus,
     });
   }
 

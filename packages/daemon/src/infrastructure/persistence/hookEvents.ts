@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import type { PetFocus } from "@amnis/shared";
 
 export interface HookEventRecord {
   accountId: number;
@@ -38,6 +39,24 @@ export function insertHookEvent(
   );
 }
 
+/**
+ * El único sitio donde el foco se traduce a SQL (#109). `state`, `since` y
+ * `sleeping` salen de las mismas filas, así que filtrar aquí los filtra a la
+ * vez. Las columnas `repo_root` / `worktree` / `session_id` llevan índice.
+ */
+function focusFilter(focus: PetFocus): { clause: string; params: string[] } {
+  switch (focus.kind) {
+    case "auto":
+      return { clause: "", params: [] };
+    case "repo":
+      return { clause: " AND repo_root = ?", params: [focus.repoRoot] };
+    case "worktree":
+      return { clause: " AND worktree = ?", params: [focus.worktree] };
+    case "session":
+      return { clause: " AND session_id = ?", params: [focus.sessionId] };
+  }
+}
+
 export interface LastKnownStateEvent {
   hook: string;
   toolName: string | null;
@@ -70,15 +89,17 @@ export interface LastKnownStateEvent {
 export function lastKnownStateEvent(
   db: DatabaseSync,
   accountId: number,
+  focus: PetFocus,
 ): LastKnownStateEvent | null {
+  const { clause, params } = focusFilter(focus);
   const rows = db
     .prepare(`
       SELECT hook, tool_name, derived_state, ts, project FROM hook_events
-      WHERE account_id = ? AND derived_state != 'unknown'
+      WHERE account_id = ? AND derived_state != 'unknown'${clause}
       ORDER BY ts DESC
       LIMIT 500
     `)
-    .all(accountId) as Array<{
+    .all(accountId, ...params) as Array<{
     hook: string;
     tool_name: string | null;
     derived_state: string;

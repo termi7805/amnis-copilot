@@ -17,6 +17,7 @@ const pet: PetSnapshot = {
   commitHash: null,
   project: null,
   listening: null,
+  focus: { kind: "auto" },
 };
 
 const playing: MediaSnapshot = {

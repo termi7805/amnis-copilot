@@ -14,6 +14,7 @@ const basePet: PetSnapshot = {
   commitHash: null,
   project: null,
   listening: null,
+  focus: { kind: "auto" },
 };
 
 const baseQuota: QuotaSnapshot = {

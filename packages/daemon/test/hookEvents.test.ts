@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { PetFocus } from "@amnis/shared";
 import { ensureAccount } from "../src/infrastructure/persistence/accounts.ts";
 import { openDb } from "../src/infrastructure/persistence/db.ts";
 import {
@@ -10,6 +11,8 @@ import {
   recentSessions,
 } from "../src/infrastructure/persistence/hookEvents.ts";
 
+const AUTO: PetFocus = { kind: "auto" };
+
 function insert(
   db: ReturnType<typeof openDb>,
   accountId: number,
@@ -19,6 +22,9 @@ function insert(
     hook?: string;
     toolName?: string | null;
     project?: string | null;
+    sessionId?: string | null;
+    repoRoot?: string | null;
+    worktree?: string | null;
   } = {},
 ): void {
   insertHookEvent(db, {
@@ -27,11 +33,11 @@ function insert(
     ts,
     hook: overrides.hook ?? "PreToolUse",
     toolName: overrides.toolName ?? "Edit",
-    sessionId: null,
+    sessionId: overrides.sessionId ?? null,
     project: overrides.project ?? null,
     sessionReason: null,
-    repoRoot: null,
-    worktree: null,
+    repoRoot: overrides.repoRoot ?? null,
+    worktree: overrides.worktree ?? null,
     derivedState,
   });
 }
@@ -40,7 +46,7 @@ test("lastKnownStateEvent devuelve null sin eventos", () => {
   const db = openDb(":memory:");
   const accountId = ensureAccount(db, "anthropic", "default");
 
-  assert.equal(lastKnownStateEvent(db, accountId), null);
+  assert.equal(lastKnownStateEvent(db, accountId, AUTO), null);
 });
 
 test("lastKnownStateEvent ignora eventos con derived_state = unknown", () => {
@@ -52,7 +58,7 @@ test("lastKnownStateEvent ignora eventos con derived_state = unknown", () => {
     toolName: null,
   });
 
-  const last = lastKnownStateEvent(db, accountId);
+  const last = lastKnownStateEvent(db, accountId, AUTO);
 
   assert.equal(last?.derivedState, "coding");
 });
@@ -67,7 +73,7 @@ test("lastKnownStateEvent devuelve el más reciente por ts", () => {
     toolName: "Edit",
   });
 
-  const last = lastKnownStateEvent(db, accountId);
+  const last = lastKnownStateEvent(db, accountId, AUTO);
 
   assert.equal(last?.derivedState, "coding");
   assert.equal(last?.ts, "2026-01-01T00:05:00.000Z");
@@ -81,7 +87,7 @@ test("lastKnownStateEvent devuelve el project del evento — de ahí sale el cwd
     project: "/home/termi/amnis-copilot",
   });
 
-  const last = lastKnownStateEvent(db, accountId);
+  const last = lastKnownStateEvent(db, accountId, AUTO);
 
   assert.equal(last?.project, "/home/termi/amnis-copilot");
 });
@@ -99,7 +105,7 @@ test("stateEnteredAt es el primer evento de la racha, no el último — varios P
     toolName: "Edit",
   });
 
-  const last = lastKnownStateEvent(db, accountId);
+  const last = lastKnownStateEvent(db, accountId, AUTO);
 
   assert.equal(last?.ts, "2026-01-01T00:10:00.000Z");
   assert.equal(last?.stateEnteredAt, "2026-01-01T00:00:00.000Z");
@@ -118,7 +124,7 @@ test("un cambio de estado corta la racha: stateEnteredAt es el primer evento del
     toolName: "Edit",
   });
 
-  const last = lastKnownStateEvent(db, accountId);
+  const last = lastKnownStateEvent(db, accountId, AUTO);
 
   assert.equal(last?.derivedState, "coding");
   assert.equal(last?.stateEnteredAt, "2026-01-01T00:10:00.000Z");
@@ -138,7 +144,7 @@ test("un evento 'unknown' en medio no corta la racha — no cuenta como cambio d
     toolName: "Edit",
   });
 
-  const last = lastKnownStateEvent(db, accountId);
+  const last = lastKnownStateEvent(db, accountId, AUTO);
 
   assert.equal(last?.stateEnteredAt, "2026-01-01T00:00:00.000Z");
 });
@@ -265,4 +271,55 @@ test("recentSessions: una fila por sesión con inicio, fin, checkout y último e
   assert.equal(by.C?.ended, false);
   assert.equal(by.C?.lastState, null);
   db.close();
+
+test("lastKnownStateEvent filtra por repo, worktree y sesión; auto mira todo", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const at = (min: number) => `2026-01-01T00:0${min}:00.000Z`;
+  // Dos worktrees del mismo repo y una sesión suelta en otro repo.
+  insert(db, accountId, at(0), "coding", {
+    sessionId: "a",
+    repoRoot: "/r",
+    worktree: "/r",
+  });
+  insert(db, accountId, at(1), "testing", {
+    sessionId: "b",
+    repoRoot: "/r",
+    worktree: "/r-wt",
+  });
+  insert(db, accountId, at(2), "researching", {
+    sessionId: "c",
+    repoRoot: "/otro",
+    worktree: "/otro",
+  });
+  const last = (focus: PetFocus) =>
+    lastKnownStateEvent(db, accountId, focus)?.derivedState ?? null;
+
+  assert.equal(last(AUTO), "researching");
+  assert.equal(last({ kind: "repo", repoRoot: "/r" }), "testing");
+  assert.equal(last({ kind: "worktree", worktree: "/r" }), "coding");
+  assert.equal(
+    last({ kind: "session", sessionId: "b", worktree: "/r-wt" }),
+    "testing",
+  );
+  assert.equal(last({ kind: "worktree", worktree: "/no-existe" }), null);
+});
+
+test("la racha (stateEnteredAt) se calcula solo con las filas del foco", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const o = (worktree: string) => ({ worktree, repoRoot: "/r" });
+  insert(db, accountId, "2026-01-01T00:00:00.000Z", "coding", o("/x"));
+  insert(db, accountId, "2026-01-01T00:01:00.000Z", "testing", o("/y"));
+  insert(db, accountId, "2026-01-01T00:02:00.000Z", "coding", o("/x"));
+
+  const x = lastKnownStateEvent(db, accountId, {
+    kind: "worktree",
+    worktree: "/x",
+  });
+  assert.equal(x?.stateEnteredAt, "2026-01-01T00:00:00.000Z");
+  assert.equal(
+    lastKnownStateEvent(db, accountId, AUTO)?.stateEnteredAt,
+    "2026-01-01T00:02:00.000Z",
+  );
 });

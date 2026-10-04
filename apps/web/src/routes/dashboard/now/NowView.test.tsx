@@ -70,6 +70,7 @@ function stateWith(limits: QuotaLimit[]): StateResponse {
       commitHash: null,
       project: null,
       listening: null,
+      focus: { kind: "auto" },
     },
     media: {
       status: "not-configured",

@@ -110,7 +110,8 @@ function makeStateDeps(
   return {
     version: VERSION,
     startedAt,
-    lastKnownStateEvent: () => lastKnownStateEvent(db, accountId),
+    focus: () => settings().petFocus,
+    lastKnownStateEvent: (focus) => lastKnownStateEvent(db, accountId, focus),
     countHookEvents: () => countHookEvents(db, accountId),
     countUsageEvents: () => countUsageEvents(db, accountId),
     sampleQuotas: () => Promise.all(quotaSamplers.map((sample) => sample())),
@@ -173,6 +174,7 @@ export function runServeCli(args: readonly string[] = []): void {
   let cachedFatigue = 0;
   let cachedExhausted = false;
   const watcher = startPetStateWatcher({
+    focus: stateDeps.focus,
     lastKnownStateEvent: stateDeps.lastKnownStateEvent,
     startedAt,
     getCachedFatigue: () => cachedFatigue,
@@ -292,6 +294,9 @@ export function runServeCli(args: readonly string[] = []): void {
           settings = next;
           // La mascota y el dashboard las aplican en vivo, sin reiniciar.
           broadcaster.broadcast({ event: "settings", data: next });
+          // Otro foco es otro estado: el snapshot sale ya, sin esperar a un
+          // hook ni al temporizador del watcher.
+          watcher.check();
         },
       }),
       ...createMediaRoutes({

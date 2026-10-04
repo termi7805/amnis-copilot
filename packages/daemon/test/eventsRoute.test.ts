@@ -20,6 +20,7 @@ const HELLO_STATE: StateResponse = {
     commitHash: null,
     project: null,
     listening: null,
+    focus: { kind: "auto" },
   },
   quotas: [],
   media: emptyMedia("not-configured", "2026-01-01T00:00:00.000Z"),
@@ -100,6 +101,7 @@ test("GET /api/events: un broadcast posterior llega al cliente conectado", async
         commitHash: null,
         project: null,
         listening: null,
+        focus: { kind: "auto" },
       },
     };
     broadcaster.broadcast(event);

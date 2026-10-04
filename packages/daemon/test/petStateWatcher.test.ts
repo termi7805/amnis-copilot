@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { MediaSnapshot, PetSnapshot } from "@amnis/shared";
+import type { MediaSnapshot, PetFocus, PetSnapshot } from "@amnis/shared";
 import type { LastKnownStateEvent } from "../src/application/getState.ts";
 import { LISTENING_GRACE_MS } from "../src/domain/listening.ts";
 import { SLEEP_AFTER_MS } from "../src/domain/petState.ts";
@@ -9,13 +9,15 @@ import { startPetStateWatcher } from "../src/infrastructure/petStateWatcher.ts";
 const STARTED_AT = "2026-01-01T00:00:00.000Z";
 
 function makeWatcher(
-  lastEvent: () => LastKnownStateEvent | null,
+  lastEvent: (focus: PetFocus) => LastKnownStateEvent | null,
   getCachedExhausted: () => boolean = () => false,
   readCommitHash: (project: string) => string | null = () => null,
   getCachedMedia: () => MediaSnapshot | null = () => null,
+  focus: () => PetFocus = () => ({ kind: "auto" }),
 ) {
   const broadcasts: PetSnapshot[] = [];
   const watcher = startPetStateWatcher({
+    focus,
     lastKnownStateEvent: lastEvent,
     startedAt: STARTED_AT,
     getCachedFatigue: () => 0.5,
@@ -266,5 +268,44 @@ test("pausa corta no apaga listening; pausa larga sí, sin tocar state", () => {
   assert.equal(watcher.listening(), null);
   assert.equal(broadcasts.at(-1)?.listening, null);
   assert.equal(broadcasts.at(-1)?.state, "coding");
+  watcher.stop();
+});
+
+test("cambiar el foco emite un snapshot aunque el estado sea el mismo", () => {
+  let focus: PetFocus = { kind: "auto" };
+  const { watcher, broadcasts } = makeWatcher(
+    () => null,
+    () => false,
+    () => null,
+    () => null,
+    () => focus,
+  );
+  assert.equal(broadcasts.length, 1);
+
+  watcher.check();
+  assert.equal(broadcasts.length, 1);
+
+  focus = { kind: "worktree", worktree: "/r/wt" };
+  watcher.check();
+  assert.equal(broadcasts.length, 2);
+  assert.deepEqual(broadcasts[1]?.focus, focus);
+  assert.equal(broadcasts[1]?.state, "sleeping");
+  watcher.stop();
+});
+
+test("lastKnownStateEvent recibe el foco vigente", () => {
+  const seen: PetFocus[] = [];
+  const focus: PetFocus = { kind: "repo", repoRoot: "/r" };
+  const { watcher } = makeWatcher(
+    (f) => {
+      seen.push(f);
+      return null;
+    },
+    () => false,
+    () => null,
+    () => null,
+    () => focus,
+  );
+  assert.deepEqual(seen, [focus]);
   watcher.stop();
 });

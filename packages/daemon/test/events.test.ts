@@ -27,6 +27,7 @@ const EVENT: AmnisEvent = {
     commitHash: null,
     project: null,
     listening: null,
+    focus: { kind: "auto" },
   },
 };
 

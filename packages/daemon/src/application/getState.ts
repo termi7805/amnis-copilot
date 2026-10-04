@@ -2,6 +2,7 @@ import type {
   AmnisSettings,
   Listening,
   MediaSnapshot,
+  PetFocus,
   PetState,
   PlanInfo,
   QuotaSnapshot,
@@ -31,7 +32,11 @@ export interface GetStateDeps {
   version: string;
   /** ISO8601, capturado una vez al arrancar el daemon. */
   startedAt: string;
-  lastKnownStateEvent(): LastKnownStateEvent | null;
+  /** El foco vigente (`settings.petFocus`). `lastKnownStateEvent` se filtra
+   * con él: `getState` y el watcher lo leen de aquí, nunca cada uno por su
+   * cuenta, o `/api/state` y el SSE se contradirían. */
+  focus(): PetFocus;
+  lastKnownStateEvent(focus: PetFocus): LastKnownStateEvent | null;
   countHookEvents(): number;
   countUsageEvents(): number;
   /** Uno por proveedor, ya con `.provider` puesto (quotaSampler.ts). */
@@ -164,7 +169,8 @@ export async function getState(
     deps.sampleQuotas(),
     deps.media(),
   ]);
-  const lastEvent = deps.lastKnownStateEvent();
+  const focus = deps.focus();
+  const lastEvent = deps.lastKnownStateEvent(focus);
   const phase = petPhaseFrom(
     lastEvent,
     deps.startedAt,
@@ -179,6 +185,7 @@ export async function getState(
       level: 1,
       commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
       listening: deps.listening(),
+      focus,
     },
     quotas,
     media,
