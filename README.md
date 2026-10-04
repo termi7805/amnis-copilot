@@ -77,7 +77,7 @@ Sube la versión en los `package.json`, `apps/pet/src-tauri/tauri.conf.json`, `C
 `Cargo.lock` y `VERSION` de `packages/daemon/src/config.ts`; intégrala en `main` y sube el tag:
 
 ```bash
-git tag v0.3.0 && git push origin v0.3.0
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
 El workflow `Release` construye los paquetes de Linux y macOS y publica la release. Falla si el
