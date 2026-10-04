@@ -44,15 +44,12 @@ function amnisHookEvents(): string[] {
     .map(([event]) => event);
 }
 
-/** `loadToken()` refrescaría el token como efecto secundario; un
- * diagnóstico no debe cambiar lo que diagnostica. */
 function credentialsFacts(): DiagnoseFacts["credentials"] {
   const result = readCredentials();
   if (!result.ok) return { ok: false, message: result.message };
   return {
     ok: true,
     expiresAt: result.token.expiresAt,
-    hasRefreshToken: result.token.refreshToken !== null,
   };
 }
 

@@ -7,6 +7,7 @@ import {
   isTokenExpired,
   parseCredentialsJson,
   readCredentials,
+  readFreshToken,
 } from "../src/infrastructure/providers/anthropic/credentials.ts";
 
 function withTempDir(fn: (dir: string) => void): void {
@@ -18,7 +19,7 @@ function withTempDir(fn: (dir: string) => void): void {
   }
 }
 
-test("CLAUDE_CODE_OAUTH_TOKEN gana sobre el fichero, sin refreshToken/expiresAt", () => {
+test("CLAUDE_CODE_OAUTH_TOKEN gana sobre el fichero, sin expiresAt", () => {
   const result = readCredentials({
     path: "/no/deberia/leerse.json",
     env: { CLAUDE_CODE_OAUTH_TOKEN: "env-token-abc" },
@@ -28,7 +29,6 @@ test("CLAUDE_CODE_OAUTH_TOKEN gana sobre el fichero, sin refreshToken/expiresAt"
   assert.ok(result.ok);
   assert.equal(result.token.source, "env");
   assert.equal(result.token.accessToken, "env-token-abc");
-  assert.equal(result.token.refreshToken, null);
   assert.equal(result.token.expiresAt, null);
 });
 
@@ -52,7 +52,8 @@ test("fichero válido produce ok:true con los campos, incluido subscriptionType"
 
     assert.ok(result.ok);
     assert.equal(result.token.accessToken, "file-token");
-    assert.equal(result.token.refreshToken, "refresh-xyz");
+    // Amnis no refresca (#136): el refresh token ni se lee.
+    assert.ok(!("refreshToken" in result.token));
     assert.equal(result.token.expiresAt, 1893456000000);
     assert.equal(result.token.subscriptionType, "max_20x");
     assert.equal(result.token.source, "file");
@@ -101,7 +102,6 @@ test("expiresAt se conserva en epoch ms, no se convierte a ISO", () => {
 test("isTokenExpired compara epoch ms directamente", () => {
   const token = {
     accessToken: "t",
-    refreshToken: null,
     expiresAt: 1000,
     subscriptionType: null,
     rateLimitTier: null,
@@ -114,4 +114,24 @@ test("isTokenExpired compara epoch ms directamente", () => {
     isTokenExpired({ ...token, expiresAt: null }, new Date(0)),
     false,
   );
+});
+
+test("readFreshToken descarta un token caducado sin tocar la red (#136)", () => {
+  withTempDir((dir) => {
+    const path = join(dir, "credentials.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        claudeAiOauth: { accessToken: "viejo", expiresAt: 1000 },
+      }),
+    );
+    const opts = { path, env: {}, platform: "linux" as const };
+
+    const expired = readFreshToken({ ...opts, now: new Date(1000) });
+    assert.equal(!expired.ok && expired.reason, "expired");
+
+    const fresh = readFreshToken({ ...opts, now: new Date(999) });
+    assert.ok(fresh.ok);
+    assert.equal(fresh.token.accessToken, "viejo");
+  });
 });

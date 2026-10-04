@@ -30,7 +30,7 @@ export interface DiagnoseFacts {
   /** Los que `install-hooks` registra hoy: PreToolUse, Notification, Stop, SessionStart, SessionEnd. */
   expectedHookEvents: readonly string[];
   credentials:
-    | { ok: true; expiresAt: number | null; hasRefreshToken: boolean }
+    | { ok: true; expiresAt: number | null }
     | { ok: false; message: string };
   quotaError: string | null;
   dbError: string | null;
@@ -108,28 +108,36 @@ function checkToken(facts: DiagnoseFacts, now: Date): Check {
       remedy: "Ejecuta `claude login`.",
     };
   }
-  const { expiresAt, hasRefreshToken } = facts.credentials;
-  const expired = expiresAt !== null && now.getTime() >= expiresAt;
-  // Caducado con refresh token disponible no es un fallo: Amnis lo renueva
-  // solo (credentials.ts loadToken). Marcarlo ✗ sería falsa alarma en el
-  // caso normal.
-  if (!expired || hasRefreshToken) {
-    return {
-      name: "token",
-      ok: true,
-      message: "El token es válido o se renueva solo.",
-      remedy: null,
-    };
-  }
+  // Caducado no es un fallo: Amnis no refresca el token (#136) y Claude Code
+  // lo renueva en cuanto se vuelve a usar. Marcarlo ✗ sería falsa alarma
+  // tras cualquier rato sin usarlo.
   return {
     name: "token",
-    ok: false,
-    message: "El token caducó y no hay refresh token para renovarlo.",
-    remedy: "Ejecuta `claude login`.",
+    ok: true,
+    message: tokenExpired(facts, now)
+      ? "Caducado: Claude Code lo renueva en cuanto vuelvas a usarlo. Mientras, el % es una estimación local."
+      : "El token es válido.",
+    remedy: null,
   };
 }
 
-function checkEndpoint(facts: DiagnoseFacts): Check {
+function tokenExpired(facts: DiagnoseFacts, now: Date): boolean {
+  if (!facts.credentials.ok) return false;
+  const { expiresAt } = facts.credentials;
+  return expiresAt !== null && now.getTime() >= expiresAt;
+}
+
+function checkEndpoint(facts: DiagnoseFacts, now: Date): Check {
+  // Con el token caducado no se consulta: el motivo ya lo da el chequeo de
+  // token, y repetirlo aquí como fallo sería la misma falsa alarma.
+  if (tokenExpired(facts, now)) {
+    return {
+      name: "endpoint",
+      ok: true,
+      message: "Sin consultar hasta que Claude Code renueve el token.",
+      remedy: null,
+    };
+  }
   if (facts.quotaError === null) {
     return {
       name: "endpoint",
@@ -260,7 +268,7 @@ export function diagnose(facts: DiagnoseFacts, now: Date): Check[] {
     checkHooks(facts),
     checkCredentials(facts),
     checkToken(facts, now),
-    checkEndpoint(facts),
+    checkEndpoint(facts, now),
     checkDb(facts),
     checkIngest(facts, now),
     checkSpotify(facts),

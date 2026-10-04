@@ -53,8 +53,8 @@ de Claude Code).
 
 - **Endpoint OAuth** (`GET api.anthropic.com/api/oauth/usage`) — `%` autoritativo de las ventanas
   5h/7d y `resets_at`. Requiere `User-Agent` o 429 instantáneo; rate limit por access token, 180s
-  seguro. Token en `~/.claude/.credentials.json`, refresco automático, **nunca se escribe de
-  vuelta en `~/.claude/`** — Amnis solo lee estado de otra aplicación.
+  seguro. Token en `~/.claude/.credentials.json`, **solo lectura**: ni se escribe en `~/.claude/` ni
+  se refresca (lo renueva Claude Code al usarse) — Amnis solo lee estado de otra aplicación.
 - **Parseo local de JSONL** — tokens por sesión/modelo/proyecto reconstruidos de los transcripts.
   Siempre disponible, sin el `%` real.
 

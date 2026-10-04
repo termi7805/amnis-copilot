@@ -46,7 +46,6 @@ function creds(
     ok: true,
     token: {
       accessToken: "x",
-      refreshToken: null,
       expiresAt: null,
       subscriptionType,
       rateLimitTier,

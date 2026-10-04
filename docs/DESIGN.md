@@ -134,25 +134,25 @@ User-Agent: claude-code/<version>
 
 - El `User-Agent` es **obligatorio**: sin él, 429 instantáneo y persistente.
 - Intervalo seguro: **180 s**. El rate limit es por access token.
-- Token en `~/.claude/.credentials.json` (`claudeAiOauth.{accessToken,refreshToken,expiresAt}`),
-  Keychain en macOS, o `CLAUDE_CODE_OAUTH_TOKEN`.
-- El access token caduca cada ~60 min → **refresh automático es MVP**, sin él parece un bug.
+- Token en `~/.claude/.credentials.json` (`claudeAiOauth.{accessToken,expiresAt}`), Keychain en
+  macOS, o `CLAUDE_CODE_OAUTH_TOKEN`.
+- El access token caduca y **Amnis no lo refresca** (#136): Claude Code lo renueva al usarse, y
+  mientras está caducado no se consulta el endpoint y el `%` cae a la estimación local.
 - **Aislado tras la abstracción `Provider`**: si un día devuelve 404, degrada, no rompe.
 
-#### Amnis nunca escribe en el fichero de credenciales de Claude
+#### Amnis solo lee las credenciales de Claude, nunca las renueva
 
 `.credentials.json` es estado de **otra aplicación**. Amnis lo relee en cada poll —es barato— y
-solo refresca si el token está caducado *y* el fichero no se ha actualizado por su cuenta. El
-token resultante se guarda en `~/.amnis/`, jamás de vuelta en `~/.claude/`.
+usa el access token tal cual; si ha caducado, espera a que Claude Code lo renueve.
 
-La regla es asimétrica a propósito: el peor fallo de Amnis debe ser quedarse sin dato, nunca
-romperle el login a Claude Code. Un dashboard que te desloguea de la herramienta que mide es
-un producto que se desinstala.
+Hasta #136 Amnis refrescaba el token por su cuenta. Se quitó por dos motivos: exigía el client
+ID de Claude Code y acuñar tokens de la suscripción desde una aplicación ajena, y si Anthropic
+rota el `refresh_token` al usarlo, el refresco de Amnis invalidaba el de Claude Code y le cerraba
+la sesión. El peor fallo de Amnis debe ser quedarse sin dato, nunca romperle el login a Claude
+Code: un dashboard que te desloguea de la herramienta que mide es un producto que se desinstala.
 
-> ⚠️ **Riesgo asumido y sin resolver:** no sabemos si Anthropic rota el `refresh_token` al usarlo.
-> Si lo rota, que Amnis refresque invalida el que tiene Claude Code. Mitigación: refrescar solo
-> cuando de verdad haga falta (token caducado y fichero sin tocar), y si tras un refresh el
-> siguiente `401` es persistente, dejar de refrescar y degradar a estimación local.
+El coste: tras un rato sin usar Claude Code no hay `%` real hasta volver a usarlo. Es un hueco
+que ya cubre la estimación local, y coincide con cuando menos importa (no estás consumiendo).
 
 ### La ventana de 5 horas es fija, no rodante
 
@@ -462,7 +462,7 @@ esquema desde la primera línea, para que lo demás sea aditivo, no una refactor
 | Daemon + SQLite + ingesta con offsets | Sistema de XP y niveles |
 | `install-hooks` con merge no destructivo | Antigravity |
 | Máquina de estados + SSE | Multi-cuenta (OAuth propio) |
-| Poll OAuth 180 s + estimación local + refresh de token | Tail de JSONL (herramientas sin hooks) |
+| Poll OAuth 180 s + estimación local | Tail de JSONL (herramientas sin hooks) |
 | Mascota Tauri (estado + fatiga) | Sprites / arte definitivo |
 | Dashboard (5h/7d en vivo, tokens y coste por día/proyecto/modelo) | Instaladores y empaquetado |
 | `amnis doctor` | Túnel remoto |
@@ -506,7 +506,7 @@ es multi-cuenta porque es barato en el esquema y caro en el auth.
 |---|---|
 | El endpoint OAuth no está documentado ni soportado | Aislado tras `Provider`; degrada a estimación local |
 | `PreToolUse` `*` dispara muchísimo | Fire-and-forget, timeout corto, `exit 0` siempre |
-| El access token caduca cada ~60 min | Refresh automático dentro del MVP |
+| El access token caduca | Claude Code lo renueva al usarse; mientras, estimación local (#136) |
 | Wayland no soporta bien la ventana flotante | Modo degradado (ventana normal / bandeja) |
 | Fallo silencioso del daemon | La mascota muestra "desconectada"; `amnis doctor` |
 | Compilar Tauri en Linux | Requiere el paquete de desarrollo `webkit2gtk-4.1` |

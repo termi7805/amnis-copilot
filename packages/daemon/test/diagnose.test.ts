@@ -9,7 +9,7 @@ function makeFacts(overrides: Partial<DiagnoseFacts> = {}): DiagnoseFacts {
     daemonAlive: true,
     amnisHookEvents: ["PreToolUse", "Notification", "Stop"],
     expectedHookEvents: ["PreToolUse", "Notification", "Stop"],
-    credentials: { ok: true, expiresAt: null, hasRefreshToken: true },
+    credentials: { ok: true, expiresAt: null },
     quotaError: null,
     dbError: null,
     lastIngestAt: new Date("2026-01-01T23:00:00.000Z"),
@@ -89,34 +89,30 @@ test("hooks desinstalados: el chequeo falla y el remedio menciona install-hooks"
   assert.ok(check.remedy?.includes("install-hooks"));
 });
 
-test("token caducado sin refresh token: falla y el remedio menciona claude login", () => {
+test("token caducado no es un fallo: Claude Code lo renueva al usarse (#136)", () => {
   const checks = diagnose(
     makeFacts({
-      credentials: {
-        ok: true,
-        expiresAt: NOW.getTime() - 1000,
-        hasRefreshToken: false,
-      },
+      credentials: { ok: true, expiresAt: NOW.getTime() - 1000 },
+      quotaError: "El token de Claude Code caducó",
     }),
     NOW,
   );
-  const check = find(checks, "token");
-  assert.equal(check.ok, false);
-  assert.ok(check.remedy?.includes("claude login"));
+  const token = find(checks, "token");
+  assert.equal(token.ok, true);
+  assert.match(token.message, /Claude Code lo renueva/);
+  // El endpoint no se consulta con el token caducado: no es un segundo fallo.
+  assert.equal(find(checks, "endpoint").ok, true);
 });
 
-test("token caducado con refresh token disponible no es un fallo", () => {
+test("con el token vigente, un fallo del endpoint sí falla", () => {
   const checks = diagnose(
     makeFacts({
-      credentials: {
-        ok: true,
-        expiresAt: NOW.getTime() - 1000,
-        hasRefreshToken: true,
-      },
+      credentials: { ok: true, expiresAt: NOW.getTime() + 60_000 },
+      quotaError: "boom",
     }),
     NOW,
   );
-  assert.equal(find(checks, "token").ok, true);
+  assert.equal(find(checks, "endpoint").ok, false);
 });
 
 test("ingesta nunca hecha falla", () => {
@@ -251,13 +247,6 @@ test("invariante: todo chequeo que falla trae un remedio no nulo", () => {
     { daemonAlive: false },
     { amnisHookEvents: [] },
     { credentials: { ok: false, message: "x" } },
-    {
-      credentials: {
-        ok: true,
-        expiresAt: NOW.getTime() - 1,
-        hasRefreshToken: false,
-      },
-    },
     { quotaError: "boom" },
     { dbError: "boom" },
     { lastIngestAt: null },

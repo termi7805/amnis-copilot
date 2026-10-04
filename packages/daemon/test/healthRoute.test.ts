@@ -10,7 +10,7 @@ function makeFacts(overrides: Partial<DiagnoseFacts> = {}): DiagnoseFacts {
     daemonAlive: true,
     amnisHookEvents: ["PreToolUse", "Notification", "Stop"],
     expectedHookEvents: ["PreToolUse", "Notification", "Stop"],
-    credentials: { ok: true, expiresAt: null, hasRefreshToken: true },
+    credentials: { ok: true, expiresAt: null },
     quotaError: null,
     dbError: null,
     lastIngestAt: new Date(),

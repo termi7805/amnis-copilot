@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { isSea } from "node:sea";
@@ -53,8 +53,11 @@ export const DB_PATH = join(AMNIS_DIR, "amnis.sqlite");
  * migraciones.
  */
 export const SETTINGS_PATH = join(AMNIS_DIR, "settings.json");
-/** Token refrescado por Amnis. Nunca de vuelta en ~/.claude/. Permisos 0600. */
-export const TOKEN_CACHE_PATH = join(AMNIS_DIR, "token.json");
+/**
+ * Token que Amnis refrescaba hasta #136. Ya no se escribe; se borra al
+ * arrancar para no dejar en disco una credencial viva que nadie usa.
+ */
+const LEGACY_TOKEN_CACHE_PATH = join(AMNIS_DIR, "token.json");
 
 /** Client ID de Spotify, del usuario (cada uno registra su app). */
 export const SPOTIFY_CONFIG_PATH = join(AMNIS_DIR, "spotify.json");
@@ -148,4 +151,5 @@ export const PLAN_WINDOW_TOKENS: Record<string, number> = {
 
 export function ensureDirs(): void {
   mkdirSync(AMNIS_DIR, { recursive: true });
+  rmSync(LEGACY_TOKEN_CACHE_PATH, { force: true });
 }

@@ -6,7 +6,7 @@ import type {
   QuotaReading,
   UsageStore,
 } from "../../../domain/Provider.ts";
-import { loadToken } from "./credentials.ts";
+import { readFreshToken } from "./credentials.ts";
 import { fetchQuota } from "./quota.ts";
 import {
   findTranscripts,
@@ -32,7 +32,7 @@ function ingestHistorical(store: UsageStore): IngestResult {
 }
 
 async function pollQuota(): Promise<QuotaReading> {
-  const result = await loadToken();
+  const result = readFreshToken();
   if (!result.ok) {
     return { authoritative: null, error: result.message, rateLimited: false };
   }
