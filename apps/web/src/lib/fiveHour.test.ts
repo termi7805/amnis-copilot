@@ -1,6 +1,7 @@
 import type { QuotaSnapshot } from "@amnis/shared";
 import { describe, expect, it } from "vitest";
 import {
+  fiveHourExhaustion,
   fiveHourWindow,
   paceHeadline,
   paceLevel,
@@ -54,7 +55,7 @@ function quota(over: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
       provisionalUtilization: null,
     },
     divergence: 6,
-    projection: { fiveHourAtReset: 62 },
+    projection: { fiveHourAtReset: 62, fiveHourExhaustsAt: null },
     sampledAt: NOW.toISOString(),
     error: null,
     rateLimitedAt: null,
@@ -303,5 +304,59 @@ describe("sparkPoints", () => {
   it("sin endpoint dibuja la serie local", () => {
     const w = fiveHourWindow(quota({ authoritative: null }), NOW);
     expect(sparkPoints(samples, w)).toHaveLength(3);
+  });
+});
+
+describe("fiveHourExhaustion", () => {
+  const at = new Date(NOW.getTime() + 1.5 * HOUR);
+  const con = (
+    over: Partial<QuotaSnapshot["projection"]>,
+    q: Partial<QuotaSnapshot> = {},
+  ) => {
+    const quota_ = quota({
+      projection: {
+        fiveHourAtReset: 120,
+        fiveHourExhaustsAt: at.toISOString(),
+        ...over,
+      },
+      ...q,
+    });
+    return fiveHourExhaustion(quota_, fiveHourWindow(quota_, NOW));
+  };
+
+  it("se agota antes del reset: la hora", () => {
+    expect(con({})).toEqual({ kind: "at", at });
+  });
+
+  it("la hora cae después del reset: te llega al reset", () => {
+    const tarde = new Date(END.getTime() + HOUR).toISOString();
+    expect(con({ fiveHourExhaustsAt: tarde })).toEqual({ kind: "lasts" });
+  });
+
+  it("ritmo 0 (proyección sin hora): te llega al reset", () => {
+    expect(con({ fiveHourAtReset: 34, fiveHourExhaustsAt: null })).toEqual({
+      kind: "lasts",
+    });
+  });
+
+  it("sin proyección: pocas muestras", () => {
+    expect(con({ fiveHourAtReset: null, fiveHourExhaustsAt: null })).toEqual({
+      kind: "unknown",
+    });
+  });
+
+  it("uso ≥ 100 %: agotada, aunque haya hora", () => {
+    const q = withSession("high", 100);
+    q.projection = {
+      fiveHourAtReset: 200,
+      fiveHourExhaustsAt: at.toISOString(),
+    };
+    expect(fiveHourExhaustion(q, fiveHourWindow(q, NOW))).toEqual({
+      kind: "exhausted",
+    });
+  });
+
+  it("sin endpoint: oculto", () => {
+    expect(con({}, { authoritative: null })).toEqual({ kind: "hidden" });
   });
 });

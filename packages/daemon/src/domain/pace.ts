@@ -10,26 +10,31 @@ export const MIN_PACE_SPAN_MS = 10 * 60_000;
 /** La pendiente se mide sobre la última hora, no sobre toda la ventana. */
 export const PACE_LOOKBACK_MS = 60 * 60_000;
 
+interface RecentPace {
+  last: PaceSample;
+  /** `%` por ms, nunca negativa. */
+  slope: number;
+}
+
 /**
- * A qué porcentaje llegará la ventana de 5 h en su reset si el ritmo de la
- * última hora se mantiene. La ventana es fija, no rodante (DESIGN.md §2): solo
- * cuentan las muestras de `[windowStart, resetsAt]`, y la proyección se para
- * en `resetsAt`.
+ * Pendiente de la última hora, compartida por `projectAtReset` y `exhaustsAt`
+ * para que la proyección y la hora de agotarse no puedan contradecirse. La
+ * ventana es fija, no rodante (DESIGN.md §2): solo cuentan las muestras de
+ * `[windowStart, resetsAt]`.
  *
  * `null` cuando no hay ritmo que medir: menos de `MIN_PACE_SAMPLES` muestras,
  * menos de `MIN_PACE_SPAN_MS` entre la primera y la última, o la última ya en
  * el reset. Misma regla que el `~` de lo estimado: mejor ningún número que uno
  * inventado.
  *
- * Mínimos cuadrados sobre la última hora. Una pendiente negativa (el uso no
- * baja dentro de una ventana) es ruido y se toma como 0. No se recorta a 100:
- * pasar de 100 es una señal real (como `estimate()` en `localQuota.ts`).
+ * Mínimos cuadrados. Una pendiente negativa (el uso no baja dentro de una
+ * ventana) es ruido y se toma como 0.
  */
-export function projectAtReset(
+function recentPace(
   samples: readonly PaceSample[],
   windowStart: Date,
   resetsAt: Date,
-): number | null {
+): RecentPace | null {
   const inWindow = samples
     .filter((s) => s.at >= windowStart && s.at <= resetsAt)
     .sort((a, b) => a.at.getTime() - b.at.getTime());
@@ -61,7 +66,52 @@ export function projectAtReset(
     num += dx * ((ys[i] ?? 0) - meanY);
     den += dx * dx;
   }
-  const slope = den === 0 ? 0 : Math.max(0, num / den);
+  return { last, slope: den === 0 ? 0 : Math.max(0, num / den) };
+}
 
-  return last.utilization + slope * (resetsAt.getTime() - last.at.getTime());
+/**
+ * A qué porcentaje llegará la ventana de 5 h en su reset si el ritmo de la
+ * última hora se mantiene (`recentPace`). La proyección se para en
+ * `resetsAt`.
+ *
+ * No se recorta a 100: pasar de 100 es una señal real (como `estimate()` en
+ * `localQuota.ts`).
+ */
+export function projectAtReset(
+  samples: readonly PaceSample[],
+  windowStart: Date,
+  resetsAt: Date,
+): number | null {
+  const pace = recentPace(samples, windowStart, resetsAt);
+  if (!pace) return null;
+  return (
+    pace.last.utilization +
+    pace.slope * (resetsAt.getTime() - pace.last.at.getTime())
+  );
+}
+
+/**
+ * Instante en que la recta de la última hora llega al 100 %.
+ *
+ * `null` sin ritmo medible o con pendiente 0: el uso no se mueve y no hay hora
+ * que enseñar, no una hora absurda en el futuro. Con la última muestra ya en
+ * ≥ 100 devuelve esa muestra.
+ *
+ * No se recorta al reset: puede caer después de `resetsAt`, y entonces lo que
+ * cuenta es que el uso llega hasta el reset. Eso lo decide quien lo enseña.
+ * Extrapola desde la última muestra, igual que `projectAtReset`, así que la
+ * proyección pasa de 100 si y solo si esta hora cae antes del reset.
+ */
+export function exhaustsAt(
+  samples: readonly PaceSample[],
+  windowStart: Date,
+  resetsAt: Date,
+): Date | null {
+  const pace = recentPace(samples, windowStart, resetsAt);
+  if (!pace) return null;
+  if (pace.last.utilization >= 100) return pace.last.at;
+  if (pace.slope === 0) return null;
+  return new Date(
+    pace.last.at.getTime() + (100 - pace.last.utilization) / pace.slope,
+  );
 }

@@ -242,3 +242,32 @@ export function sparkPoints(
   }
   return out;
 }
+
+export type Exhaustion =
+  /** Sin endpoint: no hay ritmo real que extrapolar. */
+  | { kind: "hidden" }
+  | { kind: "exhausted" }
+  /** Pocas muestras para medir un ritmo. */
+  | { kind: "unknown" }
+  /** El uso llega al reset: ritmo 0, o el 100 % cae después de él. */
+  | { kind: "lasts" }
+  | { kind: "at"; at: Date };
+
+/**
+ * Qué decir de la hora de agotarse (#119); lo comparten la tarjeta y la
+ * mascota. El daemon no recorta la hora al reset: que el 100 % caiga después
+ * de él significa que la ventana se cierra antes, y eso se decide aquí.
+ * Ritmo 0 = hay proyección pero ninguna hora.
+ */
+export function fiveHourExhaustion(
+  quota: QuotaSnapshot,
+  window: FiveHourWindow,
+): Exhaustion {
+  if (window.estimated) return { kind: "hidden" };
+  if (window.used >= 100) return { kind: "exhausted" };
+  if (quota.projection.fiveHourAtReset === null) return { kind: "unknown" };
+  const iso = quota.projection.fiveHourExhaustsAt;
+  if (iso === null) return { kind: "lasts" };
+  const at = new Date(iso);
+  return at >= window.end ? { kind: "lasts" } : { kind: "at", at };
+}

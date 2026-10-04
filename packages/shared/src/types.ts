@@ -84,6 +84,10 @@ export interface QuotaProjection {
   /** `%` al que llegará la ventana de 5 h en su reset si sigue el ritmo de la
    * última hora. `null` con pocas muestras o sin endpoint: no se inventa. */
   fiveHourAtReset: number | null;
+  /** Instante (ISO) en que la ventana de 5 h llega al 100 % al ritmo de la
+   * última hora. Puede caer después del reset: entonces el uso llega hasta él.
+   * `null` sin ritmo medible o con ritmo 0. */
+  fiveHourExhaustsAt: string | null;
 }
 
 /** `GET /api/quota/history`: la serie de `quota_samples`. */

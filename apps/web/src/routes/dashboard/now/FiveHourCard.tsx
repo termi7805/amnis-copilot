@@ -3,6 +3,7 @@ import { formatElapsed, formatUntil } from "../../../lib/countdown.ts";
 import {
   CEILING_WINDOWS_NEEDED,
   type FiveHourWindow,
+  fiveHourExhaustion,
   fiveHourWindow,
   SPARK_H,
   SPARK_W,
@@ -105,6 +106,7 @@ export function FiveHourCard({
   const calibrated = quota.local.calibrated;
   const projection = quota.projection.fiveHourAtReset;
   const divergence = quota.divergence;
+  const exhaustion = fiveHourExhaustion(quota, window);
 
   return (
     <article className={styles.card}>
@@ -241,6 +243,27 @@ export function FiveHourCard({
                 {projection === null
                   ? "pocas muestras aún"
                   : "al ritmo de la última hora"}
+              </div>
+            </div>
+            <div className={styles.fact} data-testid="fact-exhausts">
+              <div className={styles.k}>Se agota</div>
+              <div className={styles.v}>
+                {exhaustion.kind === "at"
+                  ? HHMM.format(exhaustion.at)
+                  : exhaustion.kind === "lasts"
+                    ? "te llega al reset"
+                    : exhaustion.kind === "exhausted"
+                      ? "agotada"
+                      : "—"}
+              </div>
+              <div className={styles.d}>
+                {exhaustion.kind === "at"
+                  ? `en ${formatUntil(exhaustion.at.toISOString(), now)}`
+                  : exhaustion.kind === "lasts"
+                    ? "al ritmo de la última hora"
+                    : exhaustion.kind === "unknown"
+                      ? "pocas muestras aún"
+                      : ""}
               </div>
             </div>
           </>

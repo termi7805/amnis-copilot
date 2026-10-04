@@ -31,7 +31,7 @@ const SNAPSHOT: QuotaSnapshot = {
     provisionalUtilization: null,
   },
   divergence: null,
-  projection: { fiveHourAtReset: null },
+  projection: { fiveHourAtReset: null, fiveHourExhaustsAt: null },
   sampledAt: "2026-01-01T00:00:00.000Z",
   error: null,
   rateLimitedAt: null,

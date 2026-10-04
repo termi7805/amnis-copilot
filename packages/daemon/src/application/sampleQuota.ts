@@ -13,7 +13,7 @@ import {
   windowStart,
 } from "../domain/localQuota.ts";
 import type { QuotaReading } from "../domain/Provider.ts";
-import { type PaceSample, projectAtReset } from "../domain/pace.ts";
+import { exhaustsAt, type PaceSample, projectAtReset } from "../domain/pace.ts";
 
 /**
  * `sampleQuota` es agnóstica de proveedor: no sabe qué `Provider` la llamó.
@@ -124,6 +124,7 @@ export async function sampleQuota(
 
   let divergence: number | null = null;
   let fiveHourAtReset: number | null = null;
+  let fiveHourExhaustsAt: string | null = null;
   if (authoritative) {
     divergence = authoritative.fiveHour.utilization - localUtilization;
 
@@ -149,14 +150,13 @@ export async function sampleQuota(
     if (resets) {
       const resetsAt = new Date(resets);
       const start = new Date(resetsAt.getTime() - FIVE_HOUR_MS);
-      fiveHourAtReset = projectAtReset(
-        [
-          ...deps.fiveHourSamplesSince(start),
-          { at: now, utilization: authoritative.fiveHour.utilization },
-        ],
-        start,
-        resetsAt,
-      );
+      const paceSamples = [
+        ...deps.fiveHourSamplesSince(start),
+        { at: now, utilization: authoritative.fiveHour.utilization },
+      ];
+      fiveHourAtReset = projectAtReset(paceSamples, start, resetsAt);
+      fiveHourExhaustsAt =
+        exhaustsAt(paceSamples, start, resetsAt)?.toISOString() ?? null;
     }
   }
 
@@ -188,7 +188,7 @@ export async function sampleQuota(
       provisionalUtilization,
     },
     divergence,
-    projection: { fiveHourAtReset },
+    projection: { fiveHourAtReset, fiveHourExhaustsAt },
     sampledAt: now.toISOString(),
     error: reading.error,
     rateLimitedAt,

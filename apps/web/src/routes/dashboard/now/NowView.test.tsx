@@ -58,7 +58,7 @@ function stateWith(limits: QuotaLimit[]): StateResponse {
       provisionalUtilization: null,
     },
     divergence: 4,
-    projection: { fiveHourAtReset: 60 },
+    projection: { fiveHourAtReset: 60, fiveHourExhaustsAt: null },
     sampledAt: "2026-01-04T15:00:00Z",
     error: null,
     rateLimitedAt: null,

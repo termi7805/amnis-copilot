@@ -33,7 +33,7 @@ function makeQuota(overrides: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
       provisionalUtilization: null,
     },
     divergence: null,
-    projection: { fiveHourAtReset: null },
+    projection: { fiveHourAtReset: null, fiveHourExhaustsAt: null },
     sampledAt: NOW.toISOString(),
     error: null,
     rateLimitedAt: null,

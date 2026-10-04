@@ -289,10 +289,18 @@ test("proyección: con endpoint y muestras previas da el valor al reset; sin end
   const con = await sampleQuota(deps, new Date("2026-01-01T12:00:00.000Z"));
   const value = con.projection.fiveHourAtReset;
   assert.ok(value !== null && Math.abs(value - 50) < 1e-6);
+  // 10 %/h desde el 20 % de las 12:00: el 100 % llega 8 h después, tras el reset.
+  const agota = con.projection.fiveHourExhaustsAt;
+  assert.ok(
+    agota !== null &&
+      new Date(agota).getTime() ===
+        new Date("2026-01-01T20:00:00.000Z").getTime(),
+  );
 
   const { deps: sinEndpoint } = makeDeps();
   const sin = await sampleQuota(sinEndpoint, NOW);
   assert.equal(sin.projection.fiveHourAtReset, null);
+  assert.equal(sin.projection.fiveHourExhaustsAt, null);
 });
 
 test("con 1 ventana cerrada el % provisional sale de su techo y calibrated sigue en false (#117)", async () => {

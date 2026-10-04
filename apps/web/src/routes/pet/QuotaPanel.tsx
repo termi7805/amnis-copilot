@@ -7,7 +7,8 @@ import type {
 import { useEffect, useRef, useState } from "react";
 import { postAction } from "../../api/actions.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
-import { formatElapsed } from "../../lib/countdown.ts";
+import { formatElapsed, formatUntil } from "../../lib/countdown.ts";
+import { fiveHourExhaustion, fiveHourWindow } from "../../lib/fiveHour.ts";
 import { extraLimits } from "../../lib/quotaLimits.ts";
 import { QuotaRing } from "../dashboard/QuotaRing.tsx";
 import { ActivityRow } from "./ActivityRow.tsx";
@@ -22,6 +23,11 @@ const PROVIDER_LABEL: Record<ProviderId, string> = {
 };
 
 const RING_SIZE = 54;
+
+const HHMM = new Intl.DateTimeFormat("es-ES", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 /** Si no llega un `quota` fresco por SSE en este tiempo (endpoint caído,
  * 429, offline), el icono deja de girar solo — un fallo de red no debe
@@ -111,87 +117,78 @@ export function QuotaPanel({
         musicPrefs={musicPrefs}
       />
 
-      {quotas.map((quota, i) => (
-        <section key={quota.provider} className={styles.provider}>
-          <div className={styles.providerRow}>
-            <h2 className={styles.providerLabel}>
-              {PROVIDER_LABEL[quota.provider]}
-            </h2>
-            {i === 0 && (
-              <button
-                type="button"
-                className={styles.refreshButton}
-                data-refreshing={refreshing}
-                onClick={handleRefresh}
-                // La ventana entera alterna plegado/desplegado con el
-                // mismo gesto de clic (PetWindow.tsx) — sin cortar la
-                // propagación aquí, pulsar este botón también dispara
-                // ese toggle y el panel se plegaba solo al recargar.
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-                disabled={refreshing}
-                aria-label="Recargar cuota"
-                title="Recargar cuota"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  width="11"
-                  height="11"
-                  fill="none"
-                  aria-hidden="true"
+      {quotas.map((quota, i) => {
+        // La mascota solo avisa cuando se agota antes del reset (#119).
+        const exhaustion = fiveHourExhaustion(
+          quota,
+          fiveHourWindow(quota, now),
+        );
+        return (
+          <section key={quota.provider} className={styles.provider}>
+            <div className={styles.providerRow}>
+              <h2 className={styles.providerLabel}>
+                {PROVIDER_LABEL[quota.provider]}
+              </h2>
+              {i === 0 && (
+                <button
+                  type="button"
+                  className={styles.refreshButton}
+                  data-refreshing={refreshing}
+                  onClick={handleRefresh}
+                  // La ventana entera alterna plegado/desplegado con el
+                  // mismo gesto de clic (PetWindow.tsx) — sin cortar la
+                  // propagación aquí, pulsar este botón también dispara
+                  // ese toggle y el panel se plegaba solo al recargar.
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerUp={(e) => e.stopPropagation()}
+                  disabled={refreshing}
+                  aria-label="Recargar cuota"
+                  title="Recargar cuota"
                 >
-                  <path
-                    d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="11"
+                    height="11"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M20 11a8 8 0 1 0-2.34 5.66M20 5v6h-6"
+                      stroke="currentColor"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              )}
+            </div>
+            {i === 0 && notice && (
+              <p className={styles.error} role="status">
+                {notice}
+              </p>
             )}
-          </div>
-          {i === 0 && notice && (
-            <p className={styles.error} role="status">
-              {notice}
-            </p>
-          )}
-          {quota.error && <p className={styles.error}>{quota.error}</p>}
-          {quota.rateLimitedAt && quota.authoritative && (
-            <p className={styles.stale}>
-              Dato de hace {formatElapsed(quota.sampledAt, now)}
-            </p>
-          )}
-          <div className={styles.rings}>
-            <div className={styles.ringCell}>
-              <QuotaRing
-                label="5h"
-                authoritative={quota.authoritative?.fiveHour ?? null}
-                estimated={quota.local.fiveHourUtilization}
-                now={now}
-                size={RING_SIZE}
-                layout="row"
-              />
-            </div>
-            <div className={styles.ringCell}>
-              <QuotaRing
-                label="7d"
-                authoritative={quota.authoritative?.sevenDay ?? null}
-                estimated={null}
-                now={now}
-                size={RING_SIZE}
-                layout="row"
-                tone="muted"
-              />
-            </div>
-            {extraLimits(quota.authoritative?.limits ?? []).map((limit) => (
-              <div
-                key={`${limit.kind}:${limit.scope ?? ""}`}
-                className={styles.ringCell}
-              >
+            {quota.error && <p className={styles.error}>{quota.error}</p>}
+            {quota.rateLimitedAt && quota.authoritative && (
+              <p className={styles.stale}>
+                Dato de hace {formatElapsed(quota.sampledAt, now)}
+              </p>
+            )}
+            <div className={styles.rings}>
+              <div className={styles.ringCell}>
                 <QuotaRing
-                  label={limit.label}
-                  authoritative={limit}
+                  label="5h"
+                  authoritative={quota.authoritative?.fiveHour ?? null}
+                  estimated={quota.local.fiveHourUtilization}
+                  now={now}
+                  size={RING_SIZE}
+                  layout="row"
+                />
+              </div>
+              <div className={styles.ringCell}>
+                <QuotaRing
+                  label="7d"
+                  authoritative={quota.authoritative?.sevenDay ?? null}
                   estimated={null}
                   now={now}
                   size={RING_SIZE}
@@ -199,10 +196,32 @@ export function QuotaPanel({
                   tone="muted"
                 />
               </div>
-            ))}
-          </div>
-        </section>
-      ))}
+              {extraLimits(quota.authoritative?.limits ?? []).map((limit) => (
+                <div
+                  key={`${limit.kind}:${limit.scope ?? ""}`}
+                  className={styles.ringCell}
+                >
+                  <QuotaRing
+                    label={limit.label}
+                    authoritative={limit}
+                    estimated={null}
+                    now={now}
+                    size={RING_SIZE}
+                    layout="row"
+                    tone="muted"
+                  />
+                </div>
+              ))}
+            </div>
+            {exhaustion.kind === "at" && (
+              <p className={styles.exhausts} data-testid="exhausts">
+                Se agota <b>{HHMM.format(exhaustion.at)}</b> · en{" "}
+                {formatUntil(exhaustion.at.toISOString(), now)}
+              </p>
+            )}
+          </section>
+        );
+      })}
     </div>
   );
 }

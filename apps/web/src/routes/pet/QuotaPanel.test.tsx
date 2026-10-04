@@ -38,7 +38,7 @@ const baseQuota: QuotaSnapshot = {
     provisionalUtilization: null,
   },
   divergence: 0,
-  projection: { fiveHourAtReset: null },
+  projection: { fiveHourAtReset: null, fiveHourExhaustsAt: null },
   sampledAt: "2026-01-01T00:00:00Z",
   error: null,
   rateLimitedAt: null,
@@ -268,5 +268,44 @@ describe("QuotaPanel", () => {
     expect(await screen.findByText(aviso)).toBeInTheDocument();
     expect(button).toHaveAttribute("data-refreshing", "false");
     expect(screen.getByText("Dato de hace 10 min")).toBeInTheDocument();
+  });
+
+  describe("hora de agotarse (#119)", () => {
+    const conProjection = (projection: QuotaSnapshot["projection"]) => (
+      <QuotaPanel
+        pet={basePet}
+        status="connected"
+        quotas={[{ ...baseQuota, projection }]}
+        now={NOW}
+      />
+    );
+
+    it("se agota antes del reset: enseña la hora", () => {
+      render(
+        conProjection({
+          fiveHourAtReset: 130,
+          fiveHourExhaustsAt: new Date(
+            NOW.getTime() + 30 * 60_000,
+          ).toISOString(),
+        }),
+      );
+      expect(screen.getByTestId("exhausts")).toHaveTextContent("Se agota");
+      expect(screen.getByTestId("exhausts")).toHaveTextContent("en 30m");
+    });
+
+    it.each([
+      [
+        "después del reset",
+        { fiveHourAtReset: 90, fiveHourExhaustsAt: "2026-01-01T09:00:00Z" },
+      ],
+      ["ritmo 0", { fiveHourAtReset: 62, fiveHourExhaustsAt: null }],
+      [
+        "sin ritmo medible",
+        { fiveHourAtReset: null, fiveHourExhaustsAt: null },
+      ],
+    ])("%s: no enseña hora", (_caso, projection) => {
+      render(conProjection(projection));
+      expect(screen.queryByTestId("exhausts")).toBeNull();
+    });
   });
 });

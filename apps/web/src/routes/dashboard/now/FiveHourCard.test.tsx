@@ -21,7 +21,7 @@ const base: QuotaSnapshot = {
     provisionalUtilization: null,
   },
   divergence: 6,
-  projection: { fiveHourAtReset: 62 },
+  projection: { fiveHourAtReset: 62, fiveHourExhaustsAt: null },
   sampledAt: "2026-01-01T15:44:00Z",
   error: null,
   rateLimitedAt: null,
@@ -145,9 +145,74 @@ describe("FiveHourCard", () => {
   });
 
   it("con endpoint pero sin proyección todavía: guion, no un número inventado", () => {
-    const quota = { ...base, projection: { fiveHourAtReset: null } };
+    const quota = {
+      ...base,
+      projection: { fiveHourAtReset: null, fiveHourExhaustsAt: null },
+    };
     render(<FiveHourCard quota={quota} samples={samples} now={NOW} />);
     expect(screen.getByTestId("fact-projection")).toHaveTextContent("—");
     expect(screen.queryByTestId("spark-projection")).toBeNull();
+  });
+
+  describe("hora de agotarse (#119)", () => {
+    const render_ = (projection: QuotaSnapshot["projection"], used = 34) =>
+      render(
+        <FiveHourCard
+          quota={{
+            ...base,
+            authoritative: base.authoritative && {
+              ...base.authoritative,
+              fiveHour: { ...base.authoritative.fiveHour, utilization: used },
+            },
+            projection,
+          }}
+          samples={samples}
+          now={NOW}
+        />,
+      );
+
+    it("antes del reset: la hora y cuánto falta", () => {
+      render_({
+        fiveHourAtReset: 130,
+        fiveHourExhaustsAt: new Date(NOW.getTime() + 90 * 60_000).toISOString(),
+      });
+      const fact = screen.getByTestId("fact-exhausts");
+      expect(fact).toHaveTextContent("Se agota");
+      expect(fact).toHaveTextContent(/\d{2}:\d{2}/);
+      expect(fact).toHaveTextContent("en 1h 30m");
+    });
+
+    it("después del reset: te llega al reset", () => {
+      render_({
+        fiveHourAtReset: 50,
+        fiveHourExhaustsAt: "2026-01-01T22:00:00Z",
+      });
+      expect(screen.getByTestId("fact-exhausts")).toHaveTextContent(
+        "te llega al reset",
+      );
+    });
+
+    it("uso ≥ 100 %: agotada", () => {
+      render_({ fiveHourAtReset: 130, fiveHourExhaustsAt: null }, 100);
+      expect(screen.getByTestId("fact-exhausts")).toHaveTextContent("agotada");
+    });
+
+    it("sin ritmo medible: guion y «pocas muestras aún»", () => {
+      render_({ fiveHourAtReset: null, fiveHourExhaustsAt: null });
+      const fact = screen.getByTestId("fact-exhausts");
+      expect(fact).toHaveTextContent("—");
+      expect(fact).toHaveTextContent("pocas muestras aún");
+    });
+
+    it("sin endpoint: oculto", () => {
+      render(
+        <FiveHourCard
+          quota={{ ...base, authoritative: null, divergence: null }}
+          samples={samples}
+          now={NOW}
+        />,
+      );
+      expect(screen.queryByTestId("fact-exhausts")).toBeNull();
+    });
   });
 });
