@@ -252,6 +252,7 @@ test("recentSessions: una fila por sesión con inicio, fin, checkout y último e
   ev("B", "2026-01-10T09:00:00.000Z", "PreToolUse", "testing");
   ev("B", "2026-01-10T09:10:00.000Z", "SessionEnd", "unknown");
   // C: terminada y reanudada con el mismo id.
+  ev("C", "2026-01-10T07:00:00.000Z", "PreToolUse", "coding");
   ev("C", "2026-01-10T08:00:00.000Z", "SessionEnd", "unknown");
   ev("C", "2026-01-10T08:30:00.000Z", "SessionStart", "unknown");
   // D: fuera de la ventana; E: sin cwd; F: sin sesión.
@@ -274,7 +275,36 @@ test("recentSessions: una fila por sesión con inicio, fin, checkout y último e
   assert.equal(by.A?.worktree, "/r-1");
   assert.equal(by.B?.ended, true);
   assert.equal(by.C?.ended, false);
-  assert.equal(by.C?.lastState, null);
+  assert.equal(by.C?.lastState, "coding");
+  db.close();
+});
+
+test("recentSessions ignora las sesiones sin actividad: solo SessionStart/SessionEnd", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const ev = (sessionId: string, ts: string, hook: string) =>
+    insert(db, accountId, ts, "unknown", {
+      hook,
+      sessionId,
+      repoRoot: "/r",
+      worktree: "/r-1",
+    });
+  // Sondeo de otra herramienta: solo inicio y fin.
+  ev("probe", "2026-01-10T10:00:00.000Z", "SessionStart");
+  ev("probe", "2026-01-10T10:00:03.000Z", "SessionEnd");
+  // Sesión normal con su primer prompt.
+  ev("real", "2026-01-10T10:00:00.000Z", "SessionStart");
+  ev("real", "2026-01-10T10:01:00.000Z", "UserPromptSubmit");
+  // Retomada: la actividad quedó antes de la ventana.
+  ev("resumed", "2026-01-01T10:00:00.000Z", "UserPromptSubmit");
+  ev("resumed", "2026-01-10T10:00:00.000Z", "SessionStart");
+
+  const rows = recentSessions(
+    db,
+    accountId,
+    new Date("2026-01-09T12:00:00.000Z"),
+  );
+  assert.deepEqual(rows.map((r) => r.sessionId).sort(), ["real", "resumed"]);
   db.close();
 });
 
@@ -396,6 +426,7 @@ test("liveSessionCandidates: una fila por sesión de la ventana, con fin, repo y
   // B: terminada. C: terminada y reanudada (`--resume`) con el mismo id.
   ev("B", "2026-01-10T10:01:00.000Z", "PreToolUse");
   ev("B", "2026-01-10T10:02:00.000Z", "SessionEnd");
+  ev("C", "2026-01-10T09:00:00.000Z", "PreToolUse"); // antes de la ventana
   ev("C", "2026-01-10T10:01:00.000Z", "SessionEnd");
   ev("C", "2026-01-10T10:03:00.000Z", "SessionStart");
   // D: antes de la ventana; E: sin cwd (se devuelve, sin repo); F: sin sesión.
@@ -418,6 +449,33 @@ test("liveSessionCandidates: una fila por sesión de la ventana, con fin, repo y
   assert.equal(by.C?.ended, false);
   assert.equal(by.E?.repoRoot, null);
   assert.equal(by.E?.worktree, null);
+  db.close();
+});
+
+test("liveSessionCandidates ignora las sesiones sin actividad en toda su historia", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const ev = (sessionId: string, ts: string, hook: string) =>
+    insert(db, accountId, ts, "unknown", {
+      hook,
+      sessionId,
+      repoRoot: "/r",
+      worktree: "/r-1",
+    });
+  ev("probe", "2026-01-10T10:00:00.000Z", "SessionStart");
+  ev("probe", "2026-01-10T10:00:03.000Z", "SessionEnd");
+  ev("real", "2026-01-10T10:00:00.000Z", "SessionStart");
+  ev("real", "2026-01-10T10:01:00.000Z", "UserPromptSubmit");
+  // Retomada: solo SessionStart en la ventana, la actividad es anterior.
+  ev("resumed", "2026-01-09T10:00:00.000Z", "UserPromptSubmit");
+  ev("resumed", "2026-01-10T10:00:00.000Z", "SessionStart");
+
+  const rows = liveSessionCandidates(
+    db,
+    accountId,
+    new Date("2026-01-10T09:55:00.000Z"),
+  );
+  assert.deepEqual(rows.map((r) => r.sessionId).sort(), ["real", "resumed"]);
   db.close();
 });
 

@@ -174,6 +174,15 @@ export function countHookEvents(db: DatabaseSync, accountId: number): number {
   return row.n;
 }
 
+/**
+ * Los hooks que manda cualquier `claude` al abrirse y cerrarse. Una sesión
+ * solo cuenta para Amnis si tiene algún otro (#126): así se ignoran los
+ * `claude` que lanzan otras herramientas por debajo (Orca sondeando límites).
+ * Una sola definición para la lista y el conteo, para que no diverjan.
+ */
+const SESSION_HOOKS = ["SessionStart", "SessionEnd"];
+const SESSION_HOOKS_SQL = `(${SESSION_HOOKS.map((h) => `'${h}'`).join(", ")})`;
+
 export interface RecentSessionRow {
   sessionId: string;
   startedAt: string;
@@ -191,6 +200,8 @@ export interface RecentSessionRow {
  * `startedAt` mira toda la historia de la sesión, no solo desde `since`. Un
  * `SessionStart` posterior al `SessionEnd` (`--resume`) la devuelve a viva.
  * Sin `repo_root` (hooks sin `cwd`) no hay dónde colgarla y se descarta.
+ * Las sesiones sin actividad (solo `SessionStart`/`SessionEnd`) no cuentan,
+ * mirando toda su historia (#126).
  */
 export function recentSessions(
   db: DatabaseSync,
@@ -224,6 +235,7 @@ export function recentSessions(
         WHERE account_id = ? AND session_id IS NOT NULL
         GROUP BY session_id
         HAVING MAX(ts) >= ?
+          AND SUM(hook NOT IN ${SESSION_HOOKS_SQL}) > 0
       ) s
     `)
     .all(
@@ -300,7 +312,9 @@ export interface LiveSessionCandidate {
  * foco (#112). Mucho más barata que `recentSessions`: se ejecuta en cada hook,
  * así que lee solo la ventana de inactividad (`idx_hook_ts`) y agrupa en JS.
  * `ended` sigue la misma regla que allí: un `SessionStart` posterior al
- * `SessionEnd` (`--resume`) la devuelve a viva.
+ * `SessionEnd` (`--resume`) la devuelve a viva. Y la de actividad (#126): la
+ * ventana basta si trae algún hook que no sea de sesión; si no, se mira toda
+ * la historia de esa sesión (una retomada cuya actividad quedó fuera).
  */
 export function liveSessionCandidates(
   db: DatabaseSync,
@@ -323,7 +337,7 @@ export function liveSessionCandidates(
 
   const bySession = new Map<
     string,
-    LiveSessionCandidate & { endedAt: string | null }
+    LiveSessionCandidate & { endedAt: string | null; active: boolean }
   >();
   for (const r of rows) {
     const s = bySession.get(r.session_id) ?? {
@@ -333,8 +347,10 @@ export function liveSessionCandidates(
       repoRoot: null,
       worktree: null,
       endedAt: null,
+      active: false,
     };
     s.lastEventAt = r.ts;
+    if (!SESSION_HOOKS.includes(r.hook)) s.active = true;
     if (r.hook === "SessionEnd") s.endedAt = r.ts;
     if (r.repo_root && r.worktree) {
       s.repoRoot = r.repo_root;
@@ -342,8 +358,15 @@ export function liveSessionCandidates(
     }
     bySession.set(r.session_id, s);
   }
-  return [...bySession.values()].map(({ endedAt, ...s }) => ({
-    ...s,
-    ended: endedAt !== null && endedAt >= s.lastEventAt,
-  }));
+  const hadActivity = db.prepare(`
+    SELECT 1 FROM hook_events
+    WHERE account_id = ? AND session_id = ? AND hook NOT IN ${SESSION_HOOKS_SQL}
+    LIMIT 1
+  `);
+  const out: LiveSessionCandidate[] = [];
+  for (const { endedAt, active, ...s } of bySession.values()) {
+    if (!active && !hadActivity.get(accountId, s.sessionId)) continue;
+    out.push({ ...s, ended: endedAt !== null && endedAt >= s.lastEventAt });
+  }
+  return out;
 }
