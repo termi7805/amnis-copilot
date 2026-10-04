@@ -1,24 +1,41 @@
 name: Release
 
-# Al subir un tag `vX.Y.Z` se construyen los paquetes de Linux de la mascota
-# (con el daemon dentro como sidecar SEA, #41) y se publican como release.
+# Al subir un tag `vX.Y.Z` se construyen los paquetes de la app (con el daemon
+# dentro como sidecar SEA, #41) para Linux y macOS y se publican como release.
 # Así lo que se descarga es exactamente el commit etiquetado, no un build local.
+#
+# Lanzado a mano (workflow_dispatch) compila y prueba todo sin publicar: es la
+# forma de comprobar un cambio de empaquetado antes de etiquetar.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  linux:
-    # 22.04 y no latest: la AppImage arrastra la glibc del runner, y una más
-    # vieja abre la app en más distros.
-    runs-on: ubuntu-22.04
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 22.04 y no latest: la AppImage arrastra la glibc del runner, y una
+          # más vieja abre la app en más distros.
+          - runner: ubuntu-22.04
+            arch: x86_64
+          # Un runner nativo por arquitectura: el SEA es una copia del `node`
+          # que ejecuta el build, así que no se puede compilar en cruzado.
+          - runner: macos-15
+            arch: aarch64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Dependencias de sistema de Tauri
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev \
@@ -42,6 +59,7 @@ jobs:
       # El tag manda: si no coincide con la versión empaquetada, los ficheros
       # saldrían con un número y la release con otro.
       - name: Comprueba que el tag coincide con la versión
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           version=$(node -p 'require("./apps/pet/src-tauri/tauri.conf.json").version')
           test "v$version" = "$GITHUB_REF_NAME" || {
@@ -52,18 +70,65 @@ jobs:
       # beforeBuildCommand construye la web y el SEA antes de empaquetar.
       - run: pnpm --filter @amnis/pet build
 
+      # Como el job `sea` del CI, pero en cada plataforma de la release: en
+      # macOS es lo que demuestra que la firma ad-hoc tras inyectar el blob
+      # deja un binario que arranca (#130).
+      - name: Arranca el SEA sin Node y sirve estado, SPA y dashboard
+        run: |
+          triple=$(rustc -vV | sed -n 's/^host: //p')
+          bin=apps/pet/src-tauri/binaries/amnis-daemon-$triple
+          tmp=$(mktemp -d)
+          env -i "$bin" --version
+          env -i HOME="$tmp" AMNIS_DIR="$tmp/amnis" AMNIS_PORT=4747 \
+            AMNIS_RESOURCES_DIR="$PWD/apps/pet/src-tauri/resources" \
+            "$bin" serve &
+          for _ in $(seq 50); do
+            curl -sf -o /dev/null http://127.0.0.1:4747/api/state && break
+            sleep 0.2
+          done
+          for path in /api/state /pet /debug; do
+            curl -sf -o /dev/null "http://127.0.0.1:4747$path"
+            echo "$path OK"
+          done
+          kill %1
+
       # Nombres sin versión: el README enlaza a /releases/latest/download/<nombre>
       # y esos enlaces siguen valiendo en cada release nueva.
+      - name: Reúne los paquetes
+        run: |
+          bundle=apps/pet/src-tauri/target/release/bundle
+          mkdir out
+          if [ "$RUNNER_OS" = Linux ]; then
+            cp "$bundle"/appimage/*.AppImage out/amnis-copilot-x86_64.AppImage
+            cp "$bundle"/deb/*.deb out/amnis-copilot-amd64.deb
+            cp "$bundle"/rpm/*.rpm out/amnis-copilot-x86_64.rpm
+          else
+            cp "$bundle"/dmg/*.dmg out/amnis-copilot-${{ matrix.arch }}.dmg
+          fi
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.runner }}
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
       - name: Publica la release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          bundle=apps/pet/src-tauri/target/release/bundle
-          mkdir out
-          cp "$bundle"/appimage/*.AppImage out/amnis-pet-x86_64.AppImage
-          cp "$bundle"/deb/*.deb out/amnis-pet-amd64.deb
-          cp "$bundle"/rpm/*.rpm out/amnis-pet-x86_64.rpm
           gh release create "$GITHUB_REF_NAME" \
-            --title "Amnis Pet $GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Amnis Copilot $GITHUB_REF_NAME" \
             --generate-notes \
             out/*

@@ -198,8 +198,14 @@ el de `pnpm dev` gana y no se toca). Lo lanza con `serve --exit-with-parent`: el
 al recibir EOF en su stdin, que es lo que pasa cuando la app muere por cualquier vía —SIGTERM y
 crash incluidos, que `RunEvent::Exit` no cubre—.
 
-Solo Linux por ahora: en macOS habría que quitar y rehacer la firma del binario tras inyectar el
-blob.
+**macOS (#130).** El `node` que se copia viene firmado por su autor: el build le quita la firma,
+inyecta el blob en el segmento Mach-O `NODE_SEA` y lo vuelve a firmar ad-hoc. Sin una firma
+válida, Apple Silicon mata el proceso al arrancar. La app entera también se firma ad-hoc
+(`signingIdentity: "-"`), no con Developer ID: sin cuenta de Apple no hay notarización, y quien
+la descarga tiene que quitarle la cuarentena una vez. Un `.dmg` por arquitectura, cada uno en su
+runner nativo, porque el SEA es el `node` del build y no se compila en cruzado. La ventana
+transparente necesita `macos-private-api`, y `ActivationPolicy::Accessory` hace en macOS lo que
+`skip_taskbar` hace en Linux: que la mascota no salga en el Dock.
 
 ## 7. Layout y arquitectura interna
 

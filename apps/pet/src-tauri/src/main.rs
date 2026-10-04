@@ -265,6 +265,11 @@ fn main() {
             }
         })
         .setup(|app| {
+            // `skip_taskbar` no existe en macOS: sin esto la mascota sale
+            // en el Dock y en Cmd+Tab como una app más (#130).
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+
             let url_str = std::env::var("AMNIS_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:4747/pet".to_string());
             let url: Url = url_str.parse()?;

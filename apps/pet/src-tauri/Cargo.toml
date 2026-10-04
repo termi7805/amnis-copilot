@@ -1,6 +1,6 @@
 [package]
 name = "amnis-pet"
-version = "0.1.0"
+version = "0.2.0"
 description = "Ventana flotante de la mascota de Amnis Copilot"
 edition = "2021"
 
@@ -8,7 +8,7 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-shell = "2"
 log = "0.4"
 env_logger = "0.11"

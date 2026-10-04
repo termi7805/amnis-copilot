@@ -11,7 +11,9 @@
 //   3. recursos (web, dashboard, hook) junto al binario, con el layout que
 //      espera `resolveResources()` en src/config.ts.
 //
-// Solo Linux: en macOS habría que quitar y rehacer la firma del binario.
+// En macOS el `node` copiado viene firmado: se le quita la firma antes de
+// inyectar y se vuelve a firmar ad-hoc después (#130). Sin firma válida,
+// Apple Silicon mata el proceso nada más arrancar.
 import { execFileSync } from "node:child_process";
 import {
   chmodSync,
@@ -34,7 +36,7 @@ const { inject } = require("postject") as {
     file: string,
     resource: string,
     data: Buffer,
-    options: { sentinelFuse: string },
+    options: { sentinelFuse: string; machoSegmentName?: string },
   ) => Promise<void>;
 };
 
@@ -94,12 +96,17 @@ async function makeExecutable(main: string, output: string): Promise<void> {
     stdio: "inherit",
   });
 
+  const macos = process.platform === "darwin";
   mkdirSync(join(output, ".."), { recursive: true });
   copyFileSync(process.execPath, output);
   chmodSync(output, 0o755);
+  if (macos) execFileSync("codesign", ["--remove-signature", output]);
   await inject(output, "NODE_SEA_BLOB", readFileSync(blobPath), {
     sentinelFuse: SENTINEL_FUSE,
+    // Mach-O guarda el blob en un segmento propio; ELF no tiene segmentos con nombre.
+    ...(macos && { machoSegmentName: "NODE_SEA" }),
   });
+  if (macos) execFileSync("codesign", ["--sign", "-", output]);
 }
 
 function copyResources(dest: string): void {
