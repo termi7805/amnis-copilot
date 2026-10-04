@@ -47,3 +47,23 @@
   filter: grayscale(1);
   opacity: 0.6;
 }
+
+/* Marca de hooks ausentes (#132): pequeña y sin capturar el puntero, para no
+   tapar la escena ni cambiar el tamaño de la ventana; el texto y el botón van
+   en el panel desplegado. */
+.hooksMark {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--warn-mark);
+  color: var(--ink);
+  font:
+    700 10px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  pointer-events: none;
+}

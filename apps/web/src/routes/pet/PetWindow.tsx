@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useHealth } from "../../api/health.ts";
 import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
 import { useNow } from "../../lib/countdown.ts";
 import { Pet, PetOffline } from "../../lib/Pet/Pet.tsx";
 import { useTheme } from "../../lib/theme.ts";
+import { HooksAlert } from "./HooksAlert.tsx";
 import { MediaPanel } from "./MediaPanel.tsx";
 import type { PanelId } from "./PanelHeader.tsx";
 import styles from "./PetWindow.module.css";
@@ -55,6 +57,9 @@ function readLastPanel(): OpenPanel {
 export function PetWindow() {
   const { state, status } = useAmnisStream();
   const now = useNow();
+  // Al cambiar la conexión se vuelve a preguntar: tras reconectar no hay que
+  // esperar al minuto del sondeo.
+  const health = useHealth(status);
   // Solo recibe: el tema se elige en el dashboard y llega por SSE (#121).
   useTheme(state?.settings);
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
@@ -64,6 +69,12 @@ export function PetWindow() {
   const [panel, setPanel] = useState<Panel>(readPanel);
   const [lastPanel, setLastPanel] = useState<OpenPanel>(readLastPanel);
   const expanded = panel !== "none";
+  // Con el daemon sin responder no se sabe nada de los hooks (#34, #39 ya
+  // cubren ese caso); `useHealth` conserva la última respuesta, de ahí el filtro.
+  const hooksMissing =
+    status !== "offline" &&
+    !health.unreachable &&
+    (health.health?.checks.some((c) => c.name === "hooks" && !c.ok) ?? false);
 
   useEffect(() => {
     localStorage.setItem(PANEL_KEY, panel);
@@ -135,6 +146,15 @@ export function PetWindow() {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
     >
+      {hooksMissing && !expanded && (
+        <span
+          className={styles.hooksMark}
+          role="img"
+          aria-label="Claude Code no está conectado"
+        >
+          !
+        </span>
+      )}
       {!expanded && (
         <div className={styles.petArea}>
           {status === "offline" ? (
@@ -159,6 +179,7 @@ export function PetWindow() {
       )}
       {expanded && (
         <div ref={contentRef}>
+          {hooksMissing && <HooksAlert onRepaired={health.refresh} />}
           {panel === "quota" && state && (
             <QuotaPanel
               pet={state.pet}

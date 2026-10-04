@@ -1,12 +1,18 @@
-import { DEFAULT_SETTINGS, type StateResponse } from "@amnis/shared";
+import {
+  DEFAULT_SETTINGS,
+  type HealthCheck,
+  type StateResponse,
+} from "@amnis/shared";
 import {
   act,
   cleanup,
   fireEvent,
   render,
   screen,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import * as healthApi from "../../api/health.ts";
 import { PetWindow } from "./PetWindow.tsx";
 import { EXPANDED_WIDTH, resizeWindow, startDrag } from "./useTauriWindow.ts";
 
@@ -15,6 +21,44 @@ vi.mock("./useTauriWindow.ts", async (importOriginal) => ({
   resizeWindow: vi.fn(),
   startDrag: vi.fn(),
 }));
+
+vi.mock("../../api/health.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../api/health.ts")>()),
+  repairHooks: vi.fn(),
+}));
+
+const HOOKS_OK: HealthCheck = {
+  name: "hooks",
+  ok: true,
+  message: "Los hooks de Amnis están instalados.",
+  remedy: null,
+};
+const HOOKS_MISSING: HealthCheck = {
+  name: "hooks",
+  ok: false,
+  message: "Faltan hooks de Amnis: PreToolUse.",
+  remedy: "Repáralos.",
+};
+
+/** `/api/health` contesta con estos checks (o no contesta); lo demás, `{}`. */
+function stubHealth(checks: () => HealthCheck[] | "down") {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((url: string) => {
+      if (!String(url).endsWith("/api/health")) {
+        return Promise.resolve(new Response("{}"));
+      }
+      const current = checks();
+      if (current === "down") return Promise.reject(new TypeError("down"));
+      return Promise.resolve(
+        Response.json({
+          checks: current,
+          daemon: { version: "0", startedAt: "", eventsReceived: 0 },
+        }),
+      );
+    }),
+  );
+}
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
@@ -91,6 +135,7 @@ describe("PetWindow", () => {
       "fetch",
       vi.fn(() => Promise.resolve(new Response("{}"))),
     );
+    stubHealth(() => [HOOKS_OK]);
     localStorage.clear();
   });
 
@@ -459,6 +504,92 @@ describe("PetWindow", () => {
       localStorage.setItem(PANEL_KEY, "media");
       render(<PetWindow />);
       expect(screen.getByText("Amnis no responde")).toBeInTheDocument();
+    });
+  });
+  describe("hooks ausentes (#132)", () => {
+    const mark = () =>
+      screen.queryByRole("img", { name: "Claude Code no está conectado" });
+    const alertRow = () => screen.queryByText("Claude Code no está conectado");
+
+    function mount() {
+      render(<PetWindow />);
+      const [source] = FakeEventSource.instances;
+      act(() => source?.open());
+      act(() => source?.emit("hello", fakeState));
+      return (
+        document.querySelector<HTMLElement>("[data-panel]") ?? document.body
+      );
+    }
+
+    it("plegada, una marca avisa sin desplegar nada; desplegada, sale la fila con Reparar", async () => {
+      stubHealth(() => [HOOKS_MISSING]);
+      const window_ = mount();
+      expect(
+        await screen.findByRole("img", { name: /no está conectado/ }),
+      ).toBeInTheDocument();
+      expect(alertRow()).toBeNull();
+
+      fireEvent.pointerDown(window_, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(window_, { clientX: 10, clientY: 10 });
+      expect(alertRow()).toBeInTheDocument();
+      expect(mark()).toBeNull();
+      expect(screen.getByRole("button", { name: "Reparar" })).toBeEnabled();
+    });
+
+    it("Reparar llama a la acción, refresca la salud y quita el aviso sin pliegue", async () => {
+      localStorage.setItem(PANEL_KEY, "quota");
+      let checks = [HOOKS_MISSING];
+      stubHealth(() => checks);
+      vi.mocked(healthApi.repairHooks).mockImplementation(async () => {
+        checks = [HOOKS_OK];
+        return { ok: true, body: { added: ["PreToolUse"], backup: null } };
+      });
+      mount();
+      const button = await screen.findByRole("button", { name: "Reparar" });
+
+      fireEvent.pointerDown(button);
+      fireEvent.pointerUp(button);
+      fireEvent.click(button);
+
+      expect(healthApi.repairHooks).toHaveBeenCalledOnce();
+      await waitFor(() => expect(alertRow()).toBeNull());
+      // El botón no ha plegado la ventana.
+      expect(localStorage.getItem(PANEL_KEY)).toBe("quota");
+    });
+
+    it("si reparar falla, la fila muestra el error y sigue ahí", async () => {
+      localStorage.setItem(PANEL_KEY, "quota");
+      stubHealth(() => [HOOKS_MISSING]);
+      vi.mocked(healthApi.repairHooks).mockResolvedValue({
+        ok: false,
+        message: "No se pudo escribir settings.json",
+      });
+      mount();
+      fireEvent.click(await screen.findByRole("button", { name: "Reparar" }));
+
+      expect(
+        await screen.findByText("No se pudo escribir settings.json"),
+      ).toBeInTheDocument();
+      expect(alertRow()).toBeInTheDocument();
+    });
+
+    it("con los hooks bien, no sale ni la marca ni la fila", async () => {
+      const window_ = mount();
+      await act(async () => {});
+      expect(mark()).toBeNull();
+      fireEvent.pointerDown(window_, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(window_, { clientX: 10, clientY: 10 });
+      expect(alertRow()).toBeNull();
+    });
+
+    it("con el daemon caído no se sabe nada de los hooks: no hay aviso", async () => {
+      stubHealth(() => "down");
+      const window_ = mount();
+      await act(async () => {});
+      expect(mark()).toBeNull();
+      fireEvent.pointerDown(window_, { clientX: 10, clientY: 10 });
+      fireEvent.pointerUp(window_, { clientX: 10, clientY: 10 });
+      expect(alertRow()).toBeNull();
     });
   });
 });
