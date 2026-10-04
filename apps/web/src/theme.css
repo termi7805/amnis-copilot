@@ -1,12 +1,16 @@
 /*
  * Tokens de tema (#80, #123, #124). Cada token se define primero en :root (claro) y
- * cada tema lo redefine entero bajo :root[data-theme="<id>"], un bloque por id
- * del catálogo THEMES. El oscuro va además bajo la preferencia del sistema,
- * pero solo con «Sistema» (sin data-theme): si no, con el escritorio en oscuro
- * pisaría a cualquier paleta clara. theme.test.ts comprueba que ningún tema
- * olvida un token y que las tintas pasan contraste sobre --surface.
+ * cada tema lo redefine entero bajo [data-theme="<id>"], un bloque por id del
+ * catálogo THEMES. Los selectores no llevan :root a propósito (#125): así el
+ * mismo bloque sirve a <html> y a las muestras del selector de Ajustes, que
+ * llevan su data-theme y se pintan con la paleta real. El oscuro va además bajo
+ * la preferencia del sistema, pero solo con «Sistema» (sin data-theme): si no,
+ * con el escritorio en oscuro pisaría a cualquier paleta clara. theme.test.ts
+ * comprueba que ningún tema olvida un token y que las tintas pasan contraste
+ * sobre --surface.
  */
-:root {
+:root,
+[data-theme="light"] {
   color-scheme: light;
   --bg: #eef2f5;
   --surface: #ffffff;
@@ -101,7 +105,7 @@
   }
 }
 
-:root[data-theme="dark"] {
+[data-theme="dark"] {
   color-scheme: dark;
   --bg: #11161d;
   --surface: #1a212b;
@@ -147,7 +151,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
-:root[data-theme="nord"] {
+[data-theme="nord"] {
   color-scheme: dark;
   --bg: #272c36;
   --surface: #2e3440;
@@ -193,7 +197,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
-:root[data-theme="dracula"] {
+[data-theme="dracula"] {
   color-scheme: dark;
   --bg: #1e1f29;
   --surface: #282a36;
@@ -239,7 +243,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
-:root[data-theme="solarized"] {
+[data-theme="solarized"] {
   color-scheme: light;
   --bg: #eee8d5;
   --surface: #fdf6e3;
@@ -285,7 +289,7 @@
   --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
 }
 
-:root[data-theme="gruvbox"] {
+[data-theme="gruvbox"] {
   color-scheme: dark;
   --bg: #1d2021;
   --surface: #282828;
@@ -331,7 +335,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
-:root[data-theme="gruvbox-light"] {
+[data-theme="gruvbox-light"] {
   color-scheme: light;
   --bg: #f2e5bc;
   --surface: #fbf1c7;
@@ -377,7 +381,7 @@
   --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
 }
 
-:root[data-theme="catppuccin-mocha"] {
+[data-theme="catppuccin-mocha"] {
   color-scheme: dark;
   --bg: #181825;
   --surface: #1e1e2e;
@@ -423,7 +427,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
-:root[data-theme="catppuccin-latte"] {
+[data-theme="catppuccin-latte"] {
   color-scheme: light;
   --bg: #dce0e8;
   --surface: #eff1f5;
@@ -469,7 +473,7 @@
   --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
 }
 
-:root[data-theme="tokyo-night"] {
+[data-theme="tokyo-night"] {
   color-scheme: dark;
   --bg: #16161e;
   --surface: #1a1b26;
@@ -515,7 +519,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
-:root[data-theme="rose-pine"] {
+[data-theme="rose-pine"] {
   color-scheme: dark;
   --bg: #191724;
   --surface: #1f1d2e;
@@ -561,7 +565,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
-:root[data-theme="rose-pine-dawn"] {
+[data-theme="rose-pine-dawn"] {
   color-scheme: light;
   --bg: #f6efe8;
   --surface: #fffaf3;
@@ -607,7 +611,7 @@
   --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
 }
 
-:root[data-theme="everforest-light"] {
+[data-theme="everforest-light"] {
   color-scheme: light;
   --bg: #f4f0d9;
   --surface: #fdf6e3;
@@ -653,7 +657,7 @@
   --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
 }
 
-:root[data-theme="medianoche"] {
+[data-theme="medianoche"] {
   color-scheme: dark;
   --bg: #0b1220;
   --surface: #121b2e;
@@ -699,7 +703,7 @@
   --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }
 
-:root[data-theme="papel"] {
+[data-theme="papel"] {
   color-scheme: light;
   --bg: #f1ece2;
   --surface: #fbf8f2;
@@ -745,7 +749,7 @@
   --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
 }
 
-:root[data-theme="niebla"] {
+[data-theme="niebla"] {
   color-scheme: light;
   --bg: #e9edf1;
   --surface: #f7f9fb;
@@ -791,7 +795,7 @@
   --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
 }
 
-:root[data-theme="alto-contraste"] {
+[data-theme="alto-contraste"] {
   color-scheme: dark;
   --bg: #000000;
   --surface: #0a0a0a;

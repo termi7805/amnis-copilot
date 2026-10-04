@@ -53,10 +53,8 @@ function parseBlocks(src: string): { top: Block[]; media: Block[] } {
 }
 
 const { top, media } = parseBlocks(css);
-const root = top.find((b) => b.selector === ":root") as Block;
-const themeBlocks = top.filter((b) =>
-  b.selector.startsWith(":root[data-theme="),
-);
+const root = top.find((b) => b.selector.startsWith(":root")) as Block;
+const themeBlocks = top.filter((b) => b.selector.startsWith("[data-theme="));
 const idOf = (b: Block) => /data-theme="([^"]+)"/.exec(b.selector)?.[1] ?? "";
 const systemDark = media.find((b) => b.selector.includes(":not([data-theme])"));
 
@@ -108,6 +106,14 @@ describe("theme.css", () => {
       );
       expect(missing, `${name} no redefine ${missing.join(", ")}`).toEqual([]);
     }
+  });
+
+  it("ningún bloque de tema va atado a :root, o su muestra en Ajustes no se pinta", () => {
+    const atados = top
+      .filter((b) => /:root\[data-theme=/.test(b.selector))
+      .map((b) => b.selector);
+    expect(atados, "usa [data-theme=…] a secas (#125)").toEqual([]);
+    expect(root.selector).toContain('[data-theme="light"]');
   });
 
   it("no hay bloques de tema fuera del catálogo", () => {

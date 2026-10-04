@@ -330,6 +330,8 @@ describe("Dashboard", () => {
     expect(document.querySelector("pre")).toBeNull();
 
     goTo("#ajustes");
-    expect(screen.getByRole("group", { name: "Tema" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("radiogroup", { name: "Tema" }),
+    ).toBeInTheDocument();
   });
 });

@@ -55,18 +55,35 @@ describe("useTheme", () => {
   it("elegir un tema lo aplica, lo cachea y lo guarda en el daemon", () => {
     const save = okSave();
     const { result } = renderHook(() => useTheme(undefined, save));
-    act(() => result.current[1]("dark"));
+    act(() => {
+      void result.current[1]("dark");
+    });
     expect(result.current[0]).toBe("dark");
     expect(document.documentElement.dataset.theme).toBe("dark");
     expect(localStorage.getItem("amnis-theme")).toBe("dark");
     expect(save).toHaveBeenCalledWith({ theme: "dark" });
   });
 
+  it("setTheme devuelve el resultado de guardar, para enseñar el error", async () => {
+    const fallo = { ok: false as const, message: "No se pudo" };
+    const save = vi.fn().mockResolvedValue(fallo);
+    const { result } = renderHook(() => useTheme(undefined, save));
+    let devuelto: unknown;
+    await act(async () => {
+      devuelto = await result.current[1]("nord");
+    });
+    expect(devuelto).toEqual(fallo);
+  });
+
   it("volver a sistema quita atributo y clave", () => {
     const save = okSave();
     const { result } = renderHook(() => useTheme(undefined, save));
-    act(() => result.current[1]("light"));
-    act(() => result.current[1]("system"));
+    act(() => {
+      void result.current[1]("light");
+    });
+    act(() => {
+      void result.current[1]("system");
+    });
     expect(document.documentElement.dataset.theme).toBeUndefined();
     expect(localStorage.getItem("amnis-theme")).toBeNull();
     expect(save).toHaveBeenLastCalledWith({ theme: "system" });

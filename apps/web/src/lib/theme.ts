@@ -1,6 +1,6 @@
 import { type AmnisSettings, isThemeId, type ThemeId } from "@amnis/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { saveSettings } from "../api/settings.ts";
+import { type SaveSettingsResult, saveSettings } from "../api/settings.ts";
 
 /**
  * Caché de primer pintado, nunca fuente de verdad (#121): el tema vive en
@@ -35,8 +35,9 @@ function applyTheme(theme: ThemeId) {
 
 /**
  * El tema activo, tomado de los ajustes del daemon: cuando llegan, gana el
- * daemon. Elegir uno lo aplica al momento y lo guarda por `PUT /api/settings`;
- * el SSE lo reparte al resto de clientes.
+ * daemon. Elegir uno lo aplica al momento y lo guarda por `PUT /api/settings`
+ * (el resultado vuelve a quien lo eligió, para enseñar el error); el SSE lo
+ * reparte al resto de clientes.
  *
  * Migración (#80 → #121): quien ya tenía `amnis-theme` y un `settings.json`
  * sin `theme` recibe el valor por defecto; en ese caso se sube su elección
@@ -45,7 +46,7 @@ function applyTheme(theme: ThemeId) {
 export function useTheme(
   settings: AmnisSettings | undefined,
   save: typeof saveSettings = saveSettings,
-): [ThemeId, (theme: ThemeId) => void] {
+): [ThemeId, (theme: ThemeId) => Promise<SaveSettingsResult>] {
   const [theme, setThemeState] = useState<ThemeId>(readCache);
   const migrationChecked = useRef(false);
   const daemonTheme = settings?.theme;
@@ -68,7 +69,7 @@ export function useTheme(
     (next: ThemeId) => {
       applyTheme(next);
       setThemeState(next);
-      void save({ theme: next });
+      return save({ theme: next });
     },
     [save],
   );

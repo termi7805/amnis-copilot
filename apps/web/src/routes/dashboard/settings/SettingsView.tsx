@@ -1,6 +1,9 @@
 import type { StateResponse, ThemeId } from "@amnis/shared";
 import type { HealthState } from "../../../api/health.ts";
-import { saveSettings } from "../../../api/settings.ts";
+import {
+  type SaveSettingsResult,
+  saveSettings,
+} from "../../../api/settings.ts";
 import type { AmnisStream } from "../../../api/useAmnisStream.ts";
 import { AppearanceCard } from "./AppearanceCard.tsx";
 import { DataCard } from "./DataCard.tsx";
@@ -14,7 +17,7 @@ export interface SettingsViewProps {
   health: HealthState;
   rebuild: AmnisStream["rebuild"];
   theme: ThemeId;
-  onTheme: (theme: ThemeId) => void;
+  onTheme: (theme: ThemeId) => Promise<SaveSettingsResult>;
 }
 
 /**
