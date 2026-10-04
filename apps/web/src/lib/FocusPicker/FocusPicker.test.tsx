@@ -9,7 +9,10 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FocusPicker } from "./FocusPicker.tsx";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 
 const NOW = new Date("2026-01-10T12:00:00Z");
 
@@ -127,14 +130,22 @@ describe("FocusPicker", () => {
     });
   });
 
-  it("una sesión terminada se ve pero no se puede elegir", async () => {
-    const { save } = setup();
+  it("en la mascota las terminadas no salen ni hay interruptor", async () => {
+    setup();
     await open();
-    const dead = screen.getByRole("button", { name: /bbbbbb/ });
-    expect(dead).toBeDisabled();
-    expect(dead).toHaveTextContent("terminada");
-    fireEvent.click(dead);
-    expect(save).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /bbbbbb/ })).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+  });
+
+  it("un worktree sin sesiones vivas sigue en la lista", async () => {
+    const wt = structuredClone(sessions);
+    for (const w of wt.repos.flatMap((r) => r.worktrees)) {
+      w.sessions = w.sessions.filter((x) => !x.alive);
+    }
+    setup({ loadSessions: vi.fn().mockResolvedValue(wt) });
+    await open();
+    expect(screen.getByRole("button", { name: /repo-1/ })).toBeVisible();
+    expect(screen.queryByText(/Aún no hay sesiones/)).toBeNull();
   });
 
   it("si no se puede cargar la lista, lo dice", async () => {
@@ -182,5 +193,52 @@ describe("FocusPicker — aspecto por layout", () => {
     const trigger = screen.getByRole("button", { name: "Foco de la mascota" });
     expect(trigger).toHaveTextContent("▾");
     expect(screen.queryByTestId("focus-chevron")).toBeNull();
+  });
+});
+
+describe("FocusPicker — Mostrar terminadas (dashboard)", () => {
+  const KEY = "amnis-focus-show-ended";
+  const props = { layout: "popover", showEnded: "toggle" } as const;
+  const sw = () => screen.getByRole("switch", { name: "Mostrar terminadas" });
+
+  it("apagado de partida: la terminada no sale", async () => {
+    setup(props);
+    await open();
+    expect(sw()).toHaveAttribute("aria-checked", "false");
+    expect(screen.queryByRole("button", { name: /bbbbbb/ })).toBeNull();
+  });
+
+  it("al activarlo sale, deshabilitada, sin cerrar la lista ni guardar foco", async () => {
+    const { save } = setup(props);
+    await open();
+    fireEvent.click(sw());
+    const dead = screen.getByRole("button", { name: /bbbbbb/ });
+    expect(dead).toBeDisabled();
+    expect(dead).toHaveTextContent("terminada");
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.click(sw());
+    expect(screen.queryByRole("button", { name: /bbbbbb/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Automático" })).toBeVisible();
+  });
+
+  it("recuerda la elección al volver a montar", async () => {
+    const first = setup(props);
+    await open();
+    fireEvent.click(sw());
+    expect(localStorage.getItem(KEY)).toBe("1");
+    cleanup();
+    setup(props);
+    await open();
+    expect(sw()).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("button", { name: /bbbbbb/ })).toBeVisible();
+    expect(first.loadSessions).toHaveBeenCalledOnce();
+  });
+
+  it("apagarlo borra la clave", async () => {
+    setup(props);
+    await open();
+    fireEvent.click(sw());
+    fireEvent.click(sw());
+    expect(localStorage.getItem(KEY)).toBeNull();
   });
 });

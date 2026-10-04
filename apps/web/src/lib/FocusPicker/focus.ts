@@ -1,4 +1,4 @@
-import type { PetFocus } from "@amnis/shared";
+import type { PetFocus, SessionsResponse } from "@amnis/shared";
 
 /** Último tramo de una ruta: igual que `projectName` en el daemon. */
 function baseName(path: string): string {
@@ -34,4 +34,20 @@ export function focusLabel(focus: PetFocus): string {
     case "session":
       return `${baseName(focus.worktree)} · ${focus.sessionId.slice(0, 6)}`;
   }
+}
+
+/**
+ * Quita las sesiones terminadas. Deja repos y worktrees aunque se queden sin
+ * sesiones: enfocar uno antes de abrir una sesión en él es válido.
+ */
+export function hideEnded(sessions: SessionsResponse): SessionsResponse {
+  return {
+    repos: sessions.repos.map((repo) => ({
+      ...repo,
+      worktrees: repo.worktrees.map((wt) => ({
+        ...wt,
+        sessions: wt.sessions.filter((s) => s.alive),
+      })),
+    })),
+  };
 }

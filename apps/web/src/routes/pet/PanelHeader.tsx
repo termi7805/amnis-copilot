@@ -69,7 +69,7 @@ export function PanelHeader({
           onPointerDown={(e) => e.stopPropagation()}
           onPointerUp={(e) => e.stopPropagation()}
         >
-          <FocusPicker focus={focus} now={now} />
+          <FocusPicker focus={focus} now={now} showEnded="never" />
         </div>
       )}
     </>

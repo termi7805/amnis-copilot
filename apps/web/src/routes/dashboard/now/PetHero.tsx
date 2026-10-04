@@ -68,7 +68,12 @@ export function PetHero({ state, now }: { state: StateResponse; now: Date }) {
             {pet.project}
           </span>
         )}
-        <FocusPicker focus={pet.focus} now={now} layout="popover" />
+        <FocusPicker
+          focus={pet.focus}
+          now={now}
+          layout="popover"
+          showEnded="toggle"
+        />
       </div>
       <div className={styles.fatigue}>
         <span>Fatiga</span>

@@ -517,7 +517,7 @@ export interface RepoSummary {
 /**
  * `GET /api/sessions`: los repos, worktrees y sesiones con hooks en las
  * últimas 24 h, lo más reciente primero. Las terminadas se listan pero no
- * se pueden elegir como foco.
+ * se pueden elegir como foco; cada cliente decide si las enseña (#127).
  */
 export interface SessionsResponse {
   repos: RepoSummary[];
