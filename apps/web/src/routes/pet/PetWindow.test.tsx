@@ -19,6 +19,7 @@ import {
   EXPANDED_WIDTH,
   quitApp,
   resizeWindow,
+  setUpdateMenu,
   showPetMenu,
   startDrag,
 } from "./useTauriWindow.ts";
@@ -27,6 +28,7 @@ vi.mock("./useTauriWindow.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./useTauriWindow.ts")>()),
   quitApp: vi.fn(),
   resizeWindow: vi.fn(),
+  setUpdateMenu: vi.fn(),
   showPetMenu: vi.fn(),
   startDrag: vi.fn(),
 }));
@@ -248,6 +250,35 @@ describe("PetWindow", () => {
 
     act(() => source?.emit("quit", null));
     expect(quitApp).toHaveBeenCalledOnce();
+  });
+
+  it("descartar la versión en el daemon quita la marca y la entrada del menú (#149)", () => {
+    const update = {
+      version: "9.9.9",
+      url: "https://github.com/termi7805/amnis-copilot/releases/tag/v9.9.9",
+    };
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", { ...fakeState, update }));
+    expect(
+      screen.getByRole("img", { name: "Hay una versión nueva" }),
+    ).toBeInTheDocument();
+    expect(setUpdateMenu).toHaveBeenLastCalledWith({
+      label: "Descargar v9.9.9",
+      url: update.url,
+    });
+
+    act(() =>
+      source?.emit("settings", {
+        ...fakeState.settings,
+        dismissedUpdate: "9.9.9",
+      }),
+    );
+    expect(
+      screen.queryByRole("img", { name: "Hay una versión nueva" }),
+    ).toBeNull();
+    expect(setUpdateMenu).toHaveBeenLastCalledWith(null);
   });
 
   it("el estado desplegado sobrevive a un remontaje vía localStorage", () => {

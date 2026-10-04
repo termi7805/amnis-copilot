@@ -1,3 +1,4 @@
+import { pendingUpdate } from "@amnis/shared";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { postAction } from "../../api/actions.ts";
@@ -148,7 +149,9 @@ export function Dashboard() {
         </div>
       </nav>
       <main className={styles.main}>
-        <UpdateBanner update={state?.update ?? null} />
+        <UpdateBanner
+          update={state ? pendingUpdate(state.update, state.settings) : null}
+        />
         {view === "ahora" && <NowView state={state} />}
         {view === "historico" && <HistoryView state={state} />}
         {view === "actividad" && <ActivityView state={state} />}

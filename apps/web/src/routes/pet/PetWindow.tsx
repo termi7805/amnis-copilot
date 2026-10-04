@@ -1,3 +1,4 @@
+import { pendingUpdate } from "@amnis/shared";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHealth } from "../../api/health.ts";
@@ -88,7 +89,7 @@ export function PetWindow() {
   }, [quitRequested]);
 
   // Sin `state` (daemon caído) el menú conserva la última entrada.
-  const update = state?.update;
+  const update = state ? pendingUpdate(state.update, state.settings) : null;
   const updateVersion = state ? (update?.version ?? null) : undefined;
   const updateUrl = update?.url ?? null;
   useEffect(() => {

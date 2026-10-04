@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_SETTINGS, msg } from "@amnis/shared";
+import { DEFAULT_SETTINGS, msg, pendingUpdate } from "@amnis/shared";
 import { detectPlanId, PLANS, resolvePlan } from "../src/domain/plans.ts";
 import { sanitizeSettings, validateSettings } from "../src/domain/settings.ts";
 import { currentPlan } from "../src/infrastructure/currentPlan.ts";
@@ -171,4 +171,49 @@ test("validateSettings: checkUpdates solo admite un booleano", () => {
   const bad = validateSettings({ checkUpdates: "no" }, DEFAULT_SETTINGS);
   assert.ok(!bad.ok);
   assert.equal(bad.field, "checkUpdates");
+});
+
+test("validateSettings: dismissedUpdate es null o una versión X.Y.Z", () => {
+  for (const ok of ["0.3.0", null]) {
+    const res = validateSettings({ dismissedUpdate: ok }, DEFAULT_SETTINGS);
+    assert.ok(res.ok);
+    assert.equal(res.settings.dismissedUpdate, ok);
+  }
+  for (const bad of ["latest", 3]) {
+    const res = validateSettings({ dismissedUpdate: bad }, DEFAULT_SETTINGS);
+    assert.ok(!res.ok);
+    assert.equal(res.field, "dismissedUpdate");
+  }
+});
+
+test("sanitizeSettings: un dismissedUpdate ilegible en disco cae a null", () => {
+  assert.equal(
+    sanitizeSettings({ dismissedUpdate: "0.3.0" }).dismissedUpdate,
+    "0.3.0",
+  );
+  assert.equal(
+    sanitizeSettings({ dismissedUpdate: "x" }).dismissedUpdate,
+    null,
+  );
+  assert.equal(sanitizeSettings({}).dismissedUpdate, null);
+});
+
+test("pendingUpdate: la versión descartada no se avisa; otra más nueva, sí", () => {
+  const update = (version: string) => ({
+    version,
+    url: `https://github.com/termi7805/amnis-copilot/releases/tag/v${version}`,
+  });
+  assert.equal(
+    pendingUpdate(update("0.3.0"), { dismissedUpdate: "0.3.0" }),
+    null,
+  );
+  assert.deepEqual(
+    pendingUpdate(update("0.4.0"), { dismissedUpdate: "0.3.0" }),
+    update("0.4.0"),
+  );
+  assert.deepEqual(
+    pendingUpdate(update("0.3.0"), { dismissedUpdate: null }),
+    update("0.3.0"),
+  );
+  assert.equal(pendingUpdate(null, { dismissedUpdate: null }), null);
 });

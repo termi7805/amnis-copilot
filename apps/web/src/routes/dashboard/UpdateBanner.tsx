@@ -1,32 +1,22 @@
 import type { UpdateInfo } from "@amnis/shared";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { saveSettings } from "../../api/settings.ts";
 import styles from "./UpdateBanner.module.css";
 
-const DISMISSED_KEY = "amnis.dismissedUpdate";
-
-function readDismissed(): string | null {
-  try {
-    return localStorage.getItem(DISMISSED_KEY);
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Aviso de versión nueva (#148). Se descarta por versión: si sale otra más
- * nueva, vuelve a aparecer.
+ * Aviso de versión nueva (#148). Descartar lo guarda el daemon (#149), así
+ * se oculta también en la mascota y la bandeja; solo para esa versión.
  */
 export function UpdateBanner({ update }: { update: UpdateInfo | null }) {
   const { t } = useTranslation();
-  const [dismissed, setDismissed] = useState(readDismissed);
+  // Se oculta sin esperar al evento `settings` que lo confirma.
+  const [dismissed, setDismissed] = useState<string | null>(null);
   if (!update || dismissed === update.version) return null;
 
   function dismiss(version: string) {
-    try {
-      localStorage.setItem(DISMISSED_KEY, version);
-    } catch {}
     setDismissed(version);
+    void saveSettings({ dismissedUpdate: version });
   }
 
   return (

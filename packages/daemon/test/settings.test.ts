@@ -165,3 +165,11 @@ test("checkUpdates viene activo por defecto y un valor guardado sobrevive", () =
     assert.equal(readSettings(path).checkUpdates, true);
   });
 });
+
+test("un aviso descartado sobrevive a 'reiniciar'", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    writeSettings({ ...DEFAULT_SETTINGS, dismissedUpdate: "0.3.0" }, path);
+    assert.equal(readSettings(path).dismissedUpdate, "0.3.0");
+  });
+});

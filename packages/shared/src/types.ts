@@ -355,6 +355,9 @@ export interface AmnisSettings extends MusicPrefs {
   locale: LocaleId;
   /** Consultar a GitHub si hay una release más nueva (#148). */
   checkUpdates: boolean;
+  /** Versión cuyo aviso se descartó (#149): en el daemon y no en `localStorage`
+   * para que valga a la vez en el dashboard, la mascota y la bandeja. */
+  dismissedUpdate: string | null;
 }
 
 export const DEFAULT_SETTINGS: AmnisSettings = {
@@ -364,6 +367,7 @@ export const DEFAULT_SETTINGS: AmnisSettings = {
   theme: "system",
   locale: "system",
   checkUpdates: true,
+  dismissedUpdate: null,
 };
 
 /** El plan de la suscripción, ya resuelto (detectado > manual). */
@@ -381,6 +385,14 @@ export interface UpdateInfo {
   version: string;
   /** Página de la release en GitHub. */
   url: string;
+}
+
+/** Lo que se avisa: la versión nueva, salvo que sea la descartada. */
+export function pendingUpdate(
+  update: UpdateInfo | null,
+  settings: Pick<AmnisSettings, "dismissedUpdate">,
+): UpdateInfo | null {
+  return update && update.version !== settings.dismissedUpdate ? update : null;
 }
 
 export interface StateResponse {

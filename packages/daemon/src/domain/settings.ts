@@ -11,10 +11,15 @@ import {
 } from "@amnis/shared";
 import { sanitizeMusicPrefs, validateMusicPrefs } from "./musicPrefs.ts";
 import { PLANS } from "./plans.ts";
+import { parseVersion } from "./version.ts";
 
 export type SettingsResult =
   | { ok: true; settings: AmnisSettings }
   | { ok: false; field: string; message: DaemonMessage };
+
+function isDismissedUpdate(v: unknown): v is string | null {
+  return v === null || (typeof v === "string" && parseVersion(v) !== null);
+}
 
 function isKnownPlan(v: unknown): v is string | null {
   return v === null || (typeof v === "string" && v in PLANS);
@@ -63,8 +68,15 @@ export function validateSettings(
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return { ok: false, field: "body", message: msg("body.notObject") };
   }
-  const { plan, petFocus, theme, locale, checkUpdates, ...rest } =
-    input as Record<string, unknown>;
+  const {
+    plan,
+    petFocus,
+    theme,
+    locale,
+    checkUpdates,
+    dismissedUpdate,
+    ...rest
+  } = input as Record<string, unknown>;
 
   let nextPlan = current.plan;
   if ("plan" in input) {
@@ -134,12 +146,28 @@ export function validateSettings(
     nextCheckUpdates = checkUpdates;
   }
 
+  let nextDismissed = current.dismissedUpdate;
+  if ("dismissedUpdate" in input) {
+    if (!isDismissedUpdate(dismissedUpdate)) {
+      return {
+        ok: false,
+        field: "dismissedUpdate",
+        message: msg("validation.field", {
+          field: "dismissedUpdate",
+          expected: msg("validation.version"),
+        }),
+      };
+    }
+    nextDismissed = dismissedUpdate;
+  }
+
   const {
     plan: _plan,
     petFocus: _petFocus,
     theme: _theme,
     locale: _locale,
     checkUpdates: _checkUpdates,
+    dismissedUpdate: _dismissedUpdate,
     ...currentPrefs
   } = current;
   const prefs = validateMusicPrefs(rest, currentPrefs);
@@ -153,6 +181,7 @@ export function validateSettings(
       theme: nextTheme,
       locale: nextLocale,
       checkUpdates: nextCheckUpdates,
+      dismissedUpdate: nextDismissed,
     },
   };
 }
@@ -175,5 +204,8 @@ export function sanitizeSettings(raw: unknown): AmnisSettings {
     locale: isLocaleId(source.locale) ? source.locale : "system",
     checkUpdates:
       typeof source.checkUpdates === "boolean" ? source.checkUpdates : true,
+    dismissedUpdate: isDismissedUpdate(source.dismissedUpdate)
+      ? source.dismissedUpdate
+      : null,
   };
 }
