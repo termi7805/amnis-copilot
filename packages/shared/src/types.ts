@@ -303,7 +303,7 @@ export const THEMES = [
   { id: "dark", label: "Oscuro", scheme: "dark" },
   { id: "nord", label: "Nord", scheme: "dark" },
   { id: "dracula", label: "Dracula", scheme: "dark" },
-  { id: "solarized", label: "Solarized", scheme: "dark" },
+  { id: "solarized", label: "Solarized", scheme: "light" },
   { id: "gruvbox", label: "Gruvbox", scheme: "dark" },
   { id: "gruvbox-light", label: "Gruvbox claro", scheme: "light" },
   { id: "catppuccin-mocha", label: "Catppuccin Mocha", scheme: "dark" },

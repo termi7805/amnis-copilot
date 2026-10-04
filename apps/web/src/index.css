@@ -1,5 +1,14 @@
 @import "./theme.css";
 
+/* Tipografía y radio: no son paleta, así que no los redefine ningún tema. */
+:root {
+  --f-display: "Silkscreen", ui-monospace, monospace;
+  --f-body: "Geist Variable", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:
+    "Geist Mono Variable", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+
 /*
  * html/body, no un componente: WebKitGTK usa el background-color
  * computado de la raíz del documento como color de fondo de página
