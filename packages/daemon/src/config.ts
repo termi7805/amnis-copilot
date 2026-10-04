@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { isSea } from "node:sea";
 import { fileURLToPath } from "node:url";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 
 /** Puerto fijo por ahora; configurable via AMNIS_PORT. */
 export const PORT = Number(process.env.AMNIS_PORT ?? 4747);
