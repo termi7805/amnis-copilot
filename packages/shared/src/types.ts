@@ -419,3 +419,38 @@ export interface ActivityHeatmapResponse {
 }
 
 export { PLANS, PLANS_DATE, resolvePlan } from "./plans.ts";
+
+/** Una sesión de agente vista por hooks (`GET /api/sessions`, #107). */
+export interface SessionSummary {
+  sessionId: string;
+  /** Viva: el último estado conocido. Terminada o inactiva: `sleeping`. */
+  state: PetState;
+  lastEventAt: string;
+  startedAt: string;
+  /** Sin `SessionEnd` y con hooks dentro de la ventana de inactividad. */
+  alive: boolean;
+}
+
+export interface WorktreeSummary {
+  /** Raíz del worktree: lo que usa `PetFocus` de tipo `worktree`. */
+  worktree: string;
+  name: string;
+  /** Última rama vista en el uso de sus sesiones; `null` si no hay. */
+  branch: string | null;
+  sessions: SessionSummary[];
+}
+
+export interface RepoSummary {
+  repoRoot: string;
+  name: string;
+  worktrees: WorktreeSummary[];
+}
+
+/**
+ * `GET /api/sessions`: los repos, worktrees y sesiones con hooks en las
+ * últimas 24 h, lo más reciente primero. Las terminadas se listan pero no
+ * se pueden elegir como foco.
+ */
+export interface SessionsResponse {
+  repos: RepoSummary[];
+}

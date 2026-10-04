@@ -33,6 +33,7 @@ import { createIngestRoutes } from "../http/routes/ingest.ts";
 import { createMediaRoutes } from "../http/routes/media.ts";
 import { createQuotaHistoryRoutes } from "../http/routes/quotaHistory.ts";
 import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
+import { createSessionsRoutes } from "../http/routes/sessions.ts";
 import { createSettingsRoutes } from "../http/routes/settings.ts";
 import { createSpotifyRoutes } from "../http/routes/spotify.ts";
 import { createStateRoute } from "../http/routes/state.ts";
@@ -234,6 +235,7 @@ export function runServeCli(args: readonly string[] = []): void {
       "GET /api/usage": createUsageRoute(db, accountId),
       ...createQuotaHistoryRoutes(db, accountId),
       ...createActivityRoutes(db, accountId),
+      ...createSessionsRoutes(db, accountId),
       "GET /api/state": createStateRoute(stateDeps),
       "GET /api/health": createHealthRoute({
         facts: () =>

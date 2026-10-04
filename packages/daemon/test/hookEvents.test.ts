@@ -7,6 +7,7 @@ import {
   eventsBetween,
   insertHookEvent,
   lastKnownStateEvent,
+  recentSessions,
 } from "../src/infrastructure/persistence/hookEvents.ts";
 
 function insert(
@@ -207,4 +208,61 @@ test("insertHookEvent guarda session_reason y la migración añade la columna", 
     { ...row },
     { session_reason: "clear", derived_state: "unknown" },
   );
+});
+
+test("recentSessions: una fila por sesión con inicio, fin, checkout y último estado", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const ev = (
+    sessionId: string | null,
+    ts: string,
+    hook: string,
+    derivedState: string,
+    repoRoot: string | null = "/r",
+  ) =>
+    insertHookEvent(db, {
+      accountId,
+      provider: "anthropic",
+      ts,
+      hook,
+      toolName: null,
+      sessionId,
+      project: repoRoot,
+      sessionReason: null,
+      repoRoot,
+      worktree: repoRoot && `${repoRoot}-1`,
+      derivedState,
+    });
+  // A: empezó antes de la ventana, sigue activa; el último hook no tiene estado.
+  ev("A", "2026-01-01T00:00:00.000Z", "SessionStart", "unknown");
+  ev("A", "2026-01-10T10:00:00.000Z", "PreToolUse", "coding");
+  ev("A", "2026-01-10T10:05:00.000Z", "Notification", "unknown");
+  // B: terminada.
+  ev("B", "2026-01-10T09:00:00.000Z", "PreToolUse", "testing");
+  ev("B", "2026-01-10T09:10:00.000Z", "SessionEnd", "unknown");
+  // C: terminada y reanudada con el mismo id.
+  ev("C", "2026-01-10T08:00:00.000Z", "SessionEnd", "unknown");
+  ev("C", "2026-01-10T08:30:00.000Z", "SessionStart", "unknown");
+  // D: fuera de la ventana; E: sin cwd; F: sin sesión.
+  ev("D", "2026-01-05T00:00:00.000Z", "PreToolUse", "coding");
+  ev("E", "2026-01-10T10:00:00.000Z", "PreToolUse", "coding", null);
+  ev(null, "2026-01-10T10:00:00.000Z", "PreToolUse", "coding");
+
+  const rows = recentSessions(
+    db,
+    accountId,
+    new Date("2026-01-09T12:00:00.000Z"),
+  );
+  const by = Object.fromEntries(rows.map((r) => [r.sessionId, r]));
+  assert.deepEqual(Object.keys(by).sort(), ["A", "B", "C"]);
+  assert.equal(by.A?.startedAt, "2026-01-01T00:00:00.000Z");
+  assert.equal(by.A?.lastEventAt, "2026-01-10T10:05:00.000Z");
+  assert.equal(by.A?.lastState, "coding");
+  assert.equal(by.A?.ended, false);
+  assert.equal(by.A?.repoRoot, "/r");
+  assert.equal(by.A?.worktree, "/r-1");
+  assert.equal(by.B?.ended, true);
+  assert.equal(by.C?.ended, false);
+  assert.equal(by.C?.lastState, null);
+  db.close();
 });

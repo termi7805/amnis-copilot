@@ -148,3 +148,87 @@ export function countHookEvents(db: DatabaseSync, accountId: number): number {
     .get(accountId) as { n: number };
   return row.n;
 }
+
+export interface RecentSessionRow {
+  sessionId: string;
+  startedAt: string;
+  lastEventAt: string;
+  /** El último `SessionEnd` no ha sido seguido de más actividad. */
+  ended: boolean;
+  repoRoot: string;
+  worktree: string;
+  /** Último estado reconocible de la sesión; los hooks de sesión no cuentan. */
+  lastState: string | null;
+}
+
+/**
+ * Las sesiones con algún hook desde `since`, una fila cada una (#107).
+ * `startedAt` mira toda la historia de la sesión, no solo desde `since`. Un
+ * `SessionStart` posterior al `SessionEnd` (`--resume`) la devuelve a viva.
+ * Sin `repo_root` (hooks sin `cwd`) no hay dónde colgarla y se descarta.
+ */
+export function recentSessions(
+  db: DatabaseSync,
+  accountId: number,
+  since: Date,
+): RecentSessionRow[] {
+  const rows = db
+    .prepare(`
+      SELECT
+        s.session_id AS session_id,
+        s.started_at AS started_at,
+        s.last_at AS last_at,
+        (SELECT MAX(ts) FROM hook_events e
+          WHERE e.account_id = ? AND e.session_id = s.session_id
+            AND e.hook = 'SessionEnd') AS ended_at,
+        (SELECT repo_root FROM hook_events e
+          WHERE e.account_id = ? AND e.session_id = s.session_id
+            AND e.repo_root IS NOT NULL AND e.worktree IS NOT NULL
+          ORDER BY ts DESC LIMIT 1) AS repo_root,
+        (SELECT worktree FROM hook_events e
+          WHERE e.account_id = ? AND e.session_id = s.session_id
+            AND e.repo_root IS NOT NULL AND e.worktree IS NOT NULL
+          ORDER BY ts DESC LIMIT 1) AS worktree,
+        (SELECT derived_state FROM hook_events e
+          WHERE e.account_id = ? AND e.session_id = s.session_id
+            AND e.derived_state != 'unknown'
+          ORDER BY ts DESC LIMIT 1) AS last_state
+      FROM (
+        SELECT session_id, MIN(ts) AS started_at, MAX(ts) AS last_at
+        FROM hook_events
+        WHERE account_id = ? AND session_id IS NOT NULL
+        GROUP BY session_id
+        HAVING MAX(ts) >= ?
+      ) s
+    `)
+    .all(
+      accountId,
+      accountId,
+      accountId,
+      accountId,
+      accountId,
+      since.toISOString(),
+    ) as Array<{
+    session_id: string;
+    started_at: string;
+    last_at: string;
+    ended_at: string | null;
+    repo_root: string | null;
+    worktree: string | null;
+    last_state: string | null;
+  }>;
+  const out: RecentSessionRow[] = [];
+  for (const r of rows) {
+    if (!r.repo_root || !r.worktree) continue;
+    out.push({
+      sessionId: r.session_id,
+      startedAt: r.started_at,
+      lastEventAt: r.last_at,
+      ended: r.ended_at !== null && r.ended_at >= r.last_at,
+      repoRoot: r.repo_root,
+      worktree: r.worktree,
+      lastState: r.last_state,
+    });
+  }
+  return out;
+}
