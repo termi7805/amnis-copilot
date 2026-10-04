@@ -26,6 +26,11 @@ export const common: Messages<typeof es> = {
     actividad: "Activity",
     ajustes: "Settings",
   },
+  update: {
+    available: "A new version of Amnis is out: v{{version}}",
+    notes: "See what's new",
+    dismiss: "Dismiss",
+  },
   nav: {
     label: "Views",
     daemon: "Daemon {{status}}",

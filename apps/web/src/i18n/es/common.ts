@@ -23,6 +23,11 @@ export const common = {
     actividad: "Actividad",
     ajustes: "Ajustes",
   },
+  update: {
+    available: "Hay una versión nueva de Amnis: v{{version}}",
+    notes: "Ver novedades",
+    dismiss: "Descartar aviso",
+  },
   nav: {
     label: "Vistas",
     daemon: "Daemon {{status}}",

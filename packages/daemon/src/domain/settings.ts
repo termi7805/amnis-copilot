@@ -52,7 +52,7 @@ function parsePetFocus(v: unknown): PetFocus | null {
 }
 
 /**
- * Valida un cambio de ajustes (`PUT /api/settings`): `plan`, `petFocus`, `theme` y `locale` aquí,
+ * Valida un cambio de ajustes (`PUT /api/settings`): `plan`, `petFocus`, `theme`, `locale` y `checkUpdates` aquí,
  * el resto (preferencias de música) en `validateMusicPrefs`. Acepta un
  * parcial.
  */
@@ -63,10 +63,8 @@ export function validateSettings(
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return { ok: false, field: "body", message: msg("body.notObject") };
   }
-  const { plan, petFocus, theme, locale, ...rest } = input as Record<
-    string,
-    unknown
-  >;
+  const { plan, petFocus, theme, locale, checkUpdates, ...rest } =
+    input as Record<string, unknown>;
 
   let nextPlan = current.plan;
   if ("plan" in input) {
@@ -121,11 +119,27 @@ export function validateSettings(
     nextLocale = locale;
   }
 
+  let nextCheckUpdates = current.checkUpdates;
+  if ("checkUpdates" in input) {
+    if (typeof checkUpdates !== "boolean") {
+      return {
+        ok: false,
+        field: "checkUpdates",
+        message: msg("validation.field", {
+          field: "checkUpdates",
+          expected: msg("validation.boolean"),
+        }),
+      };
+    }
+    nextCheckUpdates = checkUpdates;
+  }
+
   const {
     plan: _plan,
     petFocus: _petFocus,
     theme: _theme,
     locale: _locale,
+    checkUpdates: _checkUpdates,
     ...currentPrefs
   } = current;
   const prefs = validateMusicPrefs(rest, currentPrefs);
@@ -138,6 +152,7 @@ export function validateSettings(
       petFocus: nextFocus,
       theme: nextTheme,
       locale: nextLocale,
+      checkUpdates: nextCheckUpdates,
     },
   };
 }
@@ -158,5 +173,7 @@ export function sanitizeSettings(raw: unknown): AmnisSettings {
     petFocus: parsePetFocus(source.petFocus) ?? { kind: "auto" },
     theme: isThemeId(source.theme) ? source.theme : "system",
     locale: isLocaleId(source.locale) ? source.locale : "system",
+    checkUpdates:
+      typeof source.checkUpdates === "boolean" ? source.checkUpdates : true,
   };
 }

@@ -17,6 +17,7 @@ import {
   isTauri,
   quitApp,
   resizeWindow,
+  setUpdateMenu,
   showPetMenu,
   startDrag,
 } from "./useTauriWindow.ts";
@@ -85,6 +86,22 @@ export function PetWindow() {
   useEffect(() => {
     if (quitRequested) quitApp();
   }, [quitRequested]);
+
+  // Sin `state` (daemon caído) el menú conserva la última entrada.
+  const update = state?.update;
+  const updateVersion = state ? (update?.version ?? null) : undefined;
+  const updateUrl = update?.url ?? null;
+  useEffect(() => {
+    if (updateVersion === undefined) return;
+    setUpdateMenu(
+      updateVersion && updateUrl
+        ? {
+            label: t("pet.window.downloadUpdate", { version: updateVersion }),
+            url: updateUrl,
+          }
+        : null,
+    );
+  }, [updateVersion, updateUrl, t]);
 
   useEffect(() => {
     localStorage.setItem(PANEL_KEY, panel);
@@ -174,6 +191,15 @@ export function PetWindow() {
           aria-label={t("pet.window.hooksMissing")}
         >
           !
+        </span>
+      )}
+      {!hooksMissing && update && !expanded && (
+        <span
+          className={`${styles.hooksMark} ${styles.updateMark}`}
+          role="img"
+          aria-label={t("pet.window.update")}
+        >
+          ↑
         </span>
       )}
       {!expanded && (

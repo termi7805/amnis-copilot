@@ -89,6 +89,13 @@ export const settings: Messages<typeof es> = {
     system: "System",
     hint: "“System” follows the browser or desktop language.",
   },
+  updates: {
+    title: "Updates",
+    label: "Check for updates",
+    installed: "Installed version: v{{version}}",
+    available: "Available: <a>v{{version}}</a>",
+    hint: "Checks the latest GitHub release every 6 hours. Sends no data about you.",
+  },
   music: {
     title: "Pet · Music",
     eyebrow: "applies instantly to the floating window",

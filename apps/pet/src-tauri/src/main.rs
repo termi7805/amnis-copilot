@@ -15,8 +15,8 @@ use std::time::{Duration, Instant};
 use tauri::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{
-    App, AppHandle, LogicalSize, Manager, PhysicalPosition, RunEvent, Runtime, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder, WindowEvent,
+    App, AppHandle, LogicalSize, Manager, PhysicalPosition, RunEvent, Runtime, WebviewUrl,
+    WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -145,7 +145,9 @@ fn save_anchor(app: &AppHandle, pos: PhysicalPosition<i32>) {
 /// en ningún monitor (uno desconectado, otra resolución), se reencaja en
 /// el principal en vez de abrir la ventana fuera de la vista.
 fn restore_anchor(app: &AppHandle, window: &WebviewWindow) {
-    let Some(saved) = load_anchor(app) else { return };
+    let Some(saved) = load_anchor(app) else {
+        return;
+    };
     let on_screen = window
         .available_monitors()
         .unwrap_or_default()
@@ -215,14 +217,19 @@ fn resize_pet(window: WebviewWindow, state: tauri::State<PetAnchor>, width: f64,
     let deadline = Instant::now() + RESIZE_SETTLE;
     while Instant::now() < deadline {
         match window.inner_size() {
-            Ok(s) if s.width.abs_diff(physical.width) <= 1 && s.height.abs_diff(physical.height) <= 1 => {
+            Ok(s)
+                if s.width.abs_diff(physical.width) <= 1
+                    && s.height.abs_diff(physical.height) <= 1 =>
+            {
                 break
             }
             _ => std::thread::sleep(RESIZE_POLL),
         }
     }
 
-    let Ok(current) = window.outer_position() else { return };
+    let Ok(current) = window.outer_position() else {
+        return;
+    };
     let target = state
         .anchor
         .lock()
@@ -264,19 +271,38 @@ fn open_dashboard_in_browser(app: &AppHandle) {
     }
 }
 
+/// Entrada «Descargar vX.Y.Z» del menú (#148): etiqueta ya traducida y URL de
+/// la release. La pone la ventana `pet`, que es quien recibe el aviso por SSE.
+struct UpdateEntry(Mutex<Option<(String, String)>>);
+
+/// Lo único que la entrada puede abrir: el webview carga una URL remota y no
+/// debe poder usar el menú para mandar el navegador a cualquier sitio.
+const RELEASES_PREFIX: &str = "https://github.com/termi7805/amnis-copilot/releases/";
+
 /// Menú de la bandeja y del clic derecho sobre la mascota. La ventana no
 /// tiene decoraciones ni sale en la barra de tareas (ni en el Dock): sin
 /// esto no hay forma de cerrar la app. Los clics los atiende
 /// `on_pet_menu_event`, registrado una vez para los dos sitios.
 fn pet_menu<R: Runtime, M: Manager<R>>(app: &M) -> tauri::Result<Menu<R>> {
-    Menu::with_items(
+    let menu = Menu::with_items(
         app,
         &[
             &MenuItem::with_id(app, "dashboard", "Abrir dashboard", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?,
         ],
-    )
+    )?;
+    if let Some((label, _)) = app.state::<UpdateEntry>().0.lock().unwrap().as_ref() {
+        menu.prepend(&PredefinedMenuItem::separator(app)?)?;
+        menu.prepend(&MenuItem::with_id(
+            app,
+            "update",
+            label,
+            true,
+            None::<&str>,
+        )?)?;
+    }
+    Ok(menu)
 }
 
 /// `exit` pasa por `RunEvent::Exit`, que es donde se para el daemon lanzado
@@ -284,6 +310,20 @@ fn pet_menu<R: Runtime, M: Manager<R>>(app: &M) -> tauri::Result<Menu<R>> {
 fn on_pet_menu_event(app: &AppHandle, event: MenuEvent) {
     match event.id().as_ref() {
         "dashboard" => open_dashboard_in_browser(app),
+        "update" => {
+            let url = app
+                .state::<UpdateEntry>()
+                .0
+                .lock()
+                .unwrap()
+                .as_ref()
+                .map(|(_, url)| url.clone());
+            if let Some(url) = url {
+                if let Err(e) = app.opener().open_url(&url, None::<&str>) {
+                    log::warn!("no se pudo abrir la release en {url}: {e}");
+                }
+            }
+        }
         "quit" => app.exit(0),
         _ => {}
     }
@@ -309,6 +349,27 @@ fn show_pet_menu(window: WebviewWindow) {
     }
 }
 
+/// Pone o quita la entrada de actualización (#148) y rehace el menú de la
+/// bandeja; el del clic derecho se construye en cada apertura.
+#[tauri::command]
+fn set_update_menu(app: AppHandle, label: Option<String>, url: Option<String>) {
+    let entry = match (label, url) {
+        (Some(label), Some(url)) if url.starts_with(RELEASES_PREFIX) => Some((label, url)),
+        (Some(_), Some(url)) => {
+            log::warn!("URL de release rechazada: {url}");
+            return;
+        }
+        _ => None,
+    };
+    *app.state::<UpdateEntry>().0.lock().unwrap() = entry;
+    let Some(tray) = app.tray_by_id("amnis") else {
+        return;
+    };
+    if let Err(e) = pet_menu(&app).and_then(|menu| tray.set_menu(Some(menu))) {
+        log::warn!("no se pudo actualizar el menú de la bandeja: {e}");
+    }
+}
+
 /// «Cerrar Amnis» del dashboard: el daemon lo difunde por SSE como `quit` y
 /// la ventana lo reenvía aquí, porque el navegador no habla con Tauri.
 #[tauri::command]
@@ -323,6 +384,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .manage(Sidecar(Mutex::new(None)))
+        .manage(UpdateEntry(Mutex::new(None)))
         .manage(PetAnchor {
             anchor: Mutex::new(Anchor::default()),
             resizing: Mutex::new(()),
@@ -332,6 +394,7 @@ fn main() {
             start_drag,
             open_dashboard,
             show_pet_menu,
+            set_update_menu,
             quit_app
         ])
         .on_menu_event(on_pet_menu_event)
@@ -340,7 +403,12 @@ fn main() {
             // de arrastre" fiable ni un cierre limpio en el que guardar.
             if let WindowEvent::Moved(pos) = event {
                 let app = window.app_handle();
-                let changed = app.state::<PetAnchor>().anchor.lock().unwrap().on_moved(*pos);
+                let changed = app
+                    .state::<PetAnchor>()
+                    .anchor
+                    .lock()
+                    .unwrap()
+                    .on_moved(*pos);
                 if changed {
                     save_anchor(app, *pos);
                 }

@@ -90,6 +90,7 @@ function stateWith(limits: QuotaLimit[]): StateResponse {
     },
     settings: DEFAULT_SETTINGS,
     plan: null,
+    update: null,
     quotas: [quota],
     daemon: {
       version: "0.0.1",

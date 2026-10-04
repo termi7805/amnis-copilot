@@ -7,6 +7,7 @@ import type {
   PlanInfo,
   QuotaSnapshot,
   StateResponse,
+  UpdateInfo,
 } from "@amnis/shared";
 import {
   SLEEP_AFTER_MS,
@@ -43,6 +44,8 @@ export interface LastKnownStateEvent {
  */
 export interface GetStateDeps {
   version: string;
+  /** Último aviso de versión nueva, en memoria; nunca consulta GitHub. */
+  update(): UpdateInfo | null;
   /** ISO8601, capturado una vez al arrancar el daemon. */
   startedAt: string;
   /** El foco vigente (`settings.petFocus`). `lastKnownStateEvent` se filtra
@@ -247,6 +250,7 @@ export async function getState(
     media,
     settings: deps.settings(),
     plan: deps.plan(),
+    update: deps.update(),
     daemon: {
       version: deps.version,
       startedAt: deps.startedAt,

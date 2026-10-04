@@ -66,6 +66,22 @@ export function quitApp(): void {
     .catch(() => {});
 }
 
+/* Entrada «Descargar vX.Y.Z» del menú de la bandeja y del clic derecho
+ * (#148). El texto va ya traducido: Rust no sabe de idiomas. */
+export function setUpdateMenu(
+  entry: { label: string; url: string } | null,
+): void {
+  if (!isTauri()) return;
+  import("@tauri-apps/api/core")
+    .then(({ invoke }) =>
+      invoke("set_update_menu", {
+        label: entry?.label ?? null,
+        url: entry?.url ?? null,
+      }),
+    )
+    .catch(() => {});
+}
+
 export function openDashboard(): void {
   if (!isTauri()) {
     window.open(`${daemonUrl()}/`, "_blank");

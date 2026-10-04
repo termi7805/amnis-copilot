@@ -1,17 +1,15 @@
-import { PRICES_REFRESH_MS } from "../config.ts";
-
-export interface PricesRefresherDeps {
+export interface RefresherDeps {
   refresh(): Promise<{ error: string | null }>;
   onError?(message: string): void;
-  intervalMs?: number;
+  intervalMs: number;
 }
 
 /**
- * Descarga al arrancar y luego cada 24 h: los precios cambian con cada
- * lanzamiento de modelo, no cada minuto. Mismo guard de solapamiento que
- * `poller.ts`.
+ * Descarga al arrancar y luego cada `intervalMs`: precios (24 h) y
+ * actualizaciones (6 h). Mismo guard de solapamiento que `poller.ts`.
  */
-export function startPricesRefresher(deps: PricesRefresherDeps): {
+export function startRefresher(deps: RefresherDeps): {
+  runNow(): void;
   stop(): void;
 } {
   let inFlight = false;
@@ -31,8 +29,8 @@ export function startPricesRefresher(deps: PricesRefresherDeps): {
   };
 
   tick();
-  const timer = setInterval(tick, deps.intervalMs ?? PRICES_REFRESH_MS);
+  const timer = setInterval(tick, deps.intervalMs);
   timer.unref();
 
-  return { stop: () => clearInterval(timer) };
+  return { runNow: tick, stop: () => clearInterval(timer) };
 }

@@ -67,3 +67,7 @@
     monospace;
   pointer-events: none;
 }
+
+.updateMark {
+  background: var(--accent-mark);
+}

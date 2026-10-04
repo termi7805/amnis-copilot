@@ -39,6 +39,8 @@ export const pet: Messages<typeof es> = {
     quota: "Quota",
     music: "Music",
     openDashboard: "Open dashboard",
+    update: "A new version is out",
+    downloadUpdate: "Download v{{version}}",
   },
   ring: {
     noData: "no data",

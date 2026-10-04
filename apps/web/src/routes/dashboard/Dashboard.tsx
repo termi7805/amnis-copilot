@@ -11,6 +11,7 @@ import styles from "./Dashboard.module.css";
 import { HistoryView } from "./history/HistoryView.tsx";
 import { NowView } from "./now/NowView.tsx";
 import { SettingsView } from "./settings/SettingsView.tsx";
+import { UpdateBanner } from "./UpdateBanner.tsx";
 import { useHashView, VIEWS, type View } from "./useHashView.ts";
 
 function Icon({ children }: { children: ReactNode }) {
@@ -147,6 +148,7 @@ export function Dashboard() {
         </div>
       </nav>
       <main className={styles.main}>
+        <UpdateBanner update={state?.update ?? null} />
         {view === "ahora" && <NowView state={state} />}
         {view === "historico" && <HistoryView state={state} />}
         {view === "actividad" && <ActivityView state={state} />}

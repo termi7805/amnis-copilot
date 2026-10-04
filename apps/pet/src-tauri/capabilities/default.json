@@ -12,6 +12,7 @@
     "allow-start-drag",
     "allow-open-dashboard",
     "allow-show-pet-menu",
+    "allow-set-update-menu",
     "allow-quit-app"
   ]
 }

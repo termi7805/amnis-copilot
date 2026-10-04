@@ -88,6 +88,13 @@ export const settings = {
     system: "Sistema",
     hint: "«Sistema» sigue el idioma del navegador o del escritorio.",
   },
+  updates: {
+    title: "Actualizaciones",
+    label: "Buscar actualizaciones",
+    installed: "Versión instalada: v{{version}}",
+    available: "Disponible: <a>v{{version}}</a>",
+    hint: "Consulta la última release en GitHub cada 6 horas. No envía ningún dato tuyo.",
+  },
   music: {
     title: "Mascota · Música",
     eyebrow: "se aplica al instante en la ventana flotante",

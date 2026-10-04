@@ -13,6 +13,7 @@ import { LanguageCard } from "./LanguageCard.tsx";
 import { MusicSettings } from "./MusicSettings.tsx";
 import { PlanCard } from "./PlanCard.tsx";
 import styles from "./SettingsView.module.css";
+import { UpdatesCard } from "./UpdatesCard.tsx";
 
 export interface SettingsViewProps {
   state: StateResponse | null;
@@ -60,6 +61,7 @@ export function SettingsView({
           <AppearanceCard theme={theme} onTheme={onTheme} />
           <LanguageCard locale={locale} onLocale={onLocale} />
           <DataCard rebuild={rebuild} />
+          <UpdatesCard state={state} />
         </div>
         <div className={styles.music}>
           <MusicSettings settings={state?.settings} save={saveSettings} />

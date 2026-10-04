@@ -123,6 +123,7 @@ const fakeState: StateResponse = {
   },
   settings: DEFAULT_SETTINGS,
   plan: null,
+  update: null,
   quotas: [],
   daemon: {
     version: "0.0.1",

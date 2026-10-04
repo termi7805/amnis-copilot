@@ -6,6 +6,7 @@ import {
   msg,
   type PetFocus,
 } from "@amnis/shared";
+import { checkUpdate } from "../../application/checkUpdate.ts";
 import {
   fatigueFrom,
   type GetStateDeps,
@@ -19,9 +20,11 @@ import {
   AMNIS_DEV_ORIGIN,
   DB_PATH,
   PORT,
+  PRICES_REFRESH_MS,
   QUOTA_POLL_MS,
   RESOURCES,
   SPOTIFY_REDIRECT_URI,
+  UPDATE_CHECK_MS,
   VERSION,
 } from "../../config.ts";
 import { type FocusFacts, focusAfter } from "../../domain/petFocus.ts";
@@ -72,15 +75,17 @@ import {
 import { countUsageEvents } from "../persistence/usageEvents.ts";
 import { startPetStateWatcher } from "../petStateWatcher.ts";
 import { startQuotaPoller } from "../poller.ts";
-import { startPricesRefresher } from "../pricesRefresher.ts";
 import { anthropicProvider } from "../providers/anthropic/index.ts";
 import { fetchPrices } from "../providers/anthropic/pricing.ts";
+import { fetchLatestRelease } from "../providers/github/releases.ts";
 import { fetchFeatures } from "../providers/reccobeats/features.ts";
 import { createMediaControl } from "../providers/spotify/control.ts";
 import { exchangeCode } from "../providers/spotify/oauth.ts";
 import { readMedia } from "../providers/spotify/player.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
+import { startRefresher } from "../refresher.ts";
 import { createTrackVibes } from "../trackVibe.ts";
+import { createUpdateChecker } from "../updateChecker.ts";
 
 function makeHookDeps(
   db: DatabaseSync,
@@ -108,10 +113,12 @@ function makeStateDeps(
   listening: GetStateDeps["listening"],
   settings: GetStateDeps["settings"],
   latestQuotas: GetStateDeps["latestQuotas"],
+  update: GetStateDeps["update"],
 ): GetStateDeps {
   const plan = () => currentPlan(settings().plan);
   return {
     version: VERSION,
+    update,
     startedAt,
     focus: () => settings().petFocus,
     lastKnownStateEvent: (focus) => lastKnownStateEvent(db, accountId, focus),
@@ -173,6 +180,7 @@ export function runServeCli(args: readonly string[] = []): void {
     () => settings,
     // El poller se crea después (necesita el watcher): cierre perezoso.
     () => poller.current().then((snapshot) => [snapshot]),
+    () => updateChecker.current(),
   );
 
   // Cacheadas del último poll de cuota: un `state` disparado por hooks no
@@ -182,8 +190,11 @@ export function runServeCli(args: readonly string[] = []): void {
   // El foco se suelta por el mismo camino que un cambio de ajustes: si no, el
   // dashboard seguiría enseñando un foco que el daemon ya no aplica (#110).
   const saveSettings = (next: AmnisSettings): void => {
+    const toggledUpdates = next.checkUpdates !== settings.checkUpdates;
     writeSettings(next);
     settings = next;
+    // Encendido busca ya; apagado borra el aviso sin esperar 6 h.
+    if (toggledUpdates) updateRefresher.runNow();
     // La mascota y el dashboard las aplican en vivo, sin reiniciar.
     broadcaster.broadcast({ event: "settings", data: next });
     // Otro foco es otro estado: el snapshot sale ya, sin esperar a un
@@ -251,7 +262,8 @@ export function runServeCli(args: readonly string[] = []): void {
 
   // Un fallo no toca la tabla guardada: siguen valiendo los últimos
   // precios buenos (o la semilla de domain/cost.ts).
-  const pricesRefresher = startPricesRefresher({
+  const pricesRefresher = startRefresher({
+    intervalMs: PRICES_REFRESH_MS,
     refresh: () =>
       refreshPrices(
         {
@@ -261,6 +273,23 @@ export function runServeCli(args: readonly string[] = []): void {
         new Date(),
       ),
     onError: (message) => console.error("Fallo actualizando precios:", message),
+  });
+
+  const updateChecker = createUpdateChecker({
+    check: () =>
+      checkUpdate({
+        fetchLatest: () => fetchLatestRelease(),
+        currentVersion: VERSION,
+      }),
+    enabled: () => settings.checkUpdates,
+    onChange: (update) =>
+      broadcaster.broadcast({ event: "update", data: update }),
+  });
+  const updateRefresher = startRefresher({
+    intervalMs: UPDATE_CHECK_MS,
+    refresh: () => updateChecker.refresh(),
+    onError: (message) =>
+      console.error("Fallo buscando actualizaciones:", message),
   });
 
   const server = createHttpServer({
@@ -350,6 +379,7 @@ export function runServeCli(args: readonly string[] = []): void {
     shuttingDown = true;
     poller.stop();
     pricesRefresher.stop();
+    updateRefresher.stop();
     watcher.stop();
     mediaPoller.stop();
     broadcaster.stop();

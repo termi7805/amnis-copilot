@@ -353,6 +353,8 @@ export interface AmnisSettings extends MusicPrefs {
   theme: ThemeId;
   /** Por la misma razón que `theme`: una sola elección para las dos ventanas. */
   locale: LocaleId;
+  /** Consultar a GitHub si hay una release más nueva (#148). */
+  checkUpdates: boolean;
 }
 
 export const DEFAULT_SETTINGS: AmnisSettings = {
@@ -361,6 +363,7 @@ export const DEFAULT_SETTINGS: AmnisSettings = {
   petFocus: { kind: "auto" },
   theme: "system",
   locale: "system",
+  checkUpdates: true,
 };
 
 /** El plan de la suscripción, ya resuelto (detectado > manual). */
@@ -372,6 +375,14 @@ export interface PlanInfo {
   source: "detected" | "manual";
 }
 
+/** Una release publicada más nueva que la versión instalada (#148). */
+export interface UpdateInfo {
+  /** Sin la `v` del tag: `0.3.0`. */
+  version: string;
+  /** Página de la release en GitHub. */
+  url: string;
+}
+
 export interface StateResponse {
   pet: PetSnapshot;
   quotas: QuotaSnapshot[];
@@ -379,6 +390,8 @@ export interface StateResponse {
   settings: AmnisSettings;
   /** `null` si no se detecta ni hay uno manual. */
   plan: PlanInfo | null;
+  /** `null` si no hay versión nueva o si la comprobación está apagada. */
+  update: UpdateInfo | null;
   daemon: {
     version: string;
     startedAt: string;
@@ -432,6 +445,7 @@ export type AmnisEvent =
   | { event: "media"; data: MediaSnapshot }
   | { event: "settings"; data: AmnisSettings }
   | { event: "rebuild"; data: RebuildEvent }
+  | { event: "update"; data: UpdateInfo | null }
   /** «Cerrar Amnis»: la ventana de la mascota cierra la app de escritorio. */
   | { event: "quit"; data: null };
 

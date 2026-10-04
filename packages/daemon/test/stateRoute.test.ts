@@ -19,6 +19,7 @@ function makeDeps(): GetStateDeps {
     listening: () => null,
     settings: () => DEFAULT_SETTINGS,
     plan: () => null,
+    update: () => null,
     media: () =>
       Promise.resolve(emptyMedia("not-configured", "2026-01-01T00:00:00.000Z")),
     latestQuotas: () =>

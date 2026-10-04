@@ -117,7 +117,10 @@ mod tests {
         let before = *window;
         *window = target;
         for echo in [target, target, before, target] {
-            assert!(!anchor.on_moved(echo), "un eco del resize no es un arrastre");
+            assert!(
+                !anchor.on_moved(echo),
+                "un eco del resize no es un arrastre"
+            );
         }
     }
 

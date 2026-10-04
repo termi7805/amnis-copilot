@@ -6,6 +6,7 @@ import {
   type RebuildEvent,
   resolvePlan,
   type StateResponse,
+  type UpdateInfo,
 } from "@amnis/shared";
 import { useEffect, useState } from "react";
 import { daemonUrl } from "./config.ts";
@@ -34,7 +35,7 @@ export interface AmnisStream {
 
 /**
  * GET /api/events por SSE (docs/STACK.md §4): `hello` trae el
- * StateResponse completo al conectar, `state`/`quota`/`media`/`settings` solo
+ * StateResponse completo al conectar, `state`/`quota`/`media`/`settings`/`update` solo
  * sustituyen su parte — nunca se pierde lo que otro evento ya trajo.
  */
 export function useAmnisStream(): AmnisStream {
@@ -93,6 +94,11 @@ export function useAmnisStream(): AmnisStream {
     source.addEventListener("rebuild", (e: MessageEvent<string>) => {
       const event = JSON.parse(e.data) as RebuildEvent;
       setRebuild((prev) => ({ seq: (prev?.seq ?? 0) + 1, event }));
+    });
+
+    source.addEventListener("update", (e: MessageEvent<string>) => {
+      const update = JSON.parse(e.data) as UpdateInfo | null;
+      setState((current) => (current ? { ...current, update } : current));
     });
 
     source.addEventListener("quit", () => setQuitRequested(true));

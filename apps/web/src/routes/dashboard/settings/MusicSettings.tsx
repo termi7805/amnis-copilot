@@ -46,7 +46,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Switch({
+export function Switch({
   label,
   checked,
   onChange,

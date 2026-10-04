@@ -163,3 +163,12 @@ test("sanitizeSettings: petFocus ausente o malformado da auto; válido se conser
     SESSION_FOCUS,
   );
 });
+
+test("validateSettings: checkUpdates solo admite un booleano", () => {
+  const ok = validateSettings({ checkUpdates: false }, DEFAULT_SETTINGS);
+  assert.ok(ok.ok);
+  assert.equal(ok.settings.checkUpdates, false);
+  const bad = validateSettings({ checkUpdates: "no" }, DEFAULT_SETTINGS);
+  assert.ok(!bad.ok);
+  assert.equal(bad.field, "checkUpdates");
+});

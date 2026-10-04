@@ -38,6 +38,8 @@ export const pet = {
     quota: "Cuota",
     music: "Música",
     openDashboard: "Abrir dashboard",
+    update: "Hay una versión nueva",
+    downloadUpdate: "Descargar v{{version}}",
   },
   ring: {
     noData: "sin dato",

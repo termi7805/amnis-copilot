@@ -153,3 +153,15 @@ test("un locale guardado sobrevive a 'reiniciar'; uno desconocido cae a system",
     assert.equal(readSettings(path).locale, "system");
   });
 });
+
+test("checkUpdates viene activo por defecto y un valor guardado sobrevive", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    writeFileSync(path, JSON.stringify({}));
+    assert.equal(readSettings(path).checkUpdates, true);
+    writeSettings({ ...DEFAULT_SETTINGS, checkUpdates: false }, path);
+    assert.equal(readSettings(path).checkUpdates, false);
+    writeFileSync(path, JSON.stringify({ checkUpdates: "no" }));
+    assert.equal(readSettings(path).checkUpdates, true);
+  });
+});

@@ -67,6 +67,7 @@ const hello: StateResponse = {
   },
   settings: DEFAULT_SETTINGS,
   plan: null,
+  update: null,
   quotas: [
     {
       provider: "anthropic",
@@ -132,6 +133,25 @@ describe("useAmnisStream", () => {
     expect(result.current.state?.settings).toEqual(next);
     expect(result.current.state?.pet.state).toBe("coding");
     expect(result.current.state?.quotas).toHaveLength(1);
+  });
+
+  it("aplica update sin perder el resto (#148)", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.emit("hello", hello));
+    expect(result.current.state?.update).toBeNull();
+
+    const update = {
+      version: "9.9.9",
+      url: "https://github.com/termi7805/amnis-copilot/releases/tag/v9.9.9",
+    };
+    act(() => source?.emit("update", update));
+    expect(result.current.state?.update).toEqual(update);
+    expect(result.current.state?.quotas).toHaveLength(1);
+
+    act(() => source?.emit("update", null));
+    expect(result.current.state?.update).toBeNull();
   });
 
   it("un settings recalcula el plan manual, pero no toca el detectado", () => {

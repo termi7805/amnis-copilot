@@ -55,6 +55,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     listening: () => null,
     settings: () => DEFAULT_SETTINGS,
     plan: () => null,
+    update: () => null,
     readCommitHash: () => {
       throw new Error("readCommitHash no debería llamarse en este test");
     },
