@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   fiveHourWindow,
   paceHeadline,
+  paceLevel,
   severityPill,
   sparkPoints,
 } from "./fiveHour.ts";
@@ -197,24 +198,90 @@ describe("estimación provisional (#117)", () => {
   });
 });
 
+/** `now` al `pct` % de la ventana. */
+const at = (pct: number) => new Date(START.getTime() + (pct / 100) * 5 * HOUR);
+
+describe("paceLevel", () => {
+  const level = (used: number, pct: number) =>
+    paceLevel(fiveHourWindow(withSession("normal", used), at(pct)));
+
+  it("clasifica agotada, no llegas, justo, margen y recién empezada", () => {
+    expect(level(100, 90)).toBe("exhausted");
+    expect(level(29, 16)).toBe("over");
+    expect(level(50, 55)).toBe("tight");
+    expect(level(34, 55)).toBe("margin");
+    expect(level(1, 2)).toBe("starting");
+  });
+});
+
 describe("severityPill", () => {
-  it("sale de la severity del límite de sesión", () => {
-    expect(severityPill(quota())).toEqual({
+  const pill = (severity: string, used: number, pct: number) =>
+    severityPill(
+      withSession(severity, used),
+      fiveHourWindow(withSession(severity, used), at(pct)),
+    );
+
+  it("normal con margen: ritmo sostenible; critical manda", () => {
+    expect(pill("normal", 34, 55)).toEqual({
       tone: "ok",
       label: "Ritmo sostenible",
     });
-    expect(severityPill(withSession("critical")).tone).toBe("crit");
+    expect(pill("critical", 34, 55).tone).toBe("crit");
   });
 
-  it("una severidad desconocida se muestra tal cual", () => {
-    expect(severityPill(withSession("nueva"))).toEqual({
-      tone: "neutral",
-      label: "nueva",
+  it("29 % con el 16 % de la ventana y severity normal: no es sostenible", () => {
+    const q = withSession("normal", 29);
+    const w = fiveHourWindow(q, at(16));
+    const p = severityPill(q, w);
+    expect(p.label).not.toBe("Ritmo sostenible");
+    expect(p.tone).toBe("crit");
+    expect(paceHeadline(w, 187).title).toBe("A este ritmo no llegas al reset");
+  });
+
+  it("severity critical con ritmo bajo sigue en crítico", () => {
+    expect(pill("critical", 10, 55)).toEqual({
+      tone: "crit",
+      label: "Al límite",
     });
   });
 
+  it("el ritmo justo es warn; warning con ritmo bajo es warn", () => {
+    expect(pill("normal", 50, 55)).toEqual({
+      tone: "warn",
+      label: "Vas justo",
+    });
+    expect(pill("warning", 10, 55)).toEqual({
+      tone: "warn",
+      label: "Ritmo alto",
+    });
+  });
+
+  it("warning con ritmo insostenible: manda el ritmo", () => {
+    expect(pill("warning", 29, 16)).toEqual({
+      tone: "crit",
+      label: "Ritmo insostenible",
+    });
+  });
+
+  it("agotada", () => {
+    expect(pill("normal", 100, 90)).toEqual({ tone: "crit", label: "Agotada" });
+  });
+
+  it("recién empezada: la severity tal cual", () => {
+    expect(pill("normal", 1, 2)).toEqual({
+      tone: "ok",
+      label: "Ritmo sostenible",
+    });
+    expect(pill("critical", 1, 2).label).toBe("Al límite");
+  });
+
+  it("una severidad desconocida se muestra tal cual", () => {
+    expect(pill("nueva", 34, 55)).toEqual({ tone: "neutral", label: "nueva" });
+  });
+
   it("sin endpoint: estimado", () => {
-    expect(severityPill(quota({ authoritative: null })).label).toBe("estimado");
+    const q = quota({ authoritative: null });
+    expect(severityPill(q, fiveHourWindow(q, NOW)).label).toBe("estimado");
   });
 });
 

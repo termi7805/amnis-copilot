@@ -74,16 +74,38 @@ function clamp(n: number, lo: number, hi: number): number {
 /** Por encima de esto el ritmo lineal ya roza el límite. */
 const TIGHT_PACE = 0.85;
 
+export type Pace = "exhausted" | "over" | "tight" | "margin" | "starting";
+
+/**
+ * Clasificación de ritmo que comparten el titular y la pastilla (#118), para
+ * que no puedan discrepar. `ratio` = uso / tiempo; 1 es "justo al ritmo
+ * lineal". Con la ventana recién abierta no hay ritmo que medir.
+ */
+export function paceLevel(window: FiveHourWindow): Pace {
+  if (window.used >= 100) return "exhausted";
+  if (window.elapsedPct < 3) return "starting";
+  const ratio = window.used / window.elapsedPct;
+  if (ratio >= 1) return "over";
+  if (ratio >= TIGHT_PACE) return "tight";
+  return "margin";
+}
+
+const PACE_TITLE: Record<Exclude<Pace, "starting">, string> = {
+  exhausted: "Has agotado esta ventana",
+  over: "A este ritmo no llegas al reset",
+  tight: "Vas justo para esta ventana",
+  margin: "Te queda margen para esta ventana",
+};
+
 export interface PaceHeadline {
   title: string;
   detail: string;
 }
 
 /**
- * El titular sale de comparar uso y tiempo transcurrido, no de umbrales de
- * uso: 34 % gastado con el 55 % del tiempo pasado no es 34 % con el 10 %.
- * `ratio` = uso / tiempo; 1 es "justo al ritmo lineal". Con la ventana recién
- * abierta no hay ritmo que medir y se habla solo del uso.
+ * El titular sale de comparar uso y tiempo transcurrido (`paceLevel`), no de
+ * umbrales de uso: 34 % gastado con el 55 % del tiempo pasado no es 34 % con
+ * el 10 %. Con la ventana recién abierta se habla solo del uso.
  */
 export function paceHeadline(
   window: FiveHourWindow,
@@ -106,21 +128,14 @@ export function paceHeadline(
       ? " Es una estimación local: sin el endpoint no hay proyección."
       : "";
 
-  if (window.elapsedPct < 3 && window.used < 100) {
+  const pace = paceLevel(window);
+  if (pace === "starting") {
     return {
       title: "La ventana acaba de empezar",
       detail: `${measured}${source}`,
     };
   }
-  const ratio = window.used / window.elapsedPct;
-  const title =
-    window.used >= 100
-      ? "Has agotado esta ventana"
-      : ratio >= 1
-        ? "A este ritmo no llegas al reset"
-        : ratio >= TIGHT_PACE
-          ? "Vas justo para esta ventana"
-          : "Te queda margen para esta ventana";
+  const title = PACE_TITLE[pace];
   const detail =
     !window.estimated && projectedAtReset !== null
       ? `A este ritmo cierras la ventana de 5 h al ${Math.round(projectedAtReset)} %.`
@@ -130,12 +145,35 @@ export function paceHeadline(
 
 export type PillTone = "ok" | "warn" | "crit" | "neutral";
 
+const TONE_RANK: Record<PillTone, number> = {
+  neutral: 0,
+  ok: 1,
+  warn: 2,
+  crit: 3,
+};
+
+const PACE_PILL: Record<
+  Exclude<Pace, "starting">,
+  { tone: PillTone; label: string }
+> = {
+  exhausted: { tone: "crit", label: "Agotada" },
+  over: { tone: "crit", label: "Ritmo insostenible" },
+  tight: { tone: "warn", label: "Vas justo" },
+  margin: { tone: "ok", label: "Ritmo sostenible" },
+};
+
 /**
- * La pastilla sale de la `severity` del límite de sesión que calcula
- * Anthropic, no de umbrales propios (#91). Una severidad desconocida se
- * muestra tal cual en vez de descartarse.
+ * La pastilla sale del mismo ritmo que el titular (`paceLevel`, #118); la
+ * `severity` del límite de sesión que calcula Anthropic solo la endurece:
+ * `severity` mide cuánto se ha gastado, no a qué velocidad (#91), pero
+ * Anthropic sabe cosas del límite que el ritmo no ve. Gana el más grave; con
+ * la ventana recién empezada, la `severity` tal cual. Una severidad
+ * desconocida se muestra tal cual salvo que el ritmo ya avise.
  */
-export function severityPill(quota: QuotaSnapshot): {
+export function severityPill(
+  quota: QuotaSnapshot,
+  window: FiveHourWindow,
+): {
   tone: PillTone;
   label: string;
 } {
@@ -143,16 +181,26 @@ export function severityPill(quota: QuotaSnapshot): {
   const limit = quota.authoritative.limits.find(
     (l) => l.kind === "session" && l.scope === null,
   );
-  switch (limit?.severity) {
-    case "normal":
-      return { tone: "ok", label: "Ritmo sostenible" };
-    case "warning":
-      return { tone: "warn", label: "Ritmo alto" };
-    case "critical":
-      return { tone: "crit", label: "Al límite" };
-    default:
-      return { tone: "neutral", label: limit?.severity ?? "sin severidad" };
-  }
+  const bySeverity = ((): { tone: PillTone; label: string } => {
+    switch (limit?.severity) {
+      case "normal":
+        return { tone: "ok", label: "Ritmo sostenible" };
+      case "warning":
+        return { tone: "warn", label: "Ritmo alto" };
+      case "critical":
+        return { tone: "crit", label: "Al límite" };
+      default:
+        return { tone: "neutral", label: limit?.severity ?? "sin severidad" };
+    }
+  })();
+  const pace = paceLevel(window);
+  if (pace === "starting") return bySeverity;
+  const byPace = PACE_PILL[pace];
+  // Una severidad desconocida no se pisa con un "todo bien" del ritmo.
+  if (bySeverity.tone === "neutral" && byPace.tone === "ok") return bySeverity;
+  return TONE_RANK[bySeverity.tone] > TONE_RANK[byPace.tone]
+    ? bySeverity
+    : byPace;
 }
 
 export const SPARK_W = 600;

@@ -97,7 +97,7 @@ export function FiveHourCard({
   now: Date;
 }) {
   const window = fiveHourWindow(quota, now);
-  const pill = severityPill(quota);
+  const pill = severityPill(quota, window);
   const countdown = formatUntil(window.end.toISOString(), now);
   const localPct = quota.local.fiveHourUtilization;
   // Sin calibrar, el `%` local sale de un techo inicial que no casa con los
