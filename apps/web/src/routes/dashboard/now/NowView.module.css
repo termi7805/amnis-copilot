@@ -134,7 +134,6 @@
   border-radius: var(--r);
   background: var(--surface);
   box-shadow: var(--shadow);
-  overflow: hidden;
 }
 
 .playerHead {

@@ -271,7 +271,9 @@ describe("Dashboard", () => {
 
     expect(screen.getByText("Blinding Lights")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pausar" })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Dispositivos" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Dispositivo de reproducción" }),
+    ).toBeVisible();
 
     act(() =>
       source?.emit("media", {

@@ -452,7 +452,7 @@ describe("MediaPlayer — layout", () => {
     expect(screen.queryByRole("group", { name: "Dispositivos" })).toBeNull();
   });
 
-  it("ancho: lista de dispositivos y modos visibles sin desplegar", async () => {
+  it("ancho: el dispositivo va en la fila del transporte y su lista se despliega al pulsar", async () => {
     const { container } = render(
       <MediaPlayer
         media={playing}
@@ -461,11 +461,19 @@ describe("MediaPlayer — layout", () => {
         loadDevices={noDevices}
       />,
     );
-    await act(async () => {});
     expect(
       container.querySelector("[data-layout]")?.getAttribute("data-layout"),
     ).toBe("wide");
+    const trigger = screen.getByRole("button", {
+      name: "Dispositivo de reproducción",
+    });
+    // Mismo contenedor que los botones del transporte, no debajo del reproductor.
+    expect(trigger.closest("div")?.parentElement).toBe(
+      screen.getByRole("button", { name: "Aleatorio" }).parentElement,
+    );
+    expect(screen.queryByRole("group", { name: "Dispositivos" })).toBeNull();
+    fireEvent.click(trigger);
+    await act(async () => {});
     expect(screen.getByRole("group", { name: "Dispositivos" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Aleatorio" })).toBeVisible();
   });
 });

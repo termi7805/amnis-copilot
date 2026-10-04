@@ -1,11 +1,5 @@
 import type { MediaDevice, MediaDeviceOption } from "@amnis/shared";
-import {
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
 import type { MediaDevicesResult } from "../../api/media.ts";
 import styles from "./MediaPlayer.module.css";
 
@@ -101,9 +95,9 @@ export interface DeviceSelectorProps {
   loadDevices: () => Promise<MediaDevicesResult>;
   onTransfer: (deviceId: string) => Promise<boolean>;
   disabled?: boolean;
-  /** Layout ancho: la lista va siempre desplegada, sin botón. Se pide al
-   * montar y cuando cambia el dispositivo actual, no por polling. */
-  alwaysOpen?: boolean;
+  /** `popover` (dashboard): disparador de texto y la lista flota sobre la
+   * tarjeta sin empujarla. Solo cambia el aspecto, no la lógica. */
+  variant?: "inline" | "popover";
 }
 
 /**
@@ -115,10 +109,9 @@ export function DeviceSelector({
   loadDevices,
   onTransfer,
   disabled = false,
-  alwaysOpen = false,
+  variant = "inline",
 }: DeviceSelectorProps) {
-  const [openState, setOpen] = useState(false);
-  const open = alwaysOpen || openState;
+  const [open, setOpen] = useState(false);
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [transferringId, setTransferringId] = useState<string | null>(null);
   // Cerrar y reabrir deprisa no debe dejar que una respuesta vieja pise la nueva.
@@ -126,10 +119,7 @@ export function DeviceSelector({
 
   async function fetchList() {
     const mine = ++request.current;
-    // Refrescar una lista ya pintada no la parpadea a "Buscando…".
-    setLoad((prev) =>
-      alwaysOpen && prev.status === "ready" ? prev : { status: "loading" },
-    );
+    setLoad({ status: "loading" });
     const result = await loadDevices().catch(
       (): MediaDevicesResult => ({
         ok: false,
@@ -143,12 +133,6 @@ export function DeviceSelector({
         : { status: "error", message: result.message },
     );
   }
-
-  const currentId = current?.id ?? null;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: solo recarga al montar y cuando el siguiente `media` cambia el dispositivo
-  useEffect(() => {
-    if (alwaysOpen) void fetchList();
-  }, [alwaysOpen, currentId]);
 
   function toggle() {
     if (open) {
@@ -165,14 +149,14 @@ export function DeviceSelector({
     setTransferringId(id);
     const ok = await onTransfer(id);
     setTransferringId(null);
-    if (ok && !alwaysOpen) {
+    if (ok) {
       request.current++;
       setOpen(false);
     }
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === "Escape" && openState && !alwaysOpen) {
+    if (e.key === "Escape" && open) {
       request.current++;
       setOpen(false);
     }
@@ -180,22 +164,40 @@ export function DeviceSelector({
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: solo recoge Escape de los botones de dentro
-    <div className={styles.devices} onKeyDown={onKeyDown}>
-      {!alwaysOpen && (
-        <button
-          type="button"
-          className={styles.deviceTrigger}
-          onClick={toggle}
-          disabled={disabled}
-          aria-expanded={open}
-          aria-label="Dispositivo de reproducción"
-        >
-          {current && <DeviceIcon type={current.type} />}
-          <span className={styles.deviceName}>
-            {current ? current.name : "Elegir dispositivo"}
-          </span>
-        </button>
-      )}
+    <div
+      className={styles.devices}
+      data-variant={variant}
+      onKeyDown={onKeyDown}
+    >
+      <button
+        type="button"
+        className={styles.deviceTrigger}
+        onClick={toggle}
+        disabled={disabled}
+        aria-expanded={open}
+        aria-label="Dispositivo de reproducción"
+      >
+        {current && <DeviceIcon type={current.type} />}
+        <span className={styles.deviceName}>
+          {current ? current.name : "Elegir dispositivo"}
+        </span>
+        {variant === "popover" && (
+          <svg
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={styles.deviceChevron}
+            aria-hidden="true"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        )}
+      </button>
 
       {open && (
         <fieldset className={styles.deviceList} aria-label="Dispositivos">

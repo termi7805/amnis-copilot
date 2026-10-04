@@ -20,7 +20,8 @@ export interface MediaPlayerProps {
   media: MediaSnapshot | null;
   onCommand: (command: MediaCommand) => Promise<MediaCommandResult>;
   loadDevices: () => Promise<MediaDevicesResult>;
-  /** `wide`: portada grande y lista de dispositivos siempre visible. */
+  /** `wide` (dashboard): estética del tema, con el dispositivo en la fila del
+   * transporte y su lista en un popover. */
   layout?: "compact" | "wide";
 }
 
@@ -117,6 +118,22 @@ export function MediaPlayer({
     return false;
   }
 
+  const hasPlayer = (state === "ok" || state === "no-track") && media !== null;
+  const devices = (state === "ok" ||
+    state === "no-track" ||
+    state === "no-device") && (
+    <DeviceSelector
+      current={media?.device ?? null}
+      loadDevices={loadDevices}
+      onTransfer={(deviceId) => run({ kind: "transfer", deviceId })}
+      disabled={busy}
+      variant={layout === "wide" ? "popover" : "inline"}
+    />
+  );
+  // En el ancho el dispositivo va al final del transporte, como en el mockup;
+  // sin reproductor (`no-device`) se queda bajo el aviso.
+  const devicesInTransport = layout === "wide" && hasPlayer;
+
   return (
     // Cortar los eventos de puntero aquí: la ventana de la mascota alterna
     // plegado/desplegado con el clic de toda ella (PetWindow.tsx), y sin
@@ -168,19 +185,16 @@ export function MediaPlayer({
         <Empty title="Spotify no responde">Reintentando…</Empty>
       )}
 
-      {(state === "ok" || state === "no-track") && media && (
-        <Player media={media} busy={busy} run={run} />
-      )}
-
-      {(state === "ok" || state === "no-track" || state === "no-device") && (
-        <DeviceSelector
-          current={media?.device ?? null}
-          loadDevices={loadDevices}
-          onTransfer={(deviceId) => run({ kind: "transfer", deviceId })}
-          disabled={busy}
-          alwaysOpen={layout === "wide"}
+      {hasPlayer && (
+        <Player
+          media={media}
+          busy={busy}
+          run={run}
+          devices={devicesInTransport ? devices : null}
         />
       )}
+
+      {!devicesInTransport && devices}
 
       {error && (
         <p className={styles.error} role="alert">
@@ -207,10 +221,13 @@ function Player({
   media,
   busy,
   run,
+  devices,
 }: {
   media: MediaSnapshot;
   busy: boolean;
   run: (command: MediaCommand) => Promise<boolean>;
+  /** Selector de dispositivo al final del transporte (solo layout ancho). */
+  devices: ReactNode;
 }) {
   const { track, isPlaying } = media;
   return (
@@ -301,6 +318,7 @@ function Player({
               disabled={busy}
               onCommand={run}
             />
+            {devices}
           </div>
         </div>
       </div>

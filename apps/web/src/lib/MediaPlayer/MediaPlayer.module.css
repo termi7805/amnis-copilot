@@ -301,8 +301,10 @@
   line-height: 1.35;
 }
 
-/* Layout ancho (tarjeta del dashboard, #58): portada grande y todo a la vista,
-   con los tokens del tema para seguir el claro/oscuro del dashboard (#92). */
+/* Layout ancho (tarjeta del dashboard, #58): con los tokens del tema para
+   seguir el claro/oscuro del dashboard (#92) y la estética del reproductor del
+   mockup v6 (#115). Solo sobrescribe: el compacto sigue con las reglas de
+   arriba. */
 .root[data-layout="wide"] {
   --mp-ink: var(--ink);
   --mp-ink-hover: var(--ink-2);
@@ -320,12 +322,14 @@
 }
 
 .root[data-layout="wide"] .cover {
-  width: 140px;
-  height: 140px;
+  width: 96px;
+  height: 96px;
+  border: 0;
+  border-radius: 8px;
 }
 
 .root[data-layout="wide"] .title {
-  font-size: 16px;
+  font: 600 16px / 1.3 var(--f-body);
   white-space: normal;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -333,21 +337,245 @@
 }
 
 .root[data-layout="wide"] .artists {
+  margin-top: 1px;
   font-size: 13px;
+  color: var(--ink-2);
 }
 
+/* Transporte: botones redondos sin borde; play/pausa relleno y los modos
+   activos en el acento, sin fondo. */
 .root[data-layout="wide"] .controls {
-  margin-top: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
 }
 
+.root[data-layout="wide"] .controlGap {
+  flex: none;
+  width: 4px;
+}
+
+.root[data-layout="wide"] .control {
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  color: var(--ink-2);
+}
+
+.root[data-layout="wide"] .control svg {
+  width: 17px;
+  height: 17px;
+}
+
+.root[data-layout="wide"] .control:hover:not(:disabled) {
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.root[data-layout="wide"] .control[data-primary="true"] {
+  width: 40px;
+  height: 40px;
+  background: var(--ink);
+  color: var(--surface);
+}
+
+.root[data-layout="wide"] .control[data-primary="true"]:hover:not(:disabled) {
+  background: var(--ink-2);
+  color: var(--surface);
+}
+
+.root[data-layout="wide"] .control[data-toggle="true"][aria-pressed="true"] {
+  background: none;
+  color: var(--accent);
+}
+
+.root[data-layout="wide"]
+  .control[data-toggle="true"][aria-pressed="true"]:hover:not(:disabled) {
+  background: var(--raised);
+  color: var(--accent);
+}
+
+.root[data-layout="wide"] .control:focus-visible,
+.root[data-layout="wide"] .deviceTrigger:focus-visible,
+.root[data-layout="wide"] .deviceRow:focus-visible,
+.root[data-layout="wide"] .connect:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Progreso: la barra se ve de 4 px, pero la pista que recibe el arrastre
+   sigue midiendo 16 px de alto; si no, hacer seek sería una diana de 4 px. */
 .root[data-layout="wide"] .progress {
-  padding: 0 16px 12px;
-}
-
-.root[data-layout="wide"] .devices {
+  gap: 10px;
   padding: 0 16px 14px;
 }
 
-.root[data-layout="wide"] .deviceList {
-  margin-top: 0;
+.root[data-layout="wide"] .time {
+  font: 400 11px / 1 var(--f-mono);
+  color: var(--ink-3);
+}
+
+.root[data-layout="wide"] .progressTrack {
+  height: 16px;
+  border: 0;
+  background: none;
+}
+
+.root[data-layout="wide"] .progressTrack::before {
+  content: "";
+  position: absolute;
+  inset: 6px 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 99px;
+  background: var(--raised);
+}
+
+.root[data-layout="wide"] .progressFill {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--ink);
+}
+
+.root[data-layout="wide"] .progressTrack:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Dispositivo: texto con icono al final del transporte y lista en popover,
+   con el mismo aspecto que el selector de foco (#114). */
+.devices[data-variant="popover"] {
+  position: relative;
+}
+
+.root[data-layout="wide"] .controls .devices {
+  margin-left: auto;
+  padding: 0;
+}
+
+.root[data-layout="wide"] .deviceTrigger {
+  width: auto;
+  max-width: 14rem;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ink-2);
+  font: 500 12px / 1.2 var(--f-body);
+}
+
+.root[data-layout="wide"] .deviceTrigger:hover:not(:disabled),
+.root[data-layout="wide"] .deviceTrigger[aria-expanded="true"] {
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.deviceChevron {
+  flex: none;
+  color: var(--ink-3);
+}
+
+.deviceTrigger[aria-expanded="true"] .deviceChevron {
+  transform: rotate(180deg);
+}
+
+.devices[data-variant="popover"] .deviceList {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 18rem;
+  max-height: 20rem;
+  overflow-y: auto;
+  gap: 2px;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* Sin reproductor (`no-device`) el disparador va bajo el aviso: la lista se
+   abre desde su borde izquierdo (descontando el padding de la tarjeta). */
+.root[data-layout="wide"] .devices:not(.controls .devices) .deviceList {
+  top: calc(100% - 8px);
+  right: auto;
+  left: 16px;
+}
+
+.root[data-layout="wide"] .devices:not(.controls .devices) {
+  padding: 0 16px 14px;
+}
+
+.root[data-layout="wide"] .deviceRow {
+  gap: 8px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--ink-2);
+  font: 500 13px / 1.3 var(--f-body);
+}
+
+.root[data-layout="wide"] .deviceRow:hover:not(:disabled) {
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.root[data-layout="wide"] .deviceRow[data-active="true"] {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.root[data-layout="wide"] .deviceRow[data-active="true"] svg,
+.root[data-layout="wide"] .deviceRow[data-active="true"] .deviceNote {
+  color: var(--accent);
+}
+
+.root[data-layout="wide"] .deviceNote {
+  color: var(--ink-3);
+  font: 400 11px / 1.3 var(--f-mono);
+}
+
+.root[data-layout="wide"] .devices .hint {
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+/* Estados vacíos y errores. */
+.root[data-layout="wide"] .empty {
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.root[data-layout="wide"] .emptyTitle {
+  font: 600 14px / 1.3 var(--f-body);
+}
+
+.root[data-layout="wide"] .hint {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
+.root[data-layout="wide"] .command {
+  padding: 6px 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  font: 400 12px / 1.4 var(--f-mono);
+}
+
+.root[data-layout="wide"] .connect {
+  padding: 7px 13px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  font: 500 13px / 1 var(--f-body);
+}
+
+.root[data-layout="wide"] .error {
+  padding: 0 16px 14px;
+  font-size: 12.5px;
 }
