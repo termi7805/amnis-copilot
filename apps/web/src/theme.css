@@ -1,5 +1,5 @@
 /*
- * Tokens de tema (#80, #123). Cada token se define primero en :root (claro) y
+ * Tokens de tema (#80, #123, #124). Cada token se define primero en :root (claro) y
  * cada tema lo redefine entero bajo :root[data-theme="<id>"], un bloque por id
  * del catálogo THEMES. El oscuro va además bajo la preferencia del sistema,
  * pero solo con «Sistema» (sin data-theme): si no, con el escritorio en oscuro
@@ -651,4 +651,188 @@
     #e3dfc6 100%
   );
   --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
+}
+
+:root[data-theme="medianoche"] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --surface: #121b2e;
+  --raised: #18233a;
+  --line: #26334d;
+  --line-soft: #1c2840;
+  --ink: #e6edf7;
+  --ink-2: #afbdd3;
+  --ink-3: #8192af;
+  --accent: #39e0c8;
+  --accent-mark: #22b8a3;
+  --accent-soft: #0f3537;
+  --ok: #5bd69a;
+  --ok-soft: #12301f;
+  --warn: #ffb547;
+  --warn-mark: #d18e1e;
+  --warn-soft: #352812;
+  --crit: #ff6b6b;
+  --crit-soft: #3a1a22;
+  --s1: #5b8cff;
+  --s2: #ff8a5b;
+  --s3: #2fc48f;
+  --s4: #33415e;
+  --src-code: #22b8a3;
+  --src-chat: #ff8a5b;
+  --src-cowork: #9b8cff;
+  --src-other: #33415e;
+  --act-work: #22b8a3;
+  --act-explore: #9b8cff;
+  --act-wait: #d18e1e;
+  --act-idle: #26334d;
+  --heat-0: #16203a;
+  --heat-1: #12403f;
+  --heat-2: #146560;
+  --heat-3: #1d9585;
+  --heat-4: #39e0c8;
+  --stage: radial-gradient(
+    ellipse 70% 80% at 50% 62%,
+    #8396ba 0%,
+    #4c5d82 55%,
+    #1d2944 100%
+  );
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
+}
+
+:root[data-theme="papel"] {
+  color-scheme: light;
+  --bg: #f1ece2;
+  --surface: #fbf8f2;
+  --raised: #f5f0e6;
+  --line: #ddd3c2;
+  --line-soft: #e9e1d3;
+  --ink: #2b2118;
+  --ink-2: #5c4b3b;
+  --ink-3: #7f6c59;
+  --accent: #0b7466;
+  --accent-mark: #13917f;
+  --accent-soft: #d8ece5;
+  --ok: #3d7a3a;
+  --ok-soft: #e1ecd7;
+  --warn: #8f5b00;
+  --warn-mark: #c98a1b;
+  --warn-soft: #f4e3c2;
+  --crit: #b3361f;
+  --crit-soft: #f5dbd2;
+  --s1: #3c6e9f;
+  --s2: #c8643b;
+  --s3: #4e9a6b;
+  --s4: #cfc4b2;
+  --src-code: #13917f;
+  --src-chat: #c8643b;
+  --src-cowork: #7a62b0;
+  --src-other: #cfc4b2;
+  --act-work: #13917f;
+  --act-explore: #7a62b0;
+  --act-wait: #c98a1b;
+  --act-idle: #ddd3c2;
+  --heat-0: #f1ece2;
+  --heat-1: #d6eae0;
+  --heat-2: #a6d4c4;
+  --heat-3: #5bb29f;
+  --heat-4: #13917f;
+  --stage: radial-gradient(
+    ellipse 70% 80% at 50% 62%,
+    #fffdf8 0%,
+    #f0e8da 70%,
+    #e3d9c7 100%
+  );
+  --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
+}
+
+:root[data-theme="niebla"] {
+  color-scheme: light;
+  --bg: #e9edf1;
+  --surface: #f7f9fb;
+  --raised: #eef2f6;
+  --line: #d3dae2;
+  --line-soft: #e2e7ed;
+  --ink: #1f2a37;
+  --ink-2: #4a5869;
+  --ink-3: #627185;
+  --accent: #4152c4;
+  --accent-mark: #6273e8;
+  --accent-soft: #e2e6fb;
+  --ok: #1f8a5b;
+  --ok-soft: #dcf2e7;
+  --warn: #8f5d00;
+  --warn-mark: #e09a00;
+  --warn-soft: #fbecc8;
+  --crit: #c4260f;
+  --crit-soft: #fbe0da;
+  --s1: #4a5bd4;
+  --s2: #eb6834;
+  --s3: #1baf7a;
+  --s4: #c0c8d2;
+  --src-code: #12a08b;
+  --src-chat: #eb6834;
+  --src-cowork: #6273e8;
+  --src-other: #c0c8d2;
+  --act-work: #12a08b;
+  --act-explore: #6273e8;
+  --act-wait: #e09a00;
+  --act-idle: #cfd6de;
+  --heat-0: #eef2f6;
+  --heat-1: #dde1fa;
+  --heat-2: #b8c0f3;
+  --heat-3: #8593ec;
+  --heat-4: #4a5bd4;
+  --stage: radial-gradient(
+    ellipse 70% 80% at 50% 62%,
+    #ffffff 0%,
+    #e4e9ef 70%,
+    #d5dce4 100%
+  );
+  --shadow: 0 1px 2px rgb(23 29 38 / 0.05), 0 4px 16px rgb(23 29 38 / 0.05);
+}
+
+:root[data-theme="alto-contraste"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #0a0a0a;
+  --raised: #141414;
+  --line: #8a8a8a;
+  --line-soft: #3d3d3d;
+  --ink: #ffffff;
+  --ink-2: #e6e6e6;
+  --ink-3: #c2c2c2;
+  --accent: #5ff5df;
+  --accent-mark: #39e0c8;
+  --accent-soft: #0d3b36;
+  --ok: #6dffa8;
+  --ok-soft: #0f3320;
+  --warn: #ffd23f;
+  --warn-mark: #ffc400;
+  --warn-soft: #3d3000;
+  --crit: #ff7a6b;
+  --crit-soft: #451512;
+  --s1: #6fb1ff;
+  --s2: #ffa04d;
+  --s3: #6dffa8;
+  --s4: #8a8a8a;
+  --src-code: #39e0c8;
+  --src-chat: #ffa04d;
+  --src-cowork: #c3a5ff;
+  --src-other: #8a8a8a;
+  --act-work: #39e0c8;
+  --act-explore: #c3a5ff;
+  --act-wait: #ffc400;
+  --act-idle: #3d3d3d;
+  --heat-0: #141414;
+  --heat-1: #0f4a42;
+  --heat-2: #178a7a;
+  --heat-3: #2bc4ad;
+  --heat-4: #5ff5df;
+  --stage: radial-gradient(
+    ellipse 70% 80% at 50% 62%,
+    #b8c2cc 0%,
+    #7a8591 55%,
+    #2a2f35 100%
+  );
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.18);
 }

@@ -3,13 +3,6 @@ import { resolve } from "node:path";
 import { THEMES } from "@amnis/shared";
 import { describe, expect, it } from "vitest";
 
-/**
- * Temas del catálogo cuyo bloque CSS llega en #124. Mientras estén aquí se
- * exige que NO tengan bloque; cuando #124 los añada, este test falla hasta
- * que se vacíe la lista, para que no se queden fuera de la comprobación.
- */
-const PENDIENTES_124 = ["medianoche", "papel", "niebla", "alto-contraste"];
-
 type Block = { selector: string; tokens: Map<string, string>; scheme: string };
 
 const css = readFileSync(
@@ -106,13 +99,6 @@ describe("theme.css", () => {
     for (const id of catalogIds) {
       // «light» es el propio :root, la referencia: no lleva bloque aparte.
       if (id === "light") continue;
-      if (PENDIENTES_124.includes(id)) {
-        expect(
-          ids.has(id),
-          `${id} ya tiene bloque: quítalo de PENDIENTES_124`,
-        ).toBe(false);
-        continue;
-      }
       expect(ids.has(id), `falta el bloque de ${id}`).toBe(true);
     }
     for (const { name, block } of toCheck) {
@@ -159,6 +145,32 @@ describe("theme.css", () => {
           ).toBeGreaterThanOrEqual(min);
         });
       }
+    }
+  });
+
+  describe("Alto contraste", () => {
+    const block = themeBlocks.find(
+      (b) => idOf(b) === "alto-contraste",
+    ) as Block;
+    // Es el tema de accesibilidad: sus mínimos son AAA, no los del resto.
+    for (const token of [
+      "--ink",
+      "--ink-2",
+      "--ink-3",
+      "--accent",
+      "--crit",
+      "--ok",
+      "--warn",
+    ]) {
+      it(`${token} ≥ 7 sobre --surface`, () => {
+        const fg = block.tokens.get(token) as string;
+        const bg = block.tokens.get("--surface") as string;
+        const ratio = contrast(fg, bg);
+        expect(
+          ratio,
+          `${token} ${fg} sobre ${bg} = ${ratio.toFixed(2)}`,
+        ).toBeGreaterThanOrEqual(7);
+      });
     }
   });
 });
