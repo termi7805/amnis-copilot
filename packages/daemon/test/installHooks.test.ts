@@ -158,7 +158,9 @@ test("amnis install-hooks copia el script a AMNIS_DIR/hooks y lo registra desde 
 
     const installed = join(amnisDir, "hooks", "amnis-hook.sh");
     assert.equal(readFileSync(installed, "utf8"), readFileSync(source, "utf8"));
-    assert.equal(statSync(installed).mode & 0o777, 0o755);
+    if (process.platform !== "win32") {
+      assert.equal(statSync(installed).mode & 0o777, 0o755);
+    }
 
     const settings = JSON.parse(
       readFileSync(join(claudeDir, "settings.json"), "utf8"),
@@ -168,7 +170,7 @@ test("amnis install-hooks copia el script a AMNIS_DIR/hooks y lo registra desde 
     );
     assert.equal(commands.length, EXPECTED_HOOK_EVENTS.length);
     for (const command of commands) {
-      assert.equal(command, `/bin/sh '${installed}'`);
+      assert.equal(command, hookCommand(installed));
     }
   } finally {
     rmSync(claudeDir, { recursive: true, force: true });
