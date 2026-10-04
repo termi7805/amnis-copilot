@@ -7,7 +7,9 @@ import type {
 } from "@amnis/shared";
 import {
   commitHashFrom,
+  countOthersActive,
   type LastKnownStateEvent,
+  type LiveSessionCandidate,
   petPhaseFrom,
 } from "../application/getState.ts";
 import {
@@ -22,6 +24,8 @@ export interface PetStateWatcherDeps {
    * filtro para `/api/state` y el SSE. */
   focus(): PetFocus;
   lastKnownStateEvent(focus: PetFocus): LastKnownStateEvent | null;
+  /** Para `othersActive` (#112); la misma que `GetStateDeps`. */
+  liveSessionCandidates(since: Date): LiveSessionCandidate[];
   startedAt: string;
   getCachedFatigue(): number;
   /** Hermano exacto de `getCachedFatigue`: cuota agotada, cacheada del
@@ -47,8 +51,9 @@ export interface PetStateWatcher {
 }
 
 /**
- * Solo dispara `broadcast` cuando cambia el campo `state` o el eje
- * `listening` (#59), no el `PetSnapshot` entero — `since` avanza con cada
+ * Solo dispara `broadcast` cuando cambia el campo `state`, el eje
+ * `listening` (#59), el foco o `othersActive` (#112), no el `PetSnapshot`
+ * entero — `since` avanza con cada
  * evento del mismo estado, y comparar el objeto completo emitiría un evento
  * por cada hook. `listening` nunca altera `state`: ni lo despierta de
  * `sleeping` ni lo cambia.
@@ -64,6 +69,7 @@ export function startPetStateWatcher(
   let lastBroadcastListening: string | null = null;
   let lastBroadcastProject: string | null = null;
   let lastBroadcastFocus: string | null = null;
+  let lastBroadcastOthers: number | null = null;
   let memory: ListeningMemory = NO_LISTENING;
   // El apagado de `listening` no lo dispara ningún evento: sin esto llegaría
   // con el intervalo de 30 s, no a los ~15 s de la pausa.
@@ -84,8 +90,11 @@ export function startPetStateWatcher(
     // El foco cuenta: al cambiarlo el estado puede ser el mismo aunque lo que
     // se mira no lo sea, y los clientes tienen que enterarse.
     const focusKey = JSON.stringify(focus);
+    // Otra sesión que arranca o termina no toca `state`, pero sí el aviso.
+    const othersActive = countOthersActive(deps, focus, now);
     if (
       focusKey === lastBroadcastFocus &&
+      othersActive === lastBroadcastOthers &&
       phase.state === lastBroadcastState &&
       phase.project === lastBroadcastProject &&
       listeningKey === lastBroadcastListening
@@ -96,6 +105,7 @@ export function startPetStateWatcher(
     lastBroadcastListening = listeningKey;
     lastBroadcastProject = phase.project;
     lastBroadcastFocus = focusKey;
+    lastBroadcastOthers = othersActive;
     deps.broadcast({
       ...phase,
       fatigue: deps.getCachedFatigue(),
@@ -103,6 +113,7 @@ export function startPetStateWatcher(
       commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
       listening: memory.listening,
       focus,
+      othersActive,
     });
   }
 

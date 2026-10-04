@@ -674,3 +674,28 @@ describe("pantalla 'sonando' (#64)", () => {
     expect(screenOf(container)?.textContent).toContain("Corto");
   });
 });
+
+describe("insignia othersActive", () => {
+  const title = () =>
+    screen.getByRole("img").querySelector("title")?.textContent;
+
+  it("sin otras sesiones no hay insignia ni cambia el título", () => {
+    render(<Pet state="sleeping" level={1} fatigue={0} othersActive={0} />);
+    expect(screen.queryByTestId("pet-others")).toBeNull();
+    expect(title()).toBe("Durmiendo");
+  });
+
+  it("con otras sesiones enseña '+N' y lo dice en el título", () => {
+    render(<Pet state="sleeping" level={1} fatigue={0} othersActive={2} />);
+    expect(screen.getByTestId("pet-others").textContent).toBe("+2");
+    expect(title()).toContain("+2 sesiones activas");
+  });
+
+  it("en singular con una, y no altera el estado que se dibuja", () => {
+    render(<Pet state="sleeping" level={1} fatigue={0} othersActive={1} />);
+    expect(title()).toContain("+1 sesión activa");
+    expect(screen.getByTestId("pet").getAttribute("data-state")).toBe(
+      "sleeping",
+    );
+  });
+});

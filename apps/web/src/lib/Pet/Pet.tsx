@@ -30,6 +30,40 @@ export interface PetProps {
   listening?: Listening | null;
   /** Lo que no se indique toma el valor por defecto. */
   musicPrefs?: Partial<MusicPrefs>;
+  /** Sesiones vivas fuera del foco (`PetSnapshot.othersActive`). Con valor
+   * mayor que 0 sale una insignia "+N"; no cambia la forma ni el color de la
+   * mascota (docs/DESIGN.md §4). */
+  othersActive?: number;
+}
+
+/** La insignia "+N" de `othersActive`, fuera de `<Scene>` para que ningún
+ * estado la tape ni la altere. Neutra a propósito: no es un estado. */
+function OthersBadge({ count }: { count: number }) {
+  const label = `+${count}`;
+  const width = 8 + label.length * 6;
+  return (
+    <g data-testid="pet-others">
+      <rect
+        x={146 - width}
+        y="3"
+        width={width}
+        height="14"
+        rx="7"
+        fill="#171D26"
+        opacity=".78"
+      />
+      <text
+        x={146 - width / 2}
+        y="13"
+        textAnchor="middle"
+        fontSize="9"
+        fontWeight="700"
+        fill="#F2F4F6"
+      >
+        {label}
+      </text>
+    </g>
+  );
 }
 
 /**
@@ -2456,6 +2490,7 @@ export function Pet({
   commitHash = null,
   listening = null,
   musicPrefs: musicPrefsProp,
+  othersActive = 0,
 }: PetProps) {
   const musicPrefs: MusicPrefs = { ...DEFAULT_MUSIC_PREFS, ...musicPrefsProp };
   const style = {
@@ -2525,7 +2560,11 @@ export function Pet({
       data-fallback={shown ? musicPrefs.fallback : undefined}
       style={style}
     >
-      <title>{STATE_TITLE[state]}</title>
+      <title>
+        {othersActive > 0
+          ? `${STATE_TITLE[state]} · +${othersActive} ${othersActive === 1 ? "sesión activa" : "sesiones activas"}`
+          : STATE_TITLE[state]}
+      </title>
       <Scene
         state={state}
         resetsAt={resetsAt}
@@ -2537,6 +2576,7 @@ export function Pet({
         !(shown.vibe === "neutral" && musicPrefs.fallback === "quiet") && (
           <MusicFx visible={visible} />
         )}
+      {othersActive > 0 && <OthersBadge count={othersActive} />}
     </svg>
   );
 }

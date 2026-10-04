@@ -8,6 +8,7 @@ import {
   eventsBetween,
   insertHookEvent,
   lastKnownStateEvent,
+  liveSessionCandidates,
   recentSessions,
   sessionStatus,
 } from "../src/infrastructure/persistence/hookEvents.ts";
@@ -368,4 +369,50 @@ test("sessionStatus: viva, cleared tras un clear, ended tras otro SessionEnd o p
   assert.equal(status("clear-viejo"), "ended");
   assert.equal(status("resume"), "alive");
   assert.equal(status("no-existe"), "ended");
+});
+
+test("liveSessionCandidates: una fila por sesión de la ventana, con fin, repo y worktree", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const ev = (
+    sessionId: string | null,
+    ts: string,
+    hook: string,
+    repoRoot: string | null = "/r",
+  ) =>
+    insert(db, accountId, ts, "unknown", {
+      hook,
+      sessionId,
+      repoRoot,
+      worktree: repoRoot && `${repoRoot}-1`,
+    });
+  // A: viva, con cwd.
+  ev("A", "2026-01-10T10:00:00.000Z", "PreToolUse");
+  ev("A", "2026-01-10T10:05:00.000Z", "Notification");
+  // B: terminada. C: terminada y reanudada (`--resume`) con el mismo id.
+  ev("B", "2026-01-10T10:01:00.000Z", "PreToolUse");
+  ev("B", "2026-01-10T10:02:00.000Z", "SessionEnd");
+  ev("C", "2026-01-10T10:01:00.000Z", "SessionEnd");
+  ev("C", "2026-01-10T10:03:00.000Z", "SessionStart");
+  // D: antes de la ventana; E: sin cwd (se devuelve, sin repo); F: sin sesión.
+  ev("D", "2026-01-10T09:00:00.000Z", "PreToolUse");
+  ev("E", "2026-01-10T10:04:00.000Z", "PreToolUse", null);
+  ev(null, "2026-01-10T10:04:00.000Z", "PreToolUse");
+
+  const rows = liveSessionCandidates(
+    db,
+    accountId,
+    new Date("2026-01-10T09:55:00.000Z"),
+  );
+  const by = Object.fromEntries(rows.map((r) => [r.sessionId, r]));
+  assert.deepEqual(Object.keys(by).sort(), ["A", "B", "C", "E"]);
+  assert.equal(by.A?.lastEventAt, "2026-01-10T10:05:00.000Z");
+  assert.equal(by.A?.ended, false);
+  assert.equal(by.A?.repoRoot, "/r");
+  assert.equal(by.A?.worktree, "/r-1");
+  assert.equal(by.B?.ended, true);
+  assert.equal(by.C?.ended, false);
+  assert.equal(by.E?.repoRoot, null);
+  assert.equal(by.E?.worktree, null);
+  db.close();
 });

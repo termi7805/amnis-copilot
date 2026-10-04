@@ -5,7 +5,7 @@ import type {
   SessionsResponse,
   WorktreeSummary,
 } from "@amnis/shared";
-import { sleepAfter } from "../domain/petState.ts";
+import { sessionAlive } from "../domain/petState.ts";
 import { projectName } from "./getState.ts";
 
 /** Cuánto tiempo se lista una sesión terminada. */
@@ -29,9 +29,8 @@ const byRecent = <T extends { lastEventAt: string }>(a: T, b: T): number =>
   b.lastEventAt.localeCompare(a.lastEventAt);
 
 /**
- * Agrupa las sesiones recientes en repo → worktree → sesión. Viva exige las
- * dos cosas: sin `SessionEnd` y con hooks dentro de la ventana de
- * inactividad, porque un terminal matado con `kill` nunca manda `SessionEnd`.
+ * Agrupa las sesiones recientes en repo → worktree → sesión (viva: ver
+ * `sessionAlive`).
  */
 export function listSessions(
   deps: ListSessionsDeps,
@@ -47,7 +46,7 @@ export function listSessions(
     { repoRoot: string; worktree: string; sessions: Entry[] }
   >();
   for (const r of rows) {
-    const alive = !r.ended && !sleepAfter(new Date(r.lastEventAt), now);
+    const alive = sessionAlive(r.ended, new Date(r.lastEventAt), now);
     const state: PetState = alive
       ? ((r.lastState as PetState | null) ?? "resting")
       : "sleeping";

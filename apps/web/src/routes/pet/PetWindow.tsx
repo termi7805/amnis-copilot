@@ -147,6 +147,7 @@ export function PetWindow() {
               commitHash={state.pet.commitHash}
               listening={state.pet.listening}
               musicPrefs={state.settings}
+              othersActive={state.pet.othersActive}
             />
           ) : (
             <span>{CONNECTION_LABEL[status]}</span>

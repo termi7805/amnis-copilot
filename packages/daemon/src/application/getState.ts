@@ -8,7 +8,20 @@ import type {
   QuotaSnapshot,
   StateResponse,
 } from "@amnis/shared";
-import { sleepAfter } from "../domain/petState.ts";
+import {
+  SLEEP_AFTER_MS,
+  sessionAlive,
+  sleepAfter,
+} from "../domain/petState.ts";
+
+/** Una sesión con hooks recientes, tal como la entrega la persistencia. */
+export interface LiveSessionCandidate {
+  sessionId: string;
+  lastEventAt: string;
+  ended: boolean;
+  repoRoot: string | null;
+  worktree: string | null;
+}
 
 export interface LastKnownStateEvent {
   hook: string;
@@ -37,6 +50,8 @@ export interface GetStateDeps {
    * cuenta, o `/api/state` y el SSE se contradirían. */
   focus(): PetFocus;
   lastKnownStateEvent(focus: PetFocus): LastKnownStateEvent | null;
+  /** Sesiones con hooks desde `since`: de ahí sale `othersActive` (#112). */
+  liveSessionCandidates(since: Date): LiveSessionCandidate[];
   countHookEvents(): number;
   countUsageEvents(): number;
   /** Uno por proveedor, ya con `.provider` puesto (quotaSampler.ts). */
@@ -121,6 +136,43 @@ export function petPhaseFrom(
   };
 }
 
+/**
+ * Sesiones vivas que el foco deja fuera (#112). En `auto` el foco ya las mira
+ * a todas, así que no hay "otras". Una sesión sin repo no casa con un foco de
+ * repo o worktree: igual que en `focusFilter`, queda fuera de él.
+ */
+export function othersActiveFrom(
+  focus: PetFocus,
+  sessions: readonly LiveSessionCandidate[],
+  now: Date,
+): number {
+  if (focus.kind === "auto") return 0;
+  const inFocus = (s: LiveSessionCandidate): boolean => {
+    switch (focus.kind) {
+      case "repo":
+        return s.repoRoot === focus.repoRoot;
+      case "worktree":
+        return s.worktree === focus.worktree;
+      case "session":
+        return s.sessionId === focus.sessionId;
+    }
+  };
+  return sessions.filter(
+    (s) => sessionAlive(s.ended, new Date(s.lastEventAt), now) && !inFocus(s),
+  ).length;
+}
+
+/** Lo que `othersActiveFrom` necesita de la BD, ya con la ventana de vida. */
+export function countOthersActive(
+  deps: Pick<GetStateDeps, "liveSessionCandidates">,
+  focus: PetFocus,
+  now: Date,
+): number {
+  if (focus.kind === "auto") return 0;
+  const since = new Date(now.getTime() - SLEEP_AFTER_MS);
+  return othersActiveFrom(focus, deps.liveSessionCandidates(since), now);
+}
+
 export function fatigueFrom(quotas: readonly QuotaSnapshot[]): number {
   const primary = quotas[0];
   if (!primary) return 0;
@@ -186,6 +238,7 @@ export async function getState(
       commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
       listening: deps.listening(),
       focus,
+      othersActive: countOthersActive(deps, focus, now),
     },
     quotas,
     media,

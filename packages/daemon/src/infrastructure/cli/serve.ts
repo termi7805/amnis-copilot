@@ -53,6 +53,7 @@ import {
   countHookEvents,
   insertHookEvent,
   lastKnownStateEvent,
+  liveSessionCandidates,
   sessionStatus,
 } from "../persistence/hookEvents.ts";
 import { savePrices } from "../persistence/prices.ts";
@@ -118,6 +119,8 @@ function makeStateDeps(
     startedAt,
     focus: () => settings().petFocus,
     lastKnownStateEvent: (focus) => lastKnownStateEvent(db, accountId, focus),
+    liveSessionCandidates: (since) =>
+      liveSessionCandidates(db, accountId, since),
     countHookEvents: () => countHookEvents(db, accountId),
     countUsageEvents: () => countUsageEvents(db, accountId),
     sampleQuotas: () => Promise.all(quotaSamplers.map((sample) => sample())),
@@ -211,6 +214,7 @@ export function runServeCli(args: readonly string[] = []): void {
     },
     focus: stateDeps.focus,
     lastKnownStateEvent: stateDeps.lastKnownStateEvent,
+    liveSessionCandidates: stateDeps.liveSessionCandidates,
     startedAt,
     getCachedFatigue: () => cachedFatigue,
     getCachedExhausted: () => cachedExhausted,

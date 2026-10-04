@@ -379,6 +379,13 @@ renderiza lo que recibe por SSE, lo que la mantiene tonta y ligera.
 | `SessionStart` / `SessionEnd` | ninguno: se guardan con `source`/`reason`, `derived_state = 'unknown'` |
 | Sin eventos > N min | `sleeping` |
 
+**Con un foco fijado (E10), el estado es solo el de lo enfocado**, así que `sleeping` puede
+significar "lo que miras está parado" aunque otra sesión trabaje. Para no perder eso, la mascota
+lleva una insignia discreta **"+N"** (`othersActive`: las sesiones vivas fuera del foco; siempre 0
+en `auto`). Es un número aparte, no mezcla los estados de las demás, y no cambia la forma ni el
+color de la mascota. Viva es lo mismo que en la lista de sesiones: sin `SessionEnd` y con hooks
+dentro de la ventana de inactividad.
+
 ### Renderizado
 
 El componente `<Pet>` recibe `{ state, level, fatigue }` (y desde E8, `listening` y las

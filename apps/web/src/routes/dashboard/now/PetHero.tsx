@@ -40,6 +40,7 @@ export function PetHero({ state, now }: { state: StateResponse; now: Date }) {
           commitHash={pet.commitHash}
           listening={listening}
           musicPrefs={settings}
+          othersActive={pet.othersActive}
         />
       </div>
       <div className={styles.stateLine}>

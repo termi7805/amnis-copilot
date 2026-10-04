@@ -41,6 +41,9 @@ export interface PetSnapshot {
   listening: Listening | null;
   /** A qué mira la mascota: el foco con el que se calculó este estado. */
   focus: PetFocus;
+  /** Sesiones vivas fuera del foco (#112): lo que `state` ya no cuenta. Siempre
+   * 0 con el foco en `auto`, que mira a todas. */
+  othersActive: number;
 }
 
 export interface QuotaWindow {

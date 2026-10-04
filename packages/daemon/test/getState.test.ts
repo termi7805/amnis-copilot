@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { DEFAULT_SETTINGS, type QuotaSnapshot } from "@amnis/shared";
+import {
+  DEFAULT_SETTINGS,
+  type PetFocus,
+  type QuotaSnapshot,
+} from "@amnis/shared";
 import {
   commitHashFrom,
   type GetStateDeps,
   getState,
   type LastKnownStateEvent,
+  type LiveSessionCandidate,
+  othersActiveFrom,
   projectName,
   quotaExhausted,
 } from "../src/application/getState.ts";
@@ -38,6 +44,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     startedAt: STARTED_AT,
     focus: () => ({ kind: "auto" }),
     lastKnownStateEvent: () => null,
+    liveSessionCandidates: () => [],
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
     sampleQuotas: () => Promise.resolve([makeQuota()]),
@@ -362,4 +369,68 @@ test("getState filtra con el foco de deps.focus() y lo devuelve en el snapshot",
 
   assert.deepEqual(seen, [focus]);
   assert.deepEqual(state.pet.focus, focus);
+});
+
+function live(
+  sessionId: string,
+  overrides: Partial<LiveSessionCandidate> = {},
+): LiveSessionCandidate {
+  return {
+    sessionId,
+    lastEventAt: new Date(NOW.getTime() - 60_000).toISOString(),
+    ended: false,
+    repoRoot: "/r",
+    worktree: "/r-1",
+    ...overrides,
+  };
+}
+
+test("othersActiveFrom: en auto no hay otras, el foco ya las mira a todas", () => {
+  assert.equal(othersActiveFrom({ kind: "auto" }, [live("A")], NOW), 0);
+});
+
+test("othersActiveFrom: cuenta las vivas que el foco deja fuera, sea sesión, worktree o repo", () => {
+  const sessions = [
+    live("A"),
+    live("B", { worktree: "/r-2" }),
+    live("C", { repoRoot: "/otro", worktree: "/otro-1" }),
+  ];
+  const session: PetFocus = {
+    kind: "session",
+    sessionId: "A",
+    worktree: "/r-1",
+  };
+  const worktree: PetFocus = { kind: "worktree", worktree: "/r-1" };
+  const repo: PetFocus = { kind: "repo", repoRoot: "/r" };
+  assert.equal(othersActiveFrom(session, sessions, NOW), 2);
+  assert.equal(othersActiveFrom(worktree, sessions, NOW), 2);
+  assert.equal(othersActiveFrom(repo, sessions, NOW), 1);
+});
+
+test("othersActiveFrom: una terminada o inactiva no cuenta; una sin repo cuenta fuera de un foco de repo", () => {
+  const focus: PetFocus = { kind: "repo", repoRoot: "/r" };
+  const stale = new Date(NOW.getTime() - 11 * 60_000).toISOString();
+  const sessions = [
+    live("A"),
+    live("ended", { repoRoot: "/x", worktree: "/x-1", ended: true }),
+    live("idle", { repoRoot: "/x", worktree: "/x-1", lastEventAt: stale }),
+    live("sin-repo", { repoRoot: null, worktree: null }),
+  ];
+  assert.equal(othersActiveFrom(focus, sessions, NOW), 1);
+});
+
+test("getState rellena othersActive con las sesiones de la ventana de inactividad", async () => {
+  const sinces: Date[] = [];
+  const state = await getState(
+    makeDeps({
+      focus: () => ({ kind: "worktree", worktree: "/r-1" }),
+      liveSessionCandidates: (s) => {
+        sinces.push(s);
+        return [live("A"), live("B", { worktree: "/r-2" })];
+      },
+    }),
+    NOW,
+  );
+  assert.equal(state.pet.othersActive, 1);
+  assert.equal(sinces[0]?.toISOString(), "2026-01-01T00:50:00.000Z");
 });

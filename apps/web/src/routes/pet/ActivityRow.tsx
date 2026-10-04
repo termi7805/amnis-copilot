@@ -33,6 +33,7 @@ export function ActivityRow({
             commitHash={pet.commitHash}
             listening={pet.listening}
             musicPrefs={musicPrefs}
+            othersActive={pet.othersActive}
           />
         )}
       </div>

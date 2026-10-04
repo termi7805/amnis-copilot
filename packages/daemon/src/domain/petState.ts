@@ -116,3 +116,16 @@ export function sleepAfter(lastEventAt: Date | null, now: Date): boolean {
   if (!lastEventAt) return true;
   return now.getTime() - lastEventAt.getTime() >= SLEEP_AFTER_MS;
 }
+
+/**
+ * Viva exige las dos cosas: sin `SessionEnd` y con hooks dentro de la
+ * ventana de inactividad, porque un terminal matado con `kill` nunca manda
+ * `SessionEnd`. La misma regla para `GET /api/sessions` y para `othersActive`.
+ */
+export function sessionAlive(
+  ended: boolean,
+  lastEventAt: Date,
+  now: Date,
+): boolean {
+  return !ended && !sleepAfter(lastEventAt, now);
+}

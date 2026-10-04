@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { MediaSnapshot, PetFocus, PetSnapshot } from "@amnis/shared";
-import type { LastKnownStateEvent } from "../src/application/getState.ts";
+import type {
+  LastKnownStateEvent,
+  LiveSessionCandidate,
+} from "../src/application/getState.ts";
 import { LISTENING_GRACE_MS } from "../src/domain/listening.ts";
 import { SLEEP_AFTER_MS } from "../src/domain/petState.ts";
 import { startPetStateWatcher } from "../src/infrastructure/petStateWatcher.ts";
@@ -14,11 +17,13 @@ function makeWatcher(
   readCommitHash: (project: string) => string | null = () => null,
   getCachedMedia: () => MediaSnapshot | null = () => null,
   focus: () => PetFocus = () => ({ kind: "auto" }),
+  liveSessions: () => LiveSessionCandidate[] = () => [],
 ) {
   const broadcasts: PetSnapshot[] = [];
   const watcher = startPetStateWatcher({
     focus,
     lastKnownStateEvent: lastEvent,
+    liveSessionCandidates: liveSessions,
     startedAt: STARTED_AT,
     getCachedFatigue: () => 0.5,
     getCachedExhausted,
@@ -315,6 +320,7 @@ test("el temporizador reconcilia el foco; check() a mano no", async () => {
   const watcher = startPetStateWatcher({
     focus: () => ({ kind: "auto" }),
     lastKnownStateEvent: () => null,
+    liveSessionCandidates: () => [],
     startedAt: STARTED_AT,
     getCachedFatigue: () => 0,
     getCachedExhausted: () => false,
@@ -331,5 +337,52 @@ test("el temporizador reconcilia el foco; check() a mano no", async () => {
   assert.equal(reconciled, 0);
   await new Promise((resolve) => setTimeout(resolve, 60));
   assert.ok(reconciled >= 1);
+  watcher.stop();
+});
+
+test("othersActive: broadcastea cuando solo cambia el número de otras sesiones, y no si no cambia", () => {
+  const event: LastKnownStateEvent = {
+    hook: "Stop",
+    toolName: null,
+    derivedState: "resting",
+    ts: "2026-01-01T00:00:00.000Z",
+    project: null,
+    stateEnteredAt: "2026-01-01T00:00:00.000Z",
+  };
+  const at = (s: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, s));
+  let others: LiveSessionCandidate[] = [];
+  const { watcher, broadcasts } = makeWatcher(
+    () => event,
+    () => false,
+    () => null,
+    () => null,
+    () => ({ kind: "worktree", worktree: "/r-1" }),
+    () => others,
+  );
+  watcher.check(at(1));
+  assert.equal(broadcasts.at(-1)?.othersActive, 0);
+  const n = broadcasts.length;
+
+  watcher.check(at(2));
+  assert.equal(broadcasts.length, n, "sin cambios no emite");
+
+  others = [
+    {
+      sessionId: "B",
+      lastEventAt: at(1).toISOString(),
+      ended: false,
+      repoRoot: "/r",
+      worktree: "/r-2",
+    },
+  ];
+  watcher.check(at(3));
+  assert.equal(broadcasts.length, n + 1);
+  assert.equal(broadcasts.at(-1)?.othersActive, 1);
+  assert.equal(broadcasts.at(-1)?.state, "resting", "el estado no se toca");
+
+  others = [{ ...(others[0] as LiveSessionCandidate), ended: true }];
+  watcher.check(at(4));
+  assert.equal(broadcasts.length, n + 2);
+  assert.equal(broadcasts.at(-1)?.othersActive, 0);
   watcher.stop();
 });

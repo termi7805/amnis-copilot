@@ -28,6 +28,7 @@ const EVENT: AmnisEvent = {
     project: null,
     listening: null,
     focus: { kind: "auto" },
+    othersActive: 0,
   },
 };
 

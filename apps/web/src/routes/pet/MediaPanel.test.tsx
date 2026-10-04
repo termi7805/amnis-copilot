@@ -18,6 +18,7 @@ const pet: PetSnapshot = {
   project: null,
   listening: null,
   focus: { kind: "auto" },
+  othersActive: 0,
 };
 
 const playing: MediaSnapshot = {

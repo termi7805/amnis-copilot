@@ -282,3 +282,66 @@ export function sessionStatus(
   if (last.hook !== "SessionEnd") return "alive";
   return last.session_reason === "clear" ? "cleared" : "ended";
 }
+
+export interface LiveSessionCandidate {
+  sessionId: string;
+  lastEventAt: string;
+  /** El último `SessionEnd` no ha sido seguido de más actividad. */
+  ended: boolean;
+  /** `null` si ningún hook de la ventana traía `cwd`. */
+  repoRoot: string | null;
+  worktree: string | null;
+}
+
+/**
+ * Las sesiones con algún hook desde `since`, para contar las vivas fuera del
+ * foco (#112). Mucho más barata que `recentSessions`: se ejecuta en cada hook,
+ * así que lee solo la ventana de inactividad (`idx_hook_ts`) y agrupa en JS.
+ * `ended` sigue la misma regla que allí: un `SessionStart` posterior al
+ * `SessionEnd` (`--resume`) la devuelve a viva.
+ */
+export function liveSessionCandidates(
+  db: DatabaseSync,
+  accountId: number,
+  since: Date,
+): LiveSessionCandidate[] {
+  const rows = db
+    .prepare(`
+      SELECT session_id, ts, hook, repo_root, worktree FROM hook_events
+      WHERE account_id = ? AND ts >= ? AND session_id IS NOT NULL
+      ORDER BY ts ASC
+    `)
+    .all(accountId, since.toISOString()) as Array<{
+    session_id: string;
+    ts: string;
+    hook: string;
+    repo_root: string | null;
+    worktree: string | null;
+  }>;
+
+  const bySession = new Map<
+    string,
+    LiveSessionCandidate & { endedAt: string | null }
+  >();
+  for (const r of rows) {
+    const s = bySession.get(r.session_id) ?? {
+      sessionId: r.session_id,
+      lastEventAt: r.ts,
+      ended: false,
+      repoRoot: null,
+      worktree: null,
+      endedAt: null,
+    };
+    s.lastEventAt = r.ts;
+    if (r.hook === "SessionEnd") s.endedAt = r.ts;
+    if (r.repo_root && r.worktree) {
+      s.repoRoot = r.repo_root;
+      s.worktree = r.worktree;
+    }
+    bySession.set(r.session_id, s);
+  }
+  return [...bySession.values()].map(({ endedAt, ...s }) => ({
+    ...s,
+    ended: endedAt !== null && endedAt >= s.lastEventAt,
+  }));
+}

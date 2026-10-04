@@ -12,6 +12,7 @@ function makeDeps(): GetStateDeps {
     startedAt: "2026-01-01T00:00:00.000Z",
     focus: () => ({ kind: "auto" }),
     lastKnownStateEvent: () => null,
+    liveSessionCandidates: () => [],
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
     readCommitHash: () => null,
