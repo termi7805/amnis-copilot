@@ -271,6 +271,7 @@ test("recentSessions: una fila por sesión con inicio, fin, checkout y último e
   assert.equal(by.C?.ended, false);
   assert.equal(by.C?.lastState, null);
   db.close();
+});
 
 test("lastKnownStateEvent filtra por repo, worktree y sesión; auto mira todo", () => {
   const db = openDb(":memory:");
