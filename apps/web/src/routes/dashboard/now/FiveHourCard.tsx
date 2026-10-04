@@ -1,6 +1,7 @@
 import type { QuotaHistoryResponse, QuotaSnapshot } from "@amnis/shared";
 import { formatElapsed, formatUntil } from "../../../lib/countdown.ts";
 import {
+  CEILING_WINDOWS_NEEDED,
   type FiveHourWindow,
   fiveHourWindow,
   SPARK_H,
@@ -127,7 +128,7 @@ export function FiveHourCard({
           </div>
           <p className={styles.source}>
             {window.estimated
-              ? `estimación local${quota.error ? ` · ${quota.error}` : ""}`
+              ? `estimación local${window.provisional ? ` · provisional, ${window.provisional.windows}/${CEILING_WINDOWS_NEEDED} ventanas` : ""}${quota.error ? ` · ${quota.error}` : ""}`
               : `del endpoint de Anthropic · hace ${formatElapsed(quota.sampledAt, now)}`}
           </p>
         </div>
@@ -184,7 +185,9 @@ export function FiveHourCard({
         </div>
       </div>
 
-      {window.known && (
+      {/* Con techo provisional no hay serie fiable: las muestras sin endpoint se
+          guardaron con el techo del plan (#117). */}
+      {window.known && !window.provisional && (
         <Sparkline
           samples={samples}
           window={window}
@@ -196,15 +199,21 @@ export function FiveHourCard({
         <div className={styles.fact}>
           <div className={styles.k}>Estimación local</div>
           <div className={styles.v} data-testid="fact-local">
-            {calibrated ? `~${Math.round(localPct)} %` : "—"}
+            {calibrated
+              ? `~${Math.round(localPct)} %`
+              : quota.local.provisionalUtilization !== null
+                ? `~${Math.round(quota.local.provisionalUtilization)} %`
+                : "—"}
           </div>
           <div className={styles.d}>
             {quota.local.fiveHourTokens.toLocaleString("es-ES")} tokens de
             Claude Code
           </div>
-          {!quota.local.calibrated && (
+          {!calibrated && (
             <div className={styles.d} data-testid="uncalibrated">
-              sin calibrar: faltan ventanas cerradas para fijar el techo
+              {quota.local.provisionalUtilization !== null
+                ? `provisional: ${quota.local.ceilingWindows}/${CEILING_WINDOWS_NEEDED} ventanas cerradas para fijar el techo`
+                : "sin calibrar: faltan ventanas cerradas para fijar el techo"}
             </div>
           )}
         </div>

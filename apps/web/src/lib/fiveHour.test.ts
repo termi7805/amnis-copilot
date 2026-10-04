@@ -49,6 +49,8 @@ function quota(over: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
       fiveHourUtilization: 28,
       windowStartedAt: START.toISOString(),
       calibrated: true,
+      ceilingWindows: 3,
+      provisionalUtilization: null,
     },
     divergence: 6,
     projection: { fiveHourAtReset: 62 },
@@ -119,6 +121,8 @@ describe("paceHeadline", () => {
         fiveHourUtilization: 7089,
         windowStartedAt: START.toISOString(),
         calibrated: false,
+        ceilingWindows: 0,
+        provisionalUtilization: null,
       },
     });
     const w = fiveHourWindow(q, NOW);
@@ -135,9 +139,60 @@ describe("paceHeadline", () => {
         fiveHourUtilization: 7089,
         windowStartedAt: START.toISOString(),
         calibrated: false,
+        ceilingWindows: 0,
+        provisionalUtilization: null,
       },
     });
     expect(fiveHourWindow(q, NOW).known).toBe(true);
+  });
+});
+
+describe("estimación provisional (#117)", () => {
+  const provisional = (over: Partial<QuotaSnapshot["local"]> = {}) =>
+    quota({
+      authoritative: null,
+      local: {
+        fiveHourTokens: 9_930_000,
+        fiveHourUtilization: 7089,
+        windowStartedAt: START.toISOString(),
+        calibrated: false,
+        ceilingWindows: 1,
+        provisionalUtilization: 11.2,
+        ...over,
+      },
+    });
+
+  it("sin endpoint y con 1-2 ventanas: dato conocido, provisional n/3", () => {
+    const w = fiveHourWindow(provisional(), NOW);
+    expect(w.known).toBe(true);
+    expect(w.estimated).toBe(true);
+    expect(w.used).toBe(11.2);
+    expect(w.provisional).toEqual({ windows: 1 });
+    expect(paceHeadline(w, null).detail).toContain(
+      "provisional (1/3 ventanas)",
+    );
+  });
+
+  it("con 0 ventanas sigue sin dato", () => {
+    const w = fiveHourWindow(
+      provisional({ ceilingWindows: 0, provisionalUtilization: null }),
+      NOW,
+    );
+    expect(w.known).toBe(false);
+    expect(w.provisional).toBeNull();
+  });
+
+  it("con endpoint manda el endpoint y no hay provisional", () => {
+    const q = quota({
+      local: {
+        ...quota().local,
+        calibrated: false,
+        provisionalUtilization: 11,
+      },
+    });
+    const w = fiveHourWindow(q, NOW);
+    expect(w.used).toBe(34);
+    expect(w.provisional).toBeNull();
   });
 });
 

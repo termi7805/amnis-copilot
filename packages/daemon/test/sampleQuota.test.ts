@@ -290,3 +290,60 @@ test("proyección: con endpoint y muestras previas da el valor al reset; sin end
   const sin = await sampleQuota(sinEndpoint, NOW);
   assert.equal(sin.projection.fiveHourAtReset, null);
 });
+
+test("con 1 ventana cerrada el % provisional sale de su techo y calibrated sigue en false (#117)", async () => {
+  const { deps } = makeDeps({
+    closedCeilings: () => [closed(90_000_000)],
+    tokensInWindow: () => 9_000_000,
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.equal(snapshot.local.calibrated, false);
+  assert.equal(snapshot.local.ceilingWindows, 1);
+  assert.equal(snapshot.local.provisionalUtilization, 10);
+  // El % «oficial» y la divergencia siguen con el techo del plan.
+  assert.equal(
+    snapshot.local.fiveHourUtilization,
+    (9_000_000 / DEFAULT_CEILING) * 100,
+  );
+});
+
+test("con 2 ventanas el techo provisional es la media", async () => {
+  const { deps } = makeDeps({
+    closedCeilings: () => [closed(60_000_000), closed(100_000_000)],
+    tokensInWindow: () => 8_000_000,
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.equal(snapshot.local.ceilingWindows, 2);
+  assert.equal(snapshot.local.provisionalUtilization, 10);
+});
+
+test("con 0 ventanas no hay % provisional; con 3 ya es calibrado y tampoco", async () => {
+  const none = await sampleQuota(makeDeps().deps, NOW);
+  assert.equal(none.local.ceilingWindows, 0);
+  assert.equal(none.local.provisionalUtilization, null);
+
+  const { deps } = makeDeps({
+    closedCeilings: () => [closed(70), closed(90), closed(60)],
+  });
+  const three = await sampleQuota(deps, NOW);
+  assert.equal(three.local.calibrated, true);
+  assert.equal(three.local.ceilingWindows, 3);
+  assert.equal(three.local.provisionalUtilization, null);
+});
+
+test("con 1 ventana y endpoint la divergencia sigue calculándose con el techo del plan", async () => {
+  const { deps } = makeDeps({
+    pollQuota: () => Promise.resolve(endpointReading(50)),
+    closedCeilings: () => [closed(90_000_000)],
+    tokensInWindow: () => 22_000,
+  });
+
+  const snapshot = await sampleQuota(deps, NOW);
+
+  assert.equal(snapshot.local.calibrated, false);
+  assert.equal(snapshot.divergence, 50 - snapshot.local.fiveHourUtilization);
+});

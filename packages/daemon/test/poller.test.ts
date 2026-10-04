@@ -12,6 +12,8 @@ const FAKE_SNAPSHOT: QuotaSnapshot = {
     fiveHourUtilization: 0,
     windowStartedAt: "2026-01-01T00:00:00.000Z",
     calibrated: true,
+    ceilingWindows: 3,
+    provisionalUtilization: null,
   },
   divergence: null,
   projection: { fiveHourAtReset: null },

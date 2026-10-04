@@ -3,9 +3,11 @@ import { test } from "node:test";
 import { PLAN_WINDOW_TOKENS } from "../src/config.ts";
 import {
   calibrate,
+  ceilingWindowCount,
   estimate,
   FIVE_HOUR_MS,
   findGapStart,
+  provisionalCeiling,
   robustCeiling,
   windowStart,
 } from "../src/domain/localQuota.ts";
@@ -162,4 +164,21 @@ test("robustCeiling: solo cuentan las 7 más recientes y las pares promedian el 
   const old = [1000, 1000, 1000].map(win); // quedan fuera: ya hay 9
   assert.equal(robustCeiling([...recent, win(70), ...old]), 40);
   assert.equal(robustCeiling(recent), 35);
+});
+
+test("provisionalCeiling: con 1 ventana su techo, con 2 la media", () => {
+  assert.equal(provisionalCeiling([win(90)]), 90);
+  assert.equal(provisionalCeiling([win(90), win(70)]), 80);
+});
+
+test("provisionalCeiling: null con 0 ventanas y con 3 o más (manda robustCeiling)", () => {
+  assert.equal(provisionalCeiling([]), null);
+  assert.equal(provisionalCeiling([win(70), win(90), win(60)]), null);
+});
+
+test("provisionalCeiling y ceilingWindowCount: una ventana de ruido (< 10 %) no cuenta", () => {
+  const noisy = { tokens: 5, utilization: 5 };
+  assert.equal(provisionalCeiling([noisy]), null);
+  assert.equal(ceilingWindowCount([noisy, win(90)]), 1);
+  assert.equal(provisionalCeiling([noisy, win(90)]), 90);
 });

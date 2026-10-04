@@ -77,17 +77,45 @@ export interface CeilingWindow {
  * sesgaría el techo a la baja: con dos fuentes no se puede separar).
  */
 export function robustCeiling(windows: CeilingWindow[]): number | null {
-  const ceilings = windows
+  const ceilings = validCeilings(windows);
+  if (ceilings.length < MIN_CEILING_WINDOWS) return null;
+  return median(ceilings);
+}
+
+/**
+ * Techo provisional (#117) con 1 o 2 ventanas cerradas: la mediana (con 2, la
+ * media) de las que haya. `null` con 0 y con `MIN_CEILING_WINDOWS` o más, donde
+ * manda `robustCeiling`. Es un valor aparte a propósito: `calibrated` tiene que
+ * seguir significando «3 ventanas», o la divergencia y la mascota usarían sin
+ * saberlo un techo de una sola ventana, sin nada con qué descartar un outlier.
+ */
+export function provisionalCeiling(windows: CeilingWindow[]): number | null {
+  const ceilings = validCeilings(windows);
+  if (ceilings.length === 0 || ceilings.length >= MIN_CEILING_WINDOWS) {
+    return null;
+  }
+  return median(ceilings);
+}
+
+/** Cuántas ventanas cerradas válidas entran en el techo (el `n` de `n/3`). */
+export function ceilingWindowCount(windows: CeilingWindow[]): number {
+  return validCeilings(windows).length;
+}
+
+/** Techos de las últimas `CEILING_WINDOWS` ventanas, sin las de ruido, ordenados. */
+function validCeilings(windows: CeilingWindow[]): number[] {
+  return windows
     .slice(0, CEILING_WINDOWS)
     .map((w) => calibrate(w.tokens, w.utilization))
     .filter((c): c is number => c !== null)
     .sort((a, b) => a - b);
-  if (ceilings.length < MIN_CEILING_WINDOWS) return null;
+}
 
-  const mid = Math.floor(ceilings.length / 2);
-  return ceilings.length % 2
-    ? (ceilings[mid] as number)
-    : ((ceilings[mid - 1] as number) + (ceilings[mid] as number)) / 2;
+function median(sorted: number[]): number {
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2
+    ? (sorted[mid] as number)
+    : ((sorted[mid - 1] as number) + (sorted[mid] as number)) / 2;
 }
 
 /**

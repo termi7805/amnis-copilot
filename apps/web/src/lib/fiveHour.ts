@@ -17,7 +17,15 @@ export interface FiveHourWindow {
    * Amnis (#103) y no es un `%` que enseñar.
    */
   known: boolean;
+  /**
+   * Sin endpoint y con 1-2 ventanas cerradas (#117): `used` sale de un techo
+   * provisional, no calibrado. `windows` es el `n` de `n/3`. `null` en otro caso.
+   */
+  provisional: { windows: number } | null;
 }
+
+/** Ventanas cerradas para fiarse del techo; duplica `MIN_CEILING_WINDOWS` del daemon. */
+export const CEILING_WINDOWS_NEEDED = 3;
 
 /**
  * La ventana es fija (DESIGN §2): con endpoint arranca en `resets_at − 5 h`;
@@ -42,13 +50,20 @@ export function fiveHourWindow(
     0,
     100,
   );
+  const provisionalPct =
+    auth === null && !quota.local.calibrated
+      ? quota.local.provisionalUtilization
+      : null;
   return {
     start,
     end,
     elapsedPct,
-    used: auth?.utilization ?? quota.local.fiveHourUtilization,
+    used:
+      auth?.utilization ?? provisionalPct ?? quota.local.fiveHourUtilization,
     estimated: auth === null,
-    known: auth !== null || quota.local.calibrated,
+    known: auth !== null || quota.local.calibrated || provisionalPct !== null,
+    provisional:
+      provisionalPct !== null ? { windows: quota.local.ceilingWindows } : null,
   };
 }
 
@@ -85,9 +100,11 @@ export function paceHeadline(
   const elapsed = Math.round(window.elapsedPct);
   const prefix = window.estimated ? "~" : "";
   const measured = `Llevas ${prefix}${used} % con el ${elapsed} % de la ventana pasado.`;
-  const source = window.estimated
-    ? " Es una estimación local: sin el endpoint no hay proyección."
-    : "";
+  const source = window.provisional
+    ? ` Es una estimación local provisional (${window.provisional.windows}/${CEILING_WINDOWS_NEEDED} ventanas): sin el endpoint no hay proyección.`
+    : window.estimated
+      ? " Es una estimación local: sin el endpoint no hay proyección."
+      : "";
 
   if (window.elapsedPct < 3 && window.used < 100) {
     return {

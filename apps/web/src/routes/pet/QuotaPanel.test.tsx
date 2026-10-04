@@ -34,6 +34,8 @@ const baseQuota: QuotaSnapshot = {
     fiveHourUtilization: 62,
     windowStartedAt: "2026-01-01T00:00:00Z",
     calibrated: true,
+    ceilingWindows: 3,
+    provisionalUtilization: null,
   },
   divergence: 0,
   projection: { fiveHourAtReset: null },

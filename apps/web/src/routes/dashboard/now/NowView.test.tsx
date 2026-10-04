@@ -54,6 +54,8 @@ function stateWith(limits: QuotaLimit[]): StateResponse {
       fiveHourUtilization: 30,
       windowStartedAt: "2026-01-04T13:00:00Z",
       calibrated: true,
+      ceilingWindows: 3,
+      provisionalUtilization: null,
     },
     divergence: 4,
     projection: { fiveHourAtReset: 60 },

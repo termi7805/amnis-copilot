@@ -125,6 +125,15 @@ export interface QuotaSnapshot {
     windowStartedAt: string | null;
     /** `false` hasta tener 3 ventanas cerradas: el techo es entonces el valor inicial del plan (#100). */
     calibrated: boolean;
+    /** Ventanas cerradas válidas que lleva la calibración (el `n` de `n/3`, #117). */
+    ceilingWindows: number;
+    /**
+     * `%` con el techo provisional de 1-2 ventanas cerradas (#117). `null` con 0
+     * (no hay techo) y con 3 o más (ya vale `fiveHourUtilization`). No sustituye a
+     * `fiveHourUtilization` ni a `calibrated`: la divergencia y la mascota no se
+     * fían de un techo de una sola ventana.
+     */
+    provisionalUtilization: number | null;
   };
   /** authoritative.fiveHour - local.fiveHour. `null` si no hay endpoint. */
   divergence: number | null;

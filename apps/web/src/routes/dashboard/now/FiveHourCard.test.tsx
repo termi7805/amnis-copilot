@@ -17,6 +17,8 @@ const base: QuotaSnapshot = {
     fiveHourUtilization: 28,
     windowStartedAt: "2026-01-01T13:00:00Z",
     calibrated: true,
+    ceilingWindows: 3,
+    provisionalUtilization: null,
   },
   divergence: 6,
   projection: { fiveHourAtReset: 62 },
@@ -82,6 +84,43 @@ describe("FiveHourCard", () => {
     expect(screen.getByTestId("five-hour-value")).toHaveTextContent("—");
     expect(screen.getByTestId("five-hour-value")).not.toHaveTextContent("%");
     expect(screen.queryByTestId("sparkline")).toBeNull();
+  });
+
+  it("sin endpoint y con 1 ventana: `~N %` provisional 1/3, sin sparkline ni divergencia (#117)", () => {
+    const quota = {
+      ...base,
+      authoritative: null,
+      local: {
+        ...base.local,
+        fiveHourUtilization: 7089,
+        calibrated: false,
+        ceilingWindows: 1,
+        provisionalUtilization: 11.2,
+      },
+      divergence: null,
+    };
+    render(<FiveHourCard quota={quota} samples={samples} now={NOW} />);
+    expect(screen.getByTestId("five-hour-value")).toHaveTextContent("~11%");
+    expect(screen.getByText(/provisional, 1\/3 ventanas/)).toBeVisible();
+    expect(screen.getByTestId("fact-local")).toHaveTextContent("~11 %");
+    expect(screen.getByTestId("uncalibrated")).toHaveTextContent("1/3");
+    expect(screen.queryByTestId("sparkline")).toBeNull();
+    expect(screen.queryByTestId("fact-divergence")).toBeNull();
+  });
+
+  it("con endpoint y 1 ventana la divergencia sigue en «—»", () => {
+    const quota = {
+      ...base,
+      local: {
+        ...base.local,
+        calibrated: false,
+        ceilingWindows: 1,
+        provisionalUtilization: 11.2,
+      },
+    };
+    render(<FiveHourCard quota={quota} samples={samples} now={NOW} />);
+    expect(screen.getByTestId("five-hour-value")).toHaveTextContent("34%");
+    expect(screen.getByTestId("fact-divergence")).not.toHaveTextContent("pts");
   });
 
   it("calibrado no muestra el aviso", () => {

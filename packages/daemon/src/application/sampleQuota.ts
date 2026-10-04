@@ -3,10 +3,12 @@ import {
   CEILING_WINDOWS,
   type CeilingWindow,
   calibrate,
+  ceilingWindowCount,
   estimate,
   FIVE_HOUR_MS,
   findGapStart,
   MIN_CEILING_UTILIZATION,
+  provisionalCeiling,
   robustCeiling,
   windowStart,
 } from "../domain/localQuota.ts";
@@ -95,10 +97,16 @@ export async function sampleQuota(
   // muestra: así la estimación local es independiente del endpoint y la
   // divergencia mide el uso fuera de Claude Code (#100). Sin 3 ventanas
   // cerradas aún, vale el valor inicial del plan.
-  const robust = robustCeiling(deps.closedCeilings(CEILING_WINDOWS));
+  const closed = deps.closedCeilings(CEILING_WINDOWS);
+  const robust = robustCeiling(closed);
   const calibrated = robust !== null;
   const ceiling = robust ?? deps.defaultPlanWindowTokens;
   const localUtilization = estimate(localTokens, ceiling);
+  // Con 1-2 ventanas hay un techo razonable pero no robusto (#117): se expone
+  // aparte, sin tocar `calibrated` ni la divergencia.
+  const provisional = provisionalCeiling(closed);
+  const provisionalUtilization =
+    provisional === null ? null : estimate(localTokens, provisional);
 
   let divergence: number | null = null;
   let fiveHourAtReset: number | null = null;
@@ -158,6 +166,8 @@ export async function sampleQuota(
       fiveHourUtilization: localUtilization,
       windowStartedAt: windowStartedAt?.toISOString() ?? null,
       calibrated,
+      ceilingWindows: ceilingWindowCount(closed),
+      provisionalUtilization,
     },
     divergence,
     projection: { fiveHourAtReset },
