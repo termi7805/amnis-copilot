@@ -96,6 +96,11 @@ jobs:
       # macOS es lo que demuestra que la firma ad-hoc tras inyectar el blob
       # deja un binario que arranca (#130).
       #
+      # En macOS se prueba la copia de dentro del .app y no la de binaries/:
+      # Tauri la vuelve a firmar con hardened runtime, y sin los entitlements
+      # de JIT V8 muere al arrancar ("Failed to reserve virtual memory for
+      # CodeRange") aunque la de binaries/ funcione.
+      #
       # En Windows, `node.exe` no arranca sin `SystemRoot`, `homedir()` sale
       # de `USERPROFILE` y no de `HOME`, y las rutas se le pasan en formato
       # Windows: el binario no es de msys y no las traduce.
@@ -103,6 +108,10 @@ jobs:
         run: |
           triple=$(rustc -vV | sed -n 's/^host: //p')
           bin=apps/pet/src-tauri/binaries/amnis-daemon-$triple
+          if [ "$RUNNER_OS" = macOS ]; then
+            bin="apps/pet/src-tauri/target/release/bundle/macos/Amnis Copilot.app/Contents/MacOS/amnis-daemon"
+            codesign -d --entitlements - "$bin"
+          fi
           tmp=$(mktemp -d)
           resources=$PWD/apps/pet/src-tauri/resources
           keep=()
