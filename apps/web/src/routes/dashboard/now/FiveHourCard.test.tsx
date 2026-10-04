@@ -51,15 +51,37 @@ describe("FiveHourCard", () => {
     expect(screen.getByText(/estimación local · token inválido/)).toBeVisible();
   });
 
-  it("sin techo calibrado marca la estimación local y la divergencia como orientativas", () => {
-    const quota = { ...base, local: { ...base.local, calibrated: false } };
+  it("sin techo calibrado no enseña % local ni divergencia, solo los tokens", () => {
+    // Techo inicial del plan contra tokens con lectura de caché: ~7089 %.
+    const quota = {
+      ...base,
+      local: { ...base.local, fiveHourUtilization: 7089, calibrated: false },
+      divergence: -7055,
+    };
     render(<FiveHourCard quota={quota} samples={samples} now={NOW} />);
     expect(screen.getByTestId("uncalibrated")).toHaveTextContent(
       "sin calibrar",
     );
-    expect(screen.getByTestId("fact-divergence")).toHaveTextContent(
-      "orientativo",
-    );
+    expect(screen.getByTestId("fact-local")).toHaveTextContent("—");
+    expect(screen.getByTestId("fact-local")).not.toHaveTextContent("%");
+    expect(screen.getByTestId("fact-divergence")).not.toHaveTextContent("pts");
+    expect(screen.queryByTestId("mark-estimate")).toBeNull();
+    expect(screen.getByText(/41\.200 tokens/)).toBeVisible();
+    // El dato del endpoint sigue mandando arriba.
+    expect(screen.getByTestId("five-hour-value")).toHaveTextContent("34%");
+  });
+
+  it("sin endpoint y sin calibrar: guion arriba, no un % inventado", () => {
+    const quota = {
+      ...base,
+      authoritative: null,
+      local: { ...base.local, fiveHourUtilization: 7089, calibrated: false },
+      divergence: null,
+    };
+    render(<FiveHourCard quota={quota} samples={samples} now={NOW} />);
+    expect(screen.getByTestId("five-hour-value")).toHaveTextContent("—");
+    expect(screen.getByTestId("five-hour-value")).not.toHaveTextContent("%");
+    expect(screen.queryByTestId("sparkline")).toBeNull();
   });
 
   it("calibrado no muestra el aviso", () => {

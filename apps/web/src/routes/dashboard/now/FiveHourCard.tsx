@@ -99,6 +99,9 @@ export function FiveHourCard({
   const pill = severityPill(quota);
   const countdown = formatUntil(window.end.toISOString(), now);
   const localPct = quota.local.fiveHourUtilization;
+  // Sin calibrar, el `%` local sale de un techo inicial que no casa con los
+  // tokens contados (#103): se enseñan los tokens, no el porcentaje.
+  const calibrated = quota.local.calibrated;
   const projection = quota.projection.fiveHourAtReset;
   const divergence = quota.divergence;
 
@@ -112,9 +115,15 @@ export function FiveHourCard({
       <div className={styles.top}>
         <div>
           <div className={styles.bignum} data-testid="five-hour-value">
-            {window.estimated && "~"}
-            {Math.round(window.used)}
-            <sup>%</sup>
+            {window.known ? (
+              <>
+                {window.estimated && "~"}
+                {Math.round(window.used)}
+                <sup>%</sup>
+              </>
+            ) : (
+              "—"
+            )}
           </div>
           <p className={styles.source}>
             {window.estimated
@@ -138,13 +147,24 @@ export function FiveHourCard({
       <div>
         <div
           className={styles.track}
-          title={`Uso ${window.estimated ? "estimado" : "real"} ${Math.round(window.used)} %, estimación local ${Math.round(localPct)} %, tiempo transcurrido ${Math.round(window.elapsedPct)} %`}
+          title={[
+            window.known &&
+              `Uso ${window.estimated ? "estimado" : "real"} ${Math.round(window.used)} %`,
+            !window.estimated &&
+              calibrated &&
+              `estimación local ${Math.round(localPct)} %`,
+            `tiempo transcurrido ${Math.round(window.elapsedPct)} %`,
+          ]
+            .filter(Boolean)
+            .join(", ")}
         >
-          <div
-            className={styles.fill}
-            style={{ width: `${Math.min(100, window.used)}%` }}
-          />
-          {!window.estimated && (
+          {window.known && (
+            <div
+              className={styles.fill}
+              style={{ width: `${Math.min(100, window.used)}%` }}
+            />
+          )}
+          {!window.estimated && calibrated && (
             <div
               className={styles.est}
               data-testid="mark-estimate"
@@ -164,16 +184,20 @@ export function FiveHourCard({
         </div>
       </div>
 
-      <Sparkline
-        samples={samples}
-        window={window}
-        projection={window.estimated ? null : projection}
-      />
+      {window.known && (
+        <Sparkline
+          samples={samples}
+          window={window}
+          projection={window.estimated ? null : projection}
+        />
+      )}
 
       <div className={styles.facts}>
         <div className={styles.fact}>
           <div className={styles.k}>Estimación local</div>
-          <div className={styles.v}>~{Math.round(localPct)} %</div>
+          <div className={styles.v} data-testid="fact-local">
+            {calibrated ? `~${Math.round(localPct)} %` : "—"}
+          </div>
           <div className={styles.d}>
             {quota.local.fiveHourTokens.toLocaleString("es-ES")} tokens de
             Claude Code
@@ -189,14 +213,14 @@ export function FiveHourCard({
             <div className={styles.fact} data-testid="fact-divergence">
               <div className={styles.k}>Fuera de Claude Code</div>
               <div className={styles.v}>
-                {divergence === null
+                {divergence === null || !calibrated
                   ? "—"
                   : `${divergence > 0 ? "+" : ""}${Math.round(divergence)} pts`}
               </div>
               <div className={styles.d}>
-                {quota.local.calibrated
+                {calibrated
                   ? "claude.ai, móvil u otro equipo"
-                  : "orientativo: la estimación aún no está calibrada"}
+                  : "aparece cuando la estimación local esté calibrada"}
               </div>
             </div>
             <div className={styles.fact} data-testid="fact-projection">

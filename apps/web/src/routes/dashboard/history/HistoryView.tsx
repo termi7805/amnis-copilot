@@ -70,6 +70,7 @@ export function HistoryView({ state }: { state: StateResponse | null }) {
   const head = headline(total, plan, range, days);
   const tokens = tokenTypeTotals(rows);
   const act = activity(rows, now);
+  const series = costSeries(rows, from, now);
   const limits = limitDays(data?.peaks ?? []);
 
   return (
@@ -134,7 +135,7 @@ export function HistoryView({ state }: { state: StateResponse | null }) {
 
           <article className={styles.card}>
             <h2>Coste equivalente por día y modelo</h2>
-            <CostByModelChart series={costSeries(rows, from, now)} />
+            <CostByModelChart series={series} />
           </article>
 
           <div className={styles.grid}>
@@ -147,7 +148,7 @@ export function HistoryView({ state }: { state: StateResponse | null }) {
             <article className={`${styles.card} ${styles.span5}`}>
               <h2>Modelos</h2>
               <div className={styles.tableWrap}>
-                <ModelsTable rows={modelTotals(rows)} />
+                <ModelsTable rows={modelTotals(rows)} series={series.models} />
               </div>
               <h2 className={styles.sub}>Tipo de token</h2>
               <div className={styles.tableWrap}>

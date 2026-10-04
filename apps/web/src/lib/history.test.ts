@@ -5,6 +5,7 @@ import {
   activity,
   costSeries,
   headline,
+  modelFamily,
   modelLabel,
   planShare,
   projectLabel,
@@ -98,6 +99,33 @@ describe("costSeries", () => {
     expect(s.models).toEqual(["m1", "m2", "m3", "Otros"]);
     expect(s.days[0]?.byModel.Otros).toBe(7 + 6);
     expect(s.days[0]?.total).toBe(10 + 9 + 8 + 7 + 6);
+  });
+});
+
+describe("costSeries por familia", () => {
+  it("las versiones de una familia suman en una sola serie", () => {
+    // Opus 5 acumuló más en el periodo; Opus 5.5, el que se usa ahora, no
+    // puede acabar en "Otros" ni en gris.
+    const rows = [
+      row("2026-10-01", "claude-opus-5", 40),
+      row("2026-10-01", "claude-sonnet-5", 20),
+      row("2026-10-01", "claude-fable-5-1", 15),
+      row("2026-10-01", "claude-sonnet-4-5", 12),
+      row("2026-10-01", "claude-opus-5-5", 5),
+      row("2026-10-01", "claude-haiku-4-5", 1),
+    ];
+    const s = costSeries(rows, undefined, new Date("2026-10-01T10:00:00Z"));
+    expect(s.models).toEqual(["Opus", "Sonnet", "Fable", "Otros"]);
+    expect(s.days[0]?.byModel.Opus).toBe(45);
+    expect(s.days[0]?.byModel.Sonnet).toBe(32);
+    expect(s.days[0]?.byModel.Otros).toBe(1);
+  });
+
+  it("modelFamily", () => {
+    expect(modelFamily("claude-opus-5-5")).toBe("Opus");
+    expect(modelFamily("claude-sonnet-5")).toBe("Sonnet");
+    expect(modelFamily("<synthetic>")).toBe("<synthetic>");
+    expect(modelFamily("")).toBe("(sin modelo)");
   });
 });
 

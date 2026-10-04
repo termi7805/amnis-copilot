@@ -110,6 +110,35 @@ describe("paceHeadline", () => {
     expect(h.detail).toContain("estimación local");
     expect(h.detail).not.toContain("62");
   });
+
+  it("sin endpoint y sin calibrar: no hay % que enseñar ni ritmo que juzgar", () => {
+    const q = quota({
+      authoritative: null,
+      local: {
+        fiveHourTokens: 3_119_012,
+        fiveHourUtilization: 7089,
+        windowStartedAt: START.toISOString(),
+        calibrated: false,
+      },
+    });
+    const w = fiveHourWindow(q, NOW);
+    expect(w.known).toBe(false);
+    const h = paceHeadline(w, null);
+    expect(h.title).toBe("Sin dato fiable de esta ventana");
+    expect(`${h.title} ${h.detail}`).not.toMatch(/\d+ %/);
+  });
+
+  it("con endpoint, sin calibrar sigue habiendo dato", () => {
+    const q = quota({
+      local: {
+        fiveHourTokens: 3_119_012,
+        fiveHourUtilization: 7089,
+        windowStartedAt: START.toISOString(),
+        calibrated: false,
+      },
+    });
+    expect(fiveHourWindow(q, NOW).known).toBe(true);
+  });
 });
 
 describe("severityPill", () => {

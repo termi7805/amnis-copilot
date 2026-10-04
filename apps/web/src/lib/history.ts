@@ -114,6 +114,20 @@ export function modelLabel(id: string): string {
   return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${version.replace("-", ".")}`;
 }
 
+/**
+ * Familia del modelo («Opus», «Sonnet»…) para la gráfica de coste: agrupar
+ * por versión dejaba el modelo en uso en «Otros» en cuanto las versiones
+ * viejas acumulaban más gasto en el periodo (#103). Un id que no sigue el
+ * patrón `claude-<familia>-<versión>` se queda tal cual.
+ */
+export function modelFamily(id: string): string {
+  if (id === "") return "(sin modelo)";
+  const match = /^claude-([a-z]+)-\d+(?:-\d+)?$/.exec(id);
+  const family = match?.[1];
+  if (!family) return id;
+  return `${family.charAt(0).toUpperCase()}${family.slice(1)}`;
+}
+
 export function projectLabel(path: string): string {
   if (path === "") return "(sin proyecto)";
   return path.split("/").filter(Boolean).at(-1) ?? path;
@@ -124,13 +138,13 @@ export const OTHER_MODELS = "Otros";
 export interface CostDay {
   day: string;
   total: number;
-  /** Coste por serie (modelo o "Otros"). */
+  /** Coste por serie (familia de modelo u "Otros"). */
   byModel: Record<string, number>;
 }
 
 export interface CostSeries {
   days: CostDay[];
-  /** Modelos de mayor a menor coste; con más de 3, el resto va en "Otros". */
+  /** Familias de mayor a menor coste; con más de 3, el resto va en "Otros". */
   models: string[];
 }
 
@@ -146,7 +160,7 @@ export function costSeries(
 ): CostSeries {
   const perModel = new Map<string, number>();
   for (const r of rows) {
-    const m = r.model ?? "";
+    const m = modelFamily(r.model ?? "");
     perModel.set(m, (perModel.get(m) ?? 0) + r.costUsd);
   }
   const ranked = [...perModel.entries()]
@@ -159,7 +173,7 @@ export function costSeries(
   const byDay = new Map<string, CostDay>();
   for (const r of rows) {
     const day = byDay.get(r.key) ?? { day: r.key, total: 0, byModel: {} };
-    const s = seriesOf(r.model ?? "");
+    const s = seriesOf(modelFamily(r.model ?? ""));
     day.byModel[s] = (day.byModel[s] ?? 0) + r.costUsd;
     day.total += r.costUsd;
     byDay.set(r.key, day);

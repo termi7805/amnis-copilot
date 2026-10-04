@@ -12,8 +12,6 @@ import {
   type CostDay,
   type CostSeries,
   formatUsd,
-  modelLabel,
-  OTHER_MODELS,
 } from "../../../lib/history.ts";
 import styles from "./HistoryView.module.css";
 
@@ -24,8 +22,6 @@ const SERIES_CLASS = [
   styles.series4,
 ];
 const SERIES_VAR = ["--s1", "--s2", "--s3", "--s4"];
-
-const seriesLabel = (m: string) => (m === OTHER_MODELS ? m : modelLabel(m));
 
 function CostTooltip({
   payload,
@@ -42,7 +38,7 @@ function CostTooltip({
           <div key={m} className={styles.tipRow}>
             <span>
               <i style={{ background: `var(${SERIES_VAR[i]})` }} />
-              {seriesLabel(m)}
+              {m}
             </span>
             <span>{formatUsd(day.byModel[m])}</span>
           </div>
@@ -62,7 +58,7 @@ export function CostByModelChart({ series }: { series: CostSeries }) {
         {series.models.map((m, i) => (
           <span key={m}>
             <i style={{ background: `var(${SERIES_VAR[i]})` }} />
-            {seriesLabel(m)}
+            {m}
           </span>
         ))}
       </div>
@@ -81,7 +77,7 @@ export function CostByModelChart({ series }: { series: CostSeries }) {
               <Bar
                 key={m}
                 dataKey={m}
-                name={seriesLabel(m)}
+                name={m}
                 stackId="cost"
                 className={SERIES_CLASS[i]}
               />

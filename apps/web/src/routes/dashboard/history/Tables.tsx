@@ -3,6 +3,7 @@ import {
   formatTokens,
   formatUsd,
   type ModelTotal,
+  modelFamily,
   modelLabel,
   projectLabel,
   rowTokens,
@@ -81,7 +82,19 @@ export function ProjectsTable({ rows }: { rows: UsageAggregateRow[] }) {
   );
 }
 
-export function ModelsTable({ rows }: { rows: ModelTotal[] }) {
+/** `series` son las series de la gráfica de coste: cada fila lleva el color
+ * de su familia, y lo que la gráfica junta en "Otros" sale con el de "Otros". */
+export function ModelsTable({
+  rows,
+  series,
+}: {
+  rows: ModelTotal[];
+  series: string[];
+}) {
+  const colorOf = (model: string) => {
+    const i = series.indexOf(modelFamily(model));
+    return SERIES_VAR[i === -1 ? series.length - 1 : i];
+  };
   return (
     <table className={styles.table}>
       <thead>
@@ -92,12 +105,12 @@ export function ModelsTable({ rows }: { rows: ModelTotal[] }) {
         </tr>
       </thead>
       <tbody>
-        {rows.map((r, i) => (
+        {rows.map((r) => (
           <tr key={r.model}>
             <td>
               <span
                 className={styles.swatch}
-                style={{ background: `var(${SERIES_VAR[Math.min(i, 3)]})` }}
+                style={{ background: `var(${colorOf(r.model)})` }}
               />
               {modelLabel(r.model)}
             </td>

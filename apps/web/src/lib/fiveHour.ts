@@ -11,6 +11,12 @@ export interface FiveHourWindow {
   used: number;
   /** Sin endpoint: el número lleva `~` y proyección/divergencia se ocultan. */
   estimated: boolean;
+  /**
+   * `false` sin endpoint y con la estimación local sin calibrar: `used` sale
+   * de un techo inicial que no guarda relación con los tokens que cuenta
+   * Amnis (#103) y no es un `%` que enseñar.
+   */
+  known: boolean;
 }
 
 /**
@@ -42,6 +48,7 @@ export function fiveHourWindow(
     elapsedPct,
     used: auth?.utilization ?? quota.local.fiveHourUtilization,
     estimated: auth === null,
+    known: auth !== null || quota.local.calibrated,
   };
 }
 
@@ -67,6 +74,13 @@ export function paceHeadline(
   window: FiveHourWindow,
   projectedAtReset: number | null,
 ): PaceHeadline {
+  if (!window.known) {
+    return {
+      title: "Sin dato fiable de esta ventana",
+      detail:
+        "Sin el endpoint de Anthropic y con la estimación local aún sin calibrar, no hay un % que enseñar.",
+    };
+  }
   const used = Math.round(window.used);
   const elapsed = Math.round(window.elapsedPct);
   const prefix = window.estimated ? "~" : "";
