@@ -5,30 +5,26 @@ import type {
   RepairHooksResponse,
 } from "@amnis/shared";
 import { Fragment, type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ActionResult } from "../../../api/actions.ts";
 import {
   connectSpotify,
   disconnectSpotify,
   repairHooks,
 } from "../../../api/health.ts";
+import { settings as settingsMessages } from "../../../i18n/es/settings.ts";
+import i18n, { dateFormat, formatNumber } from "../../../i18n/index.ts";
 import styles from "./SettingsView.module.css";
 
 /** Los `name` de `diagnose()` son para el CLI; aquí se muestran con título. */
-const TITLE: Record<string, string> = {
-  daemon: "Daemon",
-  hooks: "Hooks de Claude Code",
-  credenciales: "Credenciales de Claude",
-  token: "Sesión de Claude",
-  endpoint: "Cuota de Anthropic",
-  "base de datos": "Base de datos",
-  ingesta: "Transcripts",
-  spotify: "Spotify",
-};
+type CheckName = keyof typeof settingsMessages.health.checks;
 
-const START_TIME = new Intl.DateTimeFormat("es-ES", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
+/** Un chequeo que la web no conoce se enseña con su nombre del daemon. */
+function checkTitle(name: string): string {
+  return Object.hasOwn(settingsMessages.health.checks, name)
+    ? i18n.t(`settings.health.checks.${name as CheckName}`)
+    : name;
+}
 
 /** Los remedios traen comandos entre `backticks`: se pintan como `<code>`. */
 function withCode(text: string): ReactNode {
@@ -70,8 +66,8 @@ interface Action {
 }
 
 function describeRepair({ added, backup }: RepairHooksResponse): string {
-  if (added.length === 0) return "No había nada que reparar.";
-  return `Reparado: ${added.join(", ")}.${backup ? ` Copia en ${backup}.` : ""}`;
+  if (added.length === 0) return i18n.t("settings.health.nothingToRepair");
+  return `${i18n.t("settings.health.repaired", { added: added.join(", ") })}${backup ? i18n.t("settings.health.backup", { backup }) : ""}`;
 }
 
 /**
@@ -86,6 +82,7 @@ export function HealthList({
   mediaStatus,
   actions = { repairHooks, connectSpotify, disconnectSpotify },
 }: HealthListProps) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notices, setNotices] = useState<Record<string, string>>({});
@@ -110,7 +107,7 @@ export function HealthList({
   function actionFor(check: HealthCheck): Action | null {
     if (check.name === "hooks" && !check.ok) {
       return {
-        label: "Reparar hooks",
+        label: t("settings.health.repairHooks"),
         primary: true,
         run: async () => {
           const result = await actions.repairHooks();
@@ -123,14 +120,14 @@ export function HealthList({
     if (check.name === "spotify") {
       if (mediaStatus === "not-logged-in") {
         return {
-          label: "Conectar",
+          label: t("settings.health.connect"),
           primary: !check.ok,
           run: async () => {
             const result = await actions.connectSpotify();
             return result.ok
               ? {
                   ok: true,
-                  notice: "Autoriza a Amnis en la pestaña que se ha abierto.",
+                  notice: t("settings.health.authorize"),
                 }
               : result;
           },
@@ -142,7 +139,7 @@ export function HealthList({
         mediaStatus === "unavailable"
       ) {
         return {
-          label: "Desconectar",
+          label: t("settings.health.disconnect"),
           primary: false,
           run: async () => {
             const result = await actions.disconnectSpotify();
@@ -157,7 +154,13 @@ export function HealthList({
   function detailOf(check: HealthCheck): string {
     if (check.name === "daemon" && check.ok && health) {
       const { version, startedAt, eventsReceived } = health.daemon;
-      return `v${version} · en marcha desde las ${START_TIME.format(new Date(startedAt))} · ${eventsReceived.toLocaleString("es-ES")} eventos de hook`;
+      return t("settings.health.daemonDetail", {
+        version,
+        time: dateFormat({ hour: "2-digit", minute: "2-digit" }).format(
+          new Date(startedAt),
+        ),
+        events: formatNumber(eventsReceived),
+      });
     }
     return check.message;
   }
@@ -165,23 +168,21 @@ export function HealthList({
   return (
     <section className={styles.card} aria-labelledby="health-title">
       <div className={styles.cardHead}>
-        <h2 id="health-title">Salud</h2>
+        <h2 id="health-title">{t("settings.health.title")}</h2>
         {health && (
           <span
             className={styles.pill}
             data-tone={warnings > 0 ? "warn" : "ok"}
           >
             {warnings === 0
-              ? "OK"
-              : warnings === 1
-                ? "1 aviso"
-                : `${warnings} avisos`}
+              ? t("settings.health.ok")
+              : t("settings.health.warnings", { count: warnings })}
           </span>
         )}
       </div>
       {unreachable && (
         <p role="alert" className={styles.error}>
-          No se pudo contactar con Amnis.
+          {t("common.errors.unreachable")}
         </p>
       )}
       {health && (
@@ -198,9 +199,7 @@ export function HealthList({
                   {check.ok ? "✓" : "!"}
                 </span>
                 <div>
-                  <div className={styles.title}>
-                    {TITLE[check.name] ?? check.name}
-                  </div>
+                  <div className={styles.title}>{checkTitle(check.name)}</div>
                   <div className={styles.detail}>
                     {withCode(detailOf(check))}
                   </div>

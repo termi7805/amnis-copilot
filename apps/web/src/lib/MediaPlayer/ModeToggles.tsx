@@ -1,4 +1,5 @@
 import type { MediaSnapshot } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import type { MediaCommand } from "../../api/media.ts";
 import styles from "./MediaPlayer.module.css";
 
@@ -16,12 +17,6 @@ export function nextRepeat(mode: RepeatMode): RepeatMode {
   }
 }
 
-const REPEAT_LABEL: Record<RepeatMode, string> = {
-  off: "Repetir: no",
-  context: "Repetir: lista",
-  track: "Repetir: canción",
-};
-
 export interface ModeTogglesProps {
   shuffle: boolean;
   repeat: RepeatMode;
@@ -36,6 +31,7 @@ export function ModeToggles({
   disabled = false,
   onCommand,
 }: ModeTogglesProps) {
+  const { t } = useTranslation();
   return (
     <>
       <button
@@ -43,7 +39,7 @@ export function ModeToggles({
         className={styles.control}
         data-toggle="true"
         aria-pressed={shuffle}
-        aria-label="Aleatorio"
+        aria-label={t("media.shuffle")}
         disabled={disabled}
         onClick={() => onCommand({ kind: "shuffle", state: !shuffle })}
       >
@@ -65,7 +61,7 @@ export function ModeToggles({
         data-toggle="true"
         data-mode={repeat}
         aria-pressed={repeat !== "off"}
-        aria-label={REPEAT_LABEL[repeat]}
+        aria-label={t(`media.repeat.${repeat}`)}
         disabled={disabled}
         onClick={() => onCommand({ kind: "repeat", mode: nextRepeat(repeat) })}
       >

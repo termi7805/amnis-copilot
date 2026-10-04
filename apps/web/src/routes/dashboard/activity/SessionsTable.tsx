@@ -1,4 +1,5 @@
 import type { ActivitySession } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import { formatMinutes, isOngoing } from "../../../lib/activity.ts";
 import { formatTokens, formatUsd } from "../../../lib/history.ts";
 import styles from "./ActivityView.module.css";
@@ -12,21 +13,22 @@ export function SessionsTable({
   sessions: ActivitySession[];
   fetchedAt: number | null;
 }) {
+  const { t } = useTranslation();
   if (sessions.length === 0) {
-    return <p className={styles.empty}>Sin sesiones este día.</p>;
+    return <p className={styles.empty}>{t("activity.noSessions")}</p>;
   }
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
-            <th>Proyecto</th>
-            <th>Inicio</th>
-            <th className={styles.n}>Duración</th>
-            <th className={styles.n}>Activo</th>
-            <th className={styles.n}>Tokens</th>
-            <th className={styles.n}>Equiv.</th>
-            <th>Estado</th>
+            <th>{t("activity.table.project")}</th>
+            <th>{t("activity.table.start")}</th>
+            <th className={styles.n}>{t("activity.table.duration")}</th>
+            <th className={styles.n}>{t("activity.table.active")}</th>
+            <th className={styles.n}>{t("activity.table.tokens")}</th>
+            <th className={styles.n}>{t("activity.table.cost")}</th>
+            <th>{t("activity.table.status")}</th>
           </tr>
         </thead>
         <tbody>
@@ -36,7 +38,7 @@ export function SessionsTable({
               <tr key={s.sessionId}>
                 <td>
                   <div className={styles.proj}>
-                    {s.project ?? "sin proyecto"}
+                    {s.project ?? t("activity.noProject")}
                   </div>
                   {s.gitBranch && (
                     <div className={styles.branch}>{s.gitBranch}</div>
@@ -53,7 +55,9 @@ export function SessionsTable({
                 <td className={styles.n}>{formatUsd(s.costUsd)}</td>
                 <td>
                   <span className={live ? styles.pillLive : styles.pill}>
-                    {live ? "en curso" : "terminada"}
+                    {live
+                      ? t("activity.table.live")
+                      : t("activity.table.ended")}
                   </span>
                 </td>
               </tr>

@@ -1,5 +1,6 @@
 import type { MediaSnapshot } from "@amnis/shared";
 import { type KeyboardEvent, type PointerEvent, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import styles from "./MediaPlayer.module.css";
 import {
   type InterpolationOptions,
@@ -43,6 +44,7 @@ export function ProgressBar({
   disabled = false,
   clock = Date.now,
 }: ProgressBarProps) {
+  const { t } = useTranslation();
   const durationMs = media.track?.durationMs ?? 0;
   const reducedMotion = usePrefersReducedMotion();
   const trackRef = useRef<HTMLDivElement>(null);
@@ -130,11 +132,14 @@ export function ProgressBar({
         className={styles.progressTrack}
         role="slider"
         tabIndex={disabled ? -1 : 0}
-        aria-label="Progreso de la canción"
+        aria-label={t("media.progress")}
         aria-valuemin={0}
         aria-valuemax={durationMs}
         aria-valuenow={Math.round(position)}
-        aria-valuetext={`${formatTrackTime(position)} de ${formatTrackTime(durationMs)}`}
+        aria-valuetext={t("media.progressValue", {
+          position: formatTrackTime(position),
+          duration: formatTrackTime(durationMs),
+        })}
         aria-disabled={disabled}
         data-dragging={dragMs !== null}
         onPointerDown={onPointerDown}

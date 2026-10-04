@@ -1,18 +1,14 @@
 import { useSyncExternalStore } from "react";
 
-export const VIEWS = [
-  { id: "ahora", label: "Ahora" },
-  { id: "historico", label: "Histórico" },
-  { id: "actividad", label: "Actividad" },
-  { id: "ajustes", label: "Ajustes" },
-] as const;
+/** Los ids son las URLs (`#ahora`…): no se traducen; la etiqueta sale de `common.views`. */
+export const VIEWS = ["ahora", "historico", "actividad", "ajustes"] as const;
 
-export type View = (typeof VIEWS)[number]["id"];
+export type View = (typeof VIEWS)[number];
 
 /** Un hash desconocido o vacío cae en la portada, nunca en una vista en blanco. */
 export function parseView(hash: string): View {
   const id = hash.replace(/^#/, "");
-  return VIEWS.find((v) => v.id === id)?.id ?? "ahora";
+  return VIEWS.find((v) => v === id) ?? "ahora";
 }
 
 function subscribe(onChange: () => void): () => void {

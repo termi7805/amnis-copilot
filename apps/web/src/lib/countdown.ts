@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import i18n from "../i18n/index.ts";
 
 /**
  * `null` si `resetsAt` es `null` — no hay cuenta atrás que dar, y quien
@@ -10,15 +11,19 @@ export function formatUntil(resetsAt: string | null, now: Date): string | null {
   if (!resetsAt) return null;
 
   const ms = new Date(resetsAt).getTime() - now.getTime();
-  if (ms <= 0) return "ahora";
+  if (ms <= 0) return i18n.t("common.countdown.now");
 
   const minutes = Math.floor(ms / 60_000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days >= 1) return `${days}d ${hours % 24}h`;
-  if (hours >= 1) return `${hours}h ${minutes % 60}m`;
-  return `${minutes}m`;
+  if (days >= 1) {
+    return i18n.t("common.countdown.days", { days, hours: hours % 24 });
+  }
+  if (hours >= 1) {
+    return i18n.t("common.countdown.hours", { hours, minutes: minutes % 60 });
+  }
+  return i18n.t("common.countdown.minutes", { minutes });
 }
 
 /**
@@ -33,9 +38,13 @@ export function formatElapsed(since: string, now: Date): string {
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
 
-  if (days >= 1) return `${days}d ${hours % 24}h`;
-  if (hours >= 1) return `${hours}h ${minutes % 60}m`;
-  return `${minutes} min`;
+  if (days >= 1) {
+    return i18n.t("common.countdown.days", { days, hours: hours % 24 });
+  }
+  if (hours >= 1) {
+    return i18n.t("common.countdown.hours", { hours, minutes: minutes % 60 });
+  }
+  return i18n.t("common.countdown.minutesLong", { minutes });
 }
 
 /**

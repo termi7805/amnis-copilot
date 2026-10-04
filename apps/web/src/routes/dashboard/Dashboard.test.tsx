@@ -151,6 +151,31 @@ describe("Dashboard", () => {
     expect(screen.getAllByTestId("pet")[0]?.dataset.state).toBe("coding");
   });
 
+  it("con locale en se pinta en inglés y un cambio por SSE vuelve al español sin recargar", () => {
+    render(<Dashboard />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() =>
+      source?.emit("hello", {
+        ...fakeState,
+        settings: { ...DEFAULT_SETTINGS, locale: "en" },
+      }),
+    );
+
+    expect(screen.getByTestId("connection-status")).toHaveTextContent(
+      "Daemon connected",
+    );
+    expect(screen.getByRole("link", { name: /Settings/ })).toBeVisible();
+    expect(document.body.textContent).toMatch(/\d{1,2}:\d{2}\s?[AP]M/);
+    expect(document.documentElement.lang).toBe("en");
+
+    act(() => source?.emit("settings", { ...DEFAULT_SETTINGS, locale: "es" }));
+    expect(screen.getByTestId("connection-status")).toHaveTextContent(
+      "Daemon conectado",
+    );
+    expect(document.documentElement.lang).toBe("es");
+  });
+
   it("Cerrar Amnis pide al daemon que se pare", () => {
     render(<Dashboard />);
     const [source] = FakeEventSource.instances;

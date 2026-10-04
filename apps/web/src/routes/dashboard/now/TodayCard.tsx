@@ -1,4 +1,5 @@
 import type { ActivityResponse } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import type { TodayUsage } from "../../../api/usage.ts";
 import { formatTokens, formatUsd } from "../../../lib/history.ts";
 import styles from "./NowCards.module.css";
@@ -14,30 +15,31 @@ export function TodayCard({
   usage: TodayUsage | null;
   activity: ActivityResponse | null;
 }) {
+  const { t } = useTranslation();
   const sessions = activity?.sessions.length ?? 0;
   return (
     <article className={styles.card} data-testid="card-today">
       <div className={styles.row}>
-        <h2>Hoy</h2>
+        <h2>{t("now.today.title")}</h2>
         <a className={styles.link} href="#historico">
-          Histórico
+          {t("common.views.historico")}
         </a>
       </div>
       <div className={styles.row}>
         <span className={styles.pct}>
           {usage ? formatUsd(usage.costUsd) : "—"}
         </span>
-        <small className={styles.note}>equiv. API</small>
+        <small className={styles.note}>{t("now.today.apiEquiv")}</small>
       </div>
       {usage && (
         <small className={styles.mono}>
-          {formatTokens(usage.tokens)} tokens · {sessions}{" "}
-          {sessions === 1 ? "sesión" : "sesiones"}
+          {t("now.today.sessions", {
+            tokens: formatTokens(usage.tokens),
+            count: sessions,
+          })}
         </small>
       )}
-      <small className={styles.note}>
-        Lo que habría costado pagando la API. No es dinero gastado.
-      </small>
+      <small className={styles.note}>{t("now.today.note")}</small>
     </article>
   );
 }

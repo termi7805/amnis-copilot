@@ -32,13 +32,6 @@ export interface AmnisStream {
   quitRequested: boolean;
 }
 
-/** Etiqueta en español, compartida por las dos envolturas (dashboard y `/pet`). */
-export const CONNECTION_LABEL: Record<ConnectionStatus, string> = {
-  connected: "conectado",
-  reconnecting: "reconectando…",
-  offline: "sin conexión",
-};
-
 /**
  * GET /api/events por SSE (docs/STACK.md §4): `hello` trae el
  * StateResponse completo al conectar, `state`/`quota`/`media`/`settings` solo

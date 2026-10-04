@@ -1,7 +1,9 @@
 import {
   type AmnisSettings,
   DEFAULT_SETTINGS,
+  isLocaleId,
   isThemeId,
+  LOCALES,
   type PetFocus,
   THEMES,
 } from "@amnis/shared";
@@ -48,7 +50,7 @@ function parsePetFocus(v: unknown): PetFocus | null {
 }
 
 /**
- * Valida un cambio de ajustes (`PUT /api/settings`): `plan`, `petFocus` y `theme` aquí,
+ * Valida un cambio de ajustes (`PUT /api/settings`): `plan`, `petFocus`, `theme` y `locale` aquí,
  * el resto (preferencias de música) en `validateMusicPrefs`. Acepta un
  * parcial.
  */
@@ -59,7 +61,10 @@ export function validateSettings(
   if (typeof input !== "object" || input === null || Array.isArray(input)) {
     return { ok: false, field: "body", message: "El body debe ser un objeto." };
   }
-  const { plan, petFocus, theme, ...rest } = input as Record<string, unknown>;
+  const { plan, petFocus, theme, locale, ...rest } = input as Record<
+    string,
+    unknown
+  >;
 
   let nextPlan = current.plan;
   if ("plan" in input) {
@@ -99,10 +104,23 @@ export function validateSettings(
     nextTheme = theme;
   }
 
+  let nextLocale = current.locale;
+  if ("locale" in input) {
+    if (!isLocaleId(locale)) {
+      return {
+        ok: false,
+        field: "locale",
+        message: `locale debe ser uno de: ${LOCALES.join(", ")}.`,
+      };
+    }
+    nextLocale = locale;
+  }
+
   const {
     plan: _plan,
     petFocus: _petFocus,
     theme: _theme,
+    locale: _locale,
     ...currentPrefs
   } = current;
   const prefs = validateMusicPrefs(rest, currentPrefs);
@@ -114,13 +132,14 @@ export function validateSettings(
       plan: nextPlan,
       petFocus: nextFocus,
       theme: nextTheme,
+      locale: nextLocale,
     },
   };
 }
 
 /**
  * Lo que se lee de disco: nunca lanza; un `plan` inválido cae a `null`, un
- * `petFocus` inválido o ausente, a `auto`, y un `theme` desconocido, a `system`.
+ * `petFocus` inválido o ausente, a `auto`, y un `theme` o un `locale` desconocidos, a `system`.
  */
 export function sanitizeSettings(raw: unknown): AmnisSettings {
   const source =
@@ -133,5 +152,6 @@ export function sanitizeSettings(raw: unknown): AmnisSettings {
     plan: isKnownPlan(source.plan) ? source.plan : null,
     petFocus: parsePetFocus(source.petFocus) ?? { kind: "auto" },
     theme: isThemeId(source.theme) ? source.theme : "system",
+    locale: isLocaleId(source.locale) ? source.locale : "system",
   };
 }

@@ -1,12 +1,12 @@
 import type { ActivityResponse } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
+import { dateFormat } from "../../../i18n/index.ts";
 import { GROUP_COLOR, recentSegments } from "../../../lib/nowCards.ts";
-import { STATE_TITLE } from "../../../lib/Pet/Pet.tsx";
+import { stateTitle } from "../../../lib/Pet/Pet.tsx";
 import styles from "./NowCards.module.css";
 
-const HHMM = new Intl.DateTimeFormat("es-ES", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
+const hhmm = (date: Date) =>
+  dateFormat({ hour: "2-digit", minute: "2-digit" }).format(date);
 
 /** Los últimos tramos del día: qué hizo Amnis y en qué proyecto. */
 export function RecentEvents({
@@ -14,6 +14,7 @@ export function RecentEvents({
 }: {
   activity: ActivityResponse | null;
 }) {
+  const { t } = useTranslation();
   const projects = new Map(
     (activity?.sessions ?? []).map((s) => [s.sessionId, s.project]),
   );
@@ -22,26 +23,26 @@ export function RecentEvents({
   return (
     <article className={styles.card} data-testid="recent-events">
       <div className={styles.row}>
-        <h2>Últimos eventos</h2>
+        <h2>{t("now.recent.title")}</h2>
         <a className={styles.link} href="#actividad">
-          Ver el día
+          {t("now.recent.seeDay")}
         </a>
       </div>
       {recent.length === 0 ? (
-        <small className={styles.note}>Sin actividad de agentes hoy.</small>
+        <small className={styles.note}>{t("now.recent.empty")}</small>
       ) : (
         <ul className={styles.feed}>
           {recent.map((s) => {
             const project = projects.get(s.sessionId);
             return (
               <li key={`${s.sessionId}:${s.start}`}>
-                <time dateTime={s.start}>{HHMM.format(new Date(s.start))}</time>
+                <time dateTime={s.start}>{hhmm(new Date(s.start))}</time>
                 <i
                   className={styles.sw}
                   style={{ background: GROUP_COLOR[s.group] }}
                 />
                 <span className={styles.what}>
-                  {STATE_TITLE[s.state]}
+                  {stateTitle(s.state)}
                   {project && <em> · {project}</em>}
                 </span>
               </li>

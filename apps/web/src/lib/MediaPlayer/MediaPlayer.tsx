@@ -1,5 +1,6 @@
 import type { MediaSnapshot } from "@amnis/shared";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   MediaCommand,
   MediaCommandResult,
@@ -12,8 +13,6 @@ import { ProgressBar } from "./ProgressBar.tsx";
 
 /** Un error de una orden se ve unos segundos y se va solo. */
 const ERROR_MS = 6_000;
-
-const LOGIN_COMMAND = "amnis spotify login --client-id <tu id>";
 
 export interface MediaPlayerProps {
   /** `null` = sin datos del daemon (caído, o aún sin el primer `hello`). */
@@ -63,6 +62,7 @@ export function MediaPlayer({
   loadDevices,
   layout = "compact",
 }: MediaPlayerProps) {
+  const { t } = useTranslation();
   const state = stateOf(media);
   const status = media?.status ?? null;
 
@@ -101,7 +101,7 @@ export function MediaPlayer({
     try {
       result = await onCommand(command);
     } catch {
-      result = { ok: false, message: "No se pudo enviar la orden." };
+      result = { ok: false, message: t("media.sendFailed") };
     }
 
     inFlight.current = false;
@@ -142,47 +142,45 @@ export function MediaPlayer({
       className={styles.root}
       data-state={state}
       data-layout={layout}
-      aria-label="Reproductor de Spotify"
+      aria-label={t("media.player")}
       onPointerDown={(e) => e.stopPropagation()}
       onPointerUp={(e) => e.stopPropagation()}
     >
       {state === "disconnected" && (
-        <Empty title="Amnis no responde">
-          Comprueba que el daemon está en marcha.
+        <Empty title={t("media.disconnectedTitle")}>
+          {t("media.disconnected")}
         </Empty>
       )}
 
       {state === "not-configured" && (
-        <Empty title="Spotify sin configurar">
-          Registra tu app en el panel de desarrolladores de Spotify y ejecuta:
-          <code className={styles.command}>{LOGIN_COMMAND}</code>
+        <Empty title={t("media.notConfiguredTitle")}>
+          {t("media.notConfigured")}
+          <code className={styles.command}>{t("media.loginCommand")}</code>
         </Empty>
       )}
 
       {state === "not-logged-in" && (
-        <Empty title="Spotify desconectado">
+        <Empty title={t("media.notLoggedInTitle")}>
           <button
             type="button"
             className={styles.connect}
             onClick={() => run("connect")}
             disabled={busy}
           >
-            Conectar Spotify
+            {t("media.connect")}
           </button>
           {authorizingAt !== null && (
-            <span className={styles.hint}>Autoriza en el navegador…</span>
+            <span className={styles.hint}>{t("media.authorizing")}</span>
           )}
         </Empty>
       )}
 
       {state === "no-device" && (
-        <Empty title="Abre Spotify en algún dispositivo">
-          Cuando empiece a sonar, aparecerá aquí.
-        </Empty>
+        <Empty title={t("media.noDeviceTitle")}>{t("media.noDevice")}</Empty>
       )}
 
       {state === "unavailable" && (
-        <Empty title="Spotify no responde">Reintentando…</Empty>
+        <Empty title={t("media.unavailableTitle")}>{t("media.retrying")}</Empty>
       )}
 
       {hasPlayer && (
@@ -229,6 +227,7 @@ function Player({
   /** Selector de dispositivo al final del transporte (solo layout ancho). */
   devices: ReactNode;
 }) {
+  const { t } = useTranslation();
   const { track, isPlaying } = media;
   return (
     <>
@@ -240,7 +239,11 @@ function Player({
           <img
             className={styles.cover}
             src={track.imageUrl}
-            alt={track.album ? `Portada de ${track.album}` : "Portada"}
+            alt={
+              track.album
+                ? t("media.coverOf", { album: track.album })
+                : t("media.cover")
+            }
           />
         ) : (
           <div className={styles.cover} data-empty="true" aria-hidden="true" />
@@ -255,7 +258,7 @@ function Player({
               <span className={styles.artists}>{track.artists.join(", ")}</span>
             </>
           ) : (
-            <span className={styles.title}>Sin información de la pista</span>
+            <span className={styles.title}>{t("media.noTrackInfo")}</span>
           )}
 
           <div className={styles.controls}>
@@ -264,7 +267,7 @@ function Player({
               className={styles.control}
               onClick={() => run("previous")}
               disabled={busy}
-              aria-label="Anterior"
+              aria-label={t("media.previous")}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -281,7 +284,7 @@ function Player({
               data-primary="true"
               onClick={() => run(isPlaying ? "pause" : "play")}
               disabled={busy}
-              aria-label={isPlaying ? "Pausar" : "Reproducir"}
+              aria-label={isPlaying ? t("media.pause") : t("media.play")}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -300,7 +303,7 @@ function Player({
               className={styles.control}
               onClick={() => run("next")}
               disabled={busy}
-              aria-label="Siguiente"
+              aria-label={t("media.next")}
             >
               <svg
                 viewBox="0 0 24 24"

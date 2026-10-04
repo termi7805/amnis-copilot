@@ -1,10 +1,11 @@
+import i18n from "../i18n/index.ts";
 import { daemonUrl } from "./config.ts";
 
 export type ActionResult<T = unknown> =
   | { ok: true; body: T }
   | { ok: false; message: string };
 
-/** El daemon responde `{ error }` en español; si no hay, basta el status. */
+/** El daemon responde `{ error }` en español (no se traduce); si no hay, basta el status. */
 export async function errorMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as { error?: unknown };
@@ -12,7 +13,7 @@ export async function errorMessage(response: Response): Promise<string> {
   } catch {
     // Cuerpo que no es JSON: el status basta.
   }
-  return `Amnis respondió ${response.status}.`;
+  return i18n.t("common.errors.status", { status: response.status });
 }
 
 /** POST sin cuerpo a una ruta de acción del daemon (reparar, reconstruir…). */
@@ -23,7 +24,7 @@ export async function postAction<T = unknown>(
   try {
     response = await fetch(`${daemonUrl()}${path}`, { method: "POST" });
   } catch {
-    return { ok: false, message: "No se pudo contactar con Amnis." };
+    return { ok: false, message: i18n.t("common.errors.unreachable") };
   }
   if (!response.ok) return { ok: false, message: await errorMessage(response) };
   try {

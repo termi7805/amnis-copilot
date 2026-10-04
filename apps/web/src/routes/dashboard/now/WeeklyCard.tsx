@@ -1,4 +1,5 @@
 import type { QuotaSnapshot } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import { originColor } from "../../../lib/nowCards.ts";
 import { LimitMeter } from "./LimitMeter.tsx";
 import styles from "./NowCards.module.css";
@@ -15,14 +16,17 @@ export function WeeklyCard({
   quota: QuotaSnapshot;
   now: Date;
 }) {
+  const { t } = useTranslation();
   const week = quota.authoritative?.sevenDay ?? null;
   const rows = quota.authoritative?.weeklyBreakdown?.rows ?? [];
 
   return (
     <article className={styles.card} data-testid="card-weekly">
       <div className={styles.row}>
-        <h2>Semana · 7 d</h2>
-        <span className={styles.pill}>{week ? "real" : "sin endpoint"}</span>
+        <h2>{t("now.limit.weeklyTitle")}</h2>
+        <span className={styles.pill}>
+          {week ? t("now.limit.real") : t("now.limit.noEndpoint")}
+        </span>
       </div>
       {week ? (
         <LimitMeter
@@ -31,15 +35,13 @@ export function WeeklyCard({
           now={now}
         />
       ) : (
-        <small className={styles.note}>
-          Sin el endpoint de Anthropic no hay dato de la semana.
-        </small>
+        <small className={styles.note}>{t("now.limit.weeklyMissing")}</small>
       )}
       {rows.length > 0 && (
         <div className={styles.origin} data-testid="origin">
           <div className={styles.originHead}>
-            <span>De dónde sale</span>
-            <span>según Anthropic</span>
+            <span>{t("now.limit.origin")}</span>
+            <span>{t("now.limit.originSource")}</span>
           </div>
           <div className={styles.originBar}>
             {rows

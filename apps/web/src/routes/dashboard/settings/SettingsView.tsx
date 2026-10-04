@@ -1,4 +1,5 @@
-import type { StateResponse, ThemeId } from "@amnis/shared";
+import type { LocaleId, StateResponse, ThemeId } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import type { HealthState } from "../../../api/health.ts";
 import {
   type SaveSettingsResult,
@@ -8,6 +9,7 @@ import type { AmnisStream } from "../../../api/useAmnisStream.ts";
 import { AppearanceCard } from "./AppearanceCard.tsx";
 import { DataCard } from "./DataCard.tsx";
 import { HealthList } from "./HealthList.tsx";
+import { LanguageCard } from "./LanguageCard.tsx";
 import { MusicSettings } from "./MusicSettings.tsx";
 import { PlanCard } from "./PlanCard.tsx";
 import styles from "./SettingsView.module.css";
@@ -18,6 +20,8 @@ export interface SettingsViewProps {
   rebuild: AmnisStream["rebuild"];
   theme: ThemeId;
   onTheme: (theme: ThemeId) => Promise<SaveSettingsResult>;
+  locale: LocaleId;
+  onLocale: (locale: LocaleId) => Promise<SaveSettingsResult>;
 }
 
 /**
@@ -31,15 +35,16 @@ export function SettingsView({
   rebuild,
   theme,
   onTheme,
+  locale,
+  onLocale,
 }: SettingsViewProps) {
+  const { t } = useTranslation();
   return (
     <div className={styles.view}>
       <header className={styles.pageHead}>
-        <div className={styles.eyebrow}>
-          Lo mismo que amnis doctor, sin abrir la terminal
-        </div>
-        <h1>Ajustes y salud</h1>
-        <p>Todo lo que hoy pide CLI o la mascota se hace desde aquí.</p>
+        <div className={styles.eyebrow}>{t("settings.eyebrow")}</div>
+        <h1>{t("settings.title")}</h1>
+        <p>{t("settings.intro")}</p>
       </header>
       <div className={styles.grid}>
         <div className={styles.health}>
@@ -53,6 +58,7 @@ export function SettingsView({
         <div className={styles.side}>
           <PlanCard state={state} />
           <AppearanceCard theme={theme} onTheme={onTheme} />
+          <LanguageCard locale={locale} onLocale={onLocale} />
           <DataCard rebuild={rebuild} />
         </div>
         <div className={styles.music}>

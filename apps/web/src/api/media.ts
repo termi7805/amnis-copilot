@@ -1,5 +1,6 @@
 import type { MediaDeviceOption, MediaSnapshot } from "@amnis/shared";
 import { useEffect } from "react";
+import i18n from "../i18n/index.ts";
 import { daemonUrl } from "./config.ts";
 
 /** Dos focos seguidos (foco de ventana + visibilidad suelen llegar juntos)
@@ -111,13 +112,16 @@ async function failureOf(response: Response): Promise<MediaFailure> {
   } catch {
     // Cuerpo que no es JSON: el status basta.
   }
-  return { ok: false, message: `Spotify respondió ${response.status}.` };
+  return {
+    ok: false,
+    message: i18n.t("common.errors.spotifyStatus", { status: response.status }),
+  };
 }
 
-const UNREACHABLE: MediaFailure = {
+const unreachable = (): MediaFailure => ({
   ok: false,
-  message: "No se pudo contactar con Amnis.",
-};
+  message: i18n.t("common.errors.unreachable"),
+});
 
 export async function sendMediaCommand(
   command: MediaCommand,
@@ -137,7 +141,7 @@ export async function sendMediaCommand(
       });
     }
   } catch {
-    return UNREACHABLE;
+    return unreachable();
   }
   return response.ok ? { ok: true } : failureOf(response);
 }
@@ -155,13 +159,13 @@ export async function fetchMediaDevices(): Promise<MediaDevicesResult> {
   try {
     response = await fetch(`${daemonUrl()}/api/media/devices`);
   } catch {
-    return UNREACHABLE;
+    return unreachable();
   }
   if (!response.ok) return failureOf(response);
   try {
     const body = (await response.json()) as { devices?: MediaDeviceOption[] };
     return { ok: true, devices: body.devices ?? [] };
   } catch {
-    return { ok: false, message: "Respuesta de Amnis no válida." };
+    return { ok: false, message: i18n.t("common.errors.invalidResponse") };
   }
 }

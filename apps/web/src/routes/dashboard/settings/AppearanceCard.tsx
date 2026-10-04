@@ -1,5 +1,6 @@
 import { THEMES, type ThemeId } from "@amnis/shared";
 import { type KeyboardEvent, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { SaveSettingsResult } from "../../../api/settings.ts";
 import styles from "./SettingsView.module.css";
 
@@ -7,11 +8,7 @@ import styles from "./SettingsView.module.css";
  * Por `scheme` del catálogo y no por origen (con nombre o propio): quien elige
  * tema piensa primero si lo quiere claro u oscuro.
  */
-const GROUPS = [
-  { scheme: "system", title: "Sistema" },
-  { scheme: "light", title: "Claros" },
-  { scheme: "dark", title: "Oscuros" },
-] as const;
+const GROUPS = ["system", "light", "dark"] as const;
 
 /** Los tres del conmutador de #80: lo que se enseña plegada (#128). */
 const BASIC: readonly ThemeId[] = ["system", "light", "dark"];
@@ -85,6 +82,7 @@ function Swatch({
  * en claro y oscuro en vez de fingir un aspecto.
  */
 export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   // Solo local y sin persistir: abrirla plegada en cada visita es lo que evita el desplazamiento.
   const [expanded, setExpanded] = useState(false);
@@ -123,7 +121,7 @@ export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
   return (
     <section className={styles.card} aria-labelledby="appearance-title">
       <div className={styles.cardHead}>
-        <h2 id="appearance-title">Apariencia</h2>
+        <h2 id="appearance-title">{t("settings.appearance.title")}</h2>
         <button
           type="button"
           className={styles.btn}
@@ -132,19 +130,21 @@ export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
           onClick={() => setExpanded((e) => !e)}
         >
           {expanded
-            ? "Menos temas"
-            : `Más temas (${THEMES.length - folded.length})`}
+            ? t("settings.appearance.lessThemes")
+            : t("settings.appearance.moreThemes", {
+                count: THEMES.length - folded.length,
+              })}
         </button>
       </div>
       <div
         id="appearance-themes"
         ref={group}
         role="radiogroup"
-        aria-label="Tema"
+        aria-label={t("settings.appearance.theme")}
         onKeyDown={onKeyDown}
       >
         {expanded ? (
-          GROUPS.map(({ scheme, title }) => (
+          GROUPS.map((scheme) => (
             // biome-ignore lint/a11y/useSemanticElements: ídem, un grupo dentro del radiogroup
             <div
               key={scheme}
@@ -156,15 +156,15 @@ export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
                 id={`theme-group-${scheme}`}
                 className={styles.themeGroupLabel}
               >
-                {title}
+                {t(`settings.appearance.groups.${scheme}`)}
               </div>
               <div className={styles.swatches}>
-                {THEMES.filter((t) => t.scheme === scheme).map(
-                  ({ id, label }) => (
+                {THEMES.filter((theme) => theme.scheme === scheme).map(
+                  ({ id }) => (
                     <Swatch
                       key={id}
                       id={id}
-                      label={label}
+                      label={t(`settings.appearance.themes.${id}`)}
                       checked={theme === id}
                       onChoose={(t) => void choose(t)}
                     />
@@ -175,11 +175,11 @@ export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
           ))
         ) : (
           <div className={styles.swatches}>
-            {folded.map(({ id, label }) => (
+            {folded.map(({ id }) => (
               <Swatch
                 key={id}
                 id={id}
-                label={label}
+                label={t(`settings.appearance.themes.${id}`)}
                 checked={theme === id}
                 onChoose={(t) => void choose(t)}
               />

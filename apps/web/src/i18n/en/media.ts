@@ -1,0 +1,46 @@
+import type { media as es } from "../es/media.ts";
+import type { Messages } from "../messages.ts";
+
+export const media: Messages<typeof es> = {
+  player: "Spotify player",
+  sendFailed: "Couldn't send the command.",
+  loginCommand: "amnis spotify login --client-id <your id>",
+  disconnectedTitle: "Amnis isn't responding",
+  disconnected: "Check that the daemon is running.",
+  notConfiguredTitle: "Spotify not set up",
+  notConfigured:
+    "Register your app in the Spotify developer dashboard and run:",
+  notLoggedInTitle: "Spotify disconnected",
+  connect: "Connect Spotify",
+  authorizing: "Authorize in the browser…",
+  noDeviceTitle: "Open Spotify on any device",
+  noDevice: "Once something starts playing, it'll show up here.",
+  unavailableTitle: "Spotify isn't responding",
+  retrying: "Retrying…",
+  coverOf: "Cover of {{album}}",
+  cover: "Cover",
+  noTrackInfo: "No track information",
+  previous: "Previous",
+  pause: "Pause",
+  play: "Play",
+  next: "Next",
+  shuffle: "Shuffle",
+  repeat: {
+    off: "Repeat: off",
+    context: "Repeat: playlist",
+    track: "Repeat: song",
+  },
+  progress: "Song progress",
+  progressValue: "{{position}} of {{duration}}",
+  devices: {
+    trigger: "Playback device",
+    choose: "Choose device",
+    list: "Devices",
+    loadFailed: "Couldn't load the device list.",
+    loading: "Looking for devices…",
+    none: "No devices available. Open Spotify on one.",
+    active: "Playing here",
+    restricted: "Doesn't support remote control",
+    switching: "Switching…",
+  },
+};

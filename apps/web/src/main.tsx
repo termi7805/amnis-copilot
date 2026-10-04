@@ -4,6 +4,8 @@ import "@fontsource-variable/geist";
 import "@fontsource-variable/geist-mono";
 import "@fontsource/silkscreen/400.css";
 import "./index.css";
+// Antes del primer render: el idioma de la caché ya está cargado al pintar.
+import "./i18n/index.ts";
 import { Dashboard } from "./routes/dashboard/Dashboard.tsx";
 import { PetWindow } from "./routes/pet/PetWindow.tsx";
 

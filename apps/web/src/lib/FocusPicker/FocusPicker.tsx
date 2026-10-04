@@ -1,9 +1,10 @@
 import type { PetFocus, SessionsResponse } from "@amnis/shared";
 import { type KeyboardEvent, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchSessions } from "../../api/sessions.ts";
 import { type SaveSettingsResult, saveSettings } from "../../api/settings.ts";
 import { formatElapsed } from "../countdown.ts";
-import { STATE_TITLE } from "../Pet/Pet.tsx";
+import { stateTitle } from "../Pet/Pet.tsx";
 import styles from "./FocusPicker.module.css";
 import { focusLabel, hideEnded, sameFocus } from "./focus.ts";
 
@@ -72,6 +73,7 @@ export function FocusPicker({
   loadSessions = fetchSessions,
   save = saveSettings,
 }: FocusPickerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export function FocusPicker({
       (sessions): Load => ({ status: "ready", sessions }),
       (): Load => ({
         status: "error",
-        message: "No se pudo cargar la lista de sesiones.",
+        message: t("focus.loadFailed"),
       }),
     );
     if (mine === request.current) setLoad(result);
@@ -166,7 +168,7 @@ export function FocusPicker({
         type="button"
         className={styles.trigger}
         aria-expanded={open}
-        aria-label="Foco de la mascota"
+        aria-label={t("focus.label")}
         onClick={toggle}
       >
         {layout === "popover" && (
@@ -191,18 +193,16 @@ export function FocusPicker({
       </button>
 
       {open && (
-        <fieldset className={styles.list} aria-label="Foco de la mascota">
-          {option("auto", "Automático", { kind: "auto" })}
+        <fieldset className={styles.list} aria-label={t("focus.label")}>
+          {option("auto", t("focus.auto"), { kind: "auto" })}
           {load.status === "loading" && (
-            <span className={styles.hint}>Buscando sesiones…</span>
+            <span className={styles.hint}>{t("focus.loading")}</span>
           )}
           {load.status === "error" && (
             <span className={styles.hint}>{load.message}</span>
           )}
           {visible && visible.repos.length === 0 && (
-            <span className={styles.hint}>
-              Aún no hay sesiones. Abre Claude Code en un repo.
-            </span>
+            <span className={styles.hint}>{t("focus.empty")}</span>
           )}
           {visible?.repos.map((repo) => (
             <div key={repo.repoRoot} className={styles.group}>
@@ -223,7 +223,7 @@ export function FocusPicker({
                   {wt.sessions.map((s) =>
                     option(
                       s.sessionId,
-                      `${STATE_TITLE[s.state]} · ${s.sessionId.slice(0, 6)}`,
+                      `${stateTitle(s.state)} · ${s.sessionId.slice(0, 6)}`,
                       {
                         kind: "session",
                         sessionId: s.sessionId,
@@ -234,8 +234,10 @@ export function FocusPicker({
                         // Un foco en una sesión muerta volvería a `auto` al momento.
                         disabled: !s.alive,
                         note: s.alive
-                          ? `hace ${formatElapsed(s.lastEventAt, now)}`
-                          : "terminada",
+                          ? t("focus.ago", {
+                              elapsed: formatElapsed(s.lastEventAt, now),
+                            })
+                          : t("focus.ended"),
                       },
                     ),
                   )}
@@ -251,7 +253,7 @@ export function FocusPicker({
               aria-checked={withEnded}
               onClick={toggleEnded}
             >
-              <span className={styles.name}>Mostrar terminadas</span>
+              <span className={styles.name}>{t("focus.showEnded")}</span>
               <span className={styles.track} aria-hidden="true" />
             </button>
           )}

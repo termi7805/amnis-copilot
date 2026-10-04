@@ -11,6 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import i18n from "../../../i18n/index.ts";
 import styles from "./HistoryView.module.css";
 
 function peakColor(peak: number): string {
@@ -25,15 +26,15 @@ function PeakTooltip({ payload }: TooltipContentProps) {
   return (
     <div className={styles.tooltip}>
       <strong>{p.day}</strong>
-      <div>Pico 5 h: {Math.round(p.peak)} %</div>
-      {p.peak >= 100 && <div>Llegaste al límite</div>}
+      <div>{i18n.t("history.peak", { pct: Math.round(p.peak) })}</div>
+      {p.peak >= 100 && <div>{i18n.t("history.hitLimit")}</div>}
     </div>
   );
 }
 
 export function DailyPeakChart({ peaks }: { peaks: QuotaPeak[] }) {
   if (peaks.length === 0) {
-    return <p className={styles.empty}>Sin muestras de cuota en este rango.</p>;
+    return <p className={styles.empty}>{i18n.t("history.noPeaks")}</p>;
   }
   return (
     <div className={styles.chart} data-testid="peak-chart">

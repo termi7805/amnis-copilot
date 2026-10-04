@@ -1,11 +1,13 @@
 import type { ActivityResponse, ActivitySegment } from "@amnis/shared";
 import { useId, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { dateFormat } from "../../../i18n/index.ts";
 import {
   formatMinutes,
-  GROUP_LABEL,
+  groupLabel,
   timelineRange,
 } from "../../../lib/activity.ts";
-import { STATE_TITLE } from "../../../lib/Pet/Pet.tsx";
+import { stateTitle } from "../../../lib/Pet/Pet.tsx";
 import styles from "./ActivityView.module.css";
 
 const W = 960;
@@ -23,8 +25,7 @@ const FILL_VAR = {
 } as const;
 
 export function hhmm(ms: number): string {
-  const d = new Date(ms);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return dateFormat({ hour: "2-digit", minute: "2-digit" }).format(ms);
 }
 
 interface Tip {
@@ -48,6 +49,7 @@ export function DayTimeline({
   dayStart: Date;
   now: number | null;
 }) {
+  const { t } = useTranslation();
   const hatchId = useId();
   const [tip, setTip] = useState<Tip | null>(null);
   const { from, to } = timelineRange(data.segments, dayStart);
@@ -72,7 +74,7 @@ export function DayTimeline({
   };
 
   if (data.sessions.length === 0) {
-    return <p className={styles.empty}>Sin sesiones este día.</p>;
+    return <p className={styles.empty}>{t("activity.noSessions")}</p>;
   }
 
   return (
@@ -81,7 +83,7 @@ export function DayTimeline({
         <svg
           viewBox={`0 0 ${W} ${H}`}
           role="img"
-          aria-label="Estados por sesión a lo largo del día"
+          aria-label={t("activity.timelineLabel")}
           data-testid="day-timeline"
         >
           <defs>
@@ -120,7 +122,7 @@ export function DayTimeline({
                   y={H - 7}
                   textAnchor="middle"
                 >
-                  {String(h % 24).padStart(2, "0")}:00
+                  {hhmm(at)}
                 </text>
               </g>
             );
@@ -130,7 +132,7 @@ export function DayTimeline({
             return (
               <g key={session.sessionId} data-testid="lane">
                 <text className={styles.laneName} x={0} y={y + 13}>
-                  {session.project ?? "sin proyecto"}
+                  {session.project ?? t("activity.noProject")}
                 </text>
                 <text className={styles.axis} x={0} y={y + 25}>
                   {session.gitBranch ?? ""}
@@ -140,7 +142,7 @@ export function DayTimeline({
                   .map((s) => {
                     const x0 = x(Date.parse(s.start));
                     const x1 = x(Date.parse(s.end));
-                    const label = `${STATE_TITLE[s.state]} · ${hhmm(Date.parse(s.start))}–${hhmm(Date.parse(s.end))}`;
+                    const label = `${stateTitle(s.state)} · ${hhmm(Date.parse(s.start))}–${hhmm(Date.parse(s.end))}`;
                     return (
                       // biome-ignore lint/a11y/noStaticElementInteractions: el tramo solo muestra un tooltip (hover/foco), no es un control; su aria-label dice lo mismo
                       <rect
@@ -187,7 +189,7 @@ export function DayTimeline({
                 y={TOP + 4}
                 style={{ fill: "var(--ink)" }}
               >
-                ahora
+                {t("activity.now")}
               </text>
             </g>
           )}
@@ -198,8 +200,8 @@ export function DayTimeline({
             style={{ left: tip.x, top: tip.y }}
             role="status"
           >
-            <b>{STATE_TITLE[tip.segment.state]}</b>
-            <div>{GROUP_LABEL[tip.segment.group]}</div>
+            <b>{stateTitle(tip.segment.state)}</b>
+            <div>{groupLabel(tip.segment.group)}</div>
             <div className={styles.num}>
               {hhmm(Date.parse(tip.segment.start))}–
               {hhmm(Date.parse(tip.segment.end))} ·{" "}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ActionResult } from "../../../api/actions.ts";
 import { rebuildCache } from "../../../api/health.ts";
 import type { AmnisStream } from "../../../api/useAmnisStream.ts";
@@ -24,6 +25,7 @@ export interface DataCardProps {
  * la tarjeta sigue "reconstruyendo".
  */
 export function DataCard({ rebuild, start = rebuildCache }: DataCardProps) {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [seenSeq, setSeenSeq] = useState(rebuild?.seq ?? 0);
 
@@ -38,10 +40,10 @@ export function DataCard({ rebuild, start = rebuildCache }: DataCardProps) {
           ? { kind: "done" }
           : {
               kind: "error",
-              message: rebuild.event.error ?? "La reconstrucción falló.",
+              message: rebuild.event.error ?? t("settings.data.rebuildFailed"),
             },
     );
-  }, [rebuild, seenSeq]);
+  }, [rebuild, seenSeq, t]);
 
   async function confirm() {
     setPhase({ kind: "running" });
@@ -54,13 +56,9 @@ export function DataCard({ rebuild, start = rebuildCache }: DataCardProps) {
   return (
     <section className={styles.card} aria-labelledby="data-title">
       <div className={styles.cardHead}>
-        <h2 id="data-title">Datos</h2>
+        <h2 id="data-title">{t("settings.data.title")}</h2>
       </div>
-      <p className={styles.text}>
-        La base de datos es una caché de tus transcripts. Reconstruirla vuelve a
-        leer los que sigan en disco y corrige lo que ya había, sin borrar nada:
-        la serie de cuota, la actividad de Amnis y tus ajustes se conservan.
-      </p>
+      <p className={styles.text}>{t("settings.data.text")}</p>
       <button
         type="button"
         className={`${styles.btn} ${styles.danger}`}
@@ -68,30 +66,32 @@ export function DataCard({ rebuild, start = rebuildCache }: DataCardProps) {
         aria-busy={running}
         onClick={() => setPhase({ kind: "confirming" })}
       >
-        {running ? "Reconstruyendo…" : "Reconstruir la caché"}
+        {running
+          ? t("settings.data.rebuilding")
+          : t("settings.data.rebuildCache")}
       </button>
       {phase.kind === "confirming" && (
         <div className={styles.confirm}>
-          <p>Tarda unos segundos; Amnis sigue funcionando mientras tanto.</p>
+          <p>{t("settings.data.confirm")}</p>
           <button
             type="button"
             className={`${styles.btn} ${styles.danger}`}
             onClick={confirm}
           >
-            Reconstruir
+            {t("settings.data.rebuild")}
           </button>
           <button
             type="button"
             className={styles.btn}
             onClick={() => setPhase({ kind: "idle" })}
           >
-            Cancelar
+            {t("settings.data.cancel")}
           </button>
         </div>
       )}
       {phase.kind === "done" && (
         <p role="status" className={styles.notice}>
-          Caché reconstruida.
+          {t("settings.data.done")}
         </p>
       )}
       {phase.kind === "error" && (

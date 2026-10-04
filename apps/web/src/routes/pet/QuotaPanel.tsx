@@ -5,8 +5,10 @@ import type {
   QuotaSnapshot,
 } from "@amnis/shared";
 import { useEffect, useRef, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { postAction } from "../../api/actions.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
+import { dateFormat } from "../../i18n/index.ts";
 import { formatElapsed, formatUntil } from "../../lib/countdown.ts";
 import { fiveHourExhaustion, fiveHourWindow } from "../../lib/fiveHour.ts";
 import { extraLimits } from "../../lib/quotaLimits.ts";
@@ -24,10 +26,8 @@ const PROVIDER_LABEL: Record<ProviderId, string> = {
 
 const RING_SIZE = 54;
 
-const HHMM = new Intl.DateTimeFormat("es-ES", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
+const hhmm = (date: Date) =>
+  dateFormat({ hour: "2-digit", minute: "2-digit" }).format(date);
 
 /** Si no llega un `quota` fresco por SSE en este tiempo (endpoint caído,
  * 429, offline), el icono deja de girar solo — un fallo de red no debe
@@ -57,6 +57,7 @@ export function QuotaPanel({
   musicPrefs,
   onSelectPanel,
 }: QuotaPanelProps) {
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   // El aviso del último intento que dio 429 (#116): los anillos conservan el
   // dato que había y esto explica por qué no se ha actualizado.
@@ -142,8 +143,8 @@ export function QuotaPanel({
                   onPointerDown={(e) => e.stopPropagation()}
                   onPointerUp={(e) => e.stopPropagation()}
                   disabled={refreshing}
-                  aria-label="Recargar cuota"
-                  title="Recargar cuota"
+                  aria-label={t("pet.window.refreshQuota")}
+                  title={t("pet.window.refreshQuota")}
                 >
                   <svg
                     viewBox="0 0 24 24"
@@ -171,7 +172,9 @@ export function QuotaPanel({
             {quota.error && <p className={styles.error}>{quota.error}</p>}
             {quota.rateLimitedAt && quota.authoritative && (
               <p className={styles.stale}>
-                Dato de hace {formatElapsed(quota.sampledAt, now)}
+                {t("pet.window.stale", {
+                  elapsed: formatElapsed(quota.sampledAt, now),
+                })}
               </p>
             )}
             <div className={styles.rings}>
@@ -215,8 +218,15 @@ export function QuotaPanel({
             </div>
             {exhaustion.kind === "at" && (
               <p className={styles.exhausts} data-testid="exhausts">
-                Se agota <b>{HHMM.format(exhaustion.at)}</b> · en{" "}
-                {formatUntil(exhaustion.at.toISOString(), now)}
+                <Trans
+                  i18nKey="pet.window.exhausts"
+                  values={{
+                    time: hhmm(exhaustion.at),
+                    countdown:
+                      formatUntil(exhaustion.at.toISOString(), now) ?? "",
+                  }}
+                  components={{ b: <b /> }}
+                />
               </p>
             )}
           </section>

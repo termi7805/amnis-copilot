@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { postAction } from "../../api/actions.ts";
 import { countWarnings, useHealth } from "../../api/health.ts";
-import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
+import { useAmnisStream } from "../../api/useAmnisStream.ts";
+import { useLocale } from "../../lib/locale.ts";
 import { Pet } from "../../lib/Pet/Pet.tsx";
 import { useTheme } from "../../lib/theme.ts";
 import { ActivityView } from "./activity/ActivityView.tsx";
@@ -67,6 +69,8 @@ export function Dashboard() {
   // Aquí y no en Ajustes: el tema se aplica en cualquier vista, y dos
   // instancias del hook harían dos migraciones.
   const [theme, setTheme] = useTheme(state?.settings);
+  const [locale, setLocale] = useLocale(state?.settings);
+  const { t } = useTranslation();
   // Cada sondeo de cuota y cada cambio del estado de Spotify (conectar,
   // desconectar) pueden cambiar un chequeo: se vuelve a pedir la salud.
   const health = useHealth(
@@ -76,7 +80,7 @@ export function Dashboard() {
 
   return (
     <div className={styles.dashboard}>
-      <nav className={styles.rail} aria-label="Vistas">
+      <nav className={styles.rail} aria-label={t("common.nav.label")}>
         <a className={styles.logo} href="#ahora">
           <span className={styles.mini} aria-hidden="true">
             {state && (
@@ -92,20 +96,20 @@ export function Dashboard() {
           </span>
         </a>
         <ul className={styles.links}>
-          {VIEWS.map(({ id, label }) => (
+          {VIEWS.map((id) => (
             <li key={id}>
               <a
                 href={`#${id}`}
                 aria-current={view === id ? "page" : undefined}
               >
                 {VIEW_ICON[id]}
-                {label}
+                {t(`common.views.${id}`)}
                 {id === "ajustes" && warnings > 0 && (
                   <span
                     className={styles.badge}
-                    title={`${warnings} ${warnings === 1 ? "aviso" : "avisos"} de salud`}
+                    title={t("common.nav.warnings", { count: warnings })}
                     role="status"
-                    aria-label={`${warnings} ${warnings === 1 ? "aviso" : "avisos"} de salud`}
+                    aria-label={t("common.nav.warnings", { count: warnings })}
                   >
                     {warnings}
                   </span>
@@ -118,10 +122,17 @@ export function Dashboard() {
           <p>
             <span className={styles.dot} data-status={status} />
             <span data-testid="connection-status">
-              Daemon {CONNECTION_LABEL[status]}
+              {t("common.nav.daemon", {
+                status: t(`common.connection.${status}`),
+              })}
               {status === "connected" && state && ` · v${state.daemon.version}`}
             </span>
           </p>
+          {warnings > 0 && (
+            <a className={styles.health} href="#ajustes">
+              {t("common.nav.warnings", { count: warnings })}
+            </a>
+          )}
           {/* Cierra la mascota y el daemon; tras esto el estado pasa solo a
               «sin conexión». */}
           {status === "connected" && (
@@ -130,13 +141,8 @@ export function Dashboard() {
               className={styles.quit}
               onClick={() => postAction("/api/shutdown")}
             >
-              Cerrar Amnis
+              {t("common.nav.quit")}
             </button>
-          )}
-          {warnings > 0 && (
-            <a className={styles.health} href="#ajustes">
-              {warnings} {warnings === 1 ? "aviso" : "avisos"} de salud
-            </a>
           )}
         </div>
       </nav>
@@ -151,6 +157,8 @@ export function Dashboard() {
             rebuild={rebuild}
             theme={theme}
             onTheme={setTheme}
+            locale={locale}
+            onLocale={setLocale}
           />
         )}
       </main>

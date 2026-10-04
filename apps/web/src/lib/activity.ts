@@ -5,6 +5,7 @@ import type {
   ActivitySession,
   PetState,
 } from "@amnis/shared";
+import i18n from "../i18n/index.ts";
 
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -26,12 +27,9 @@ export function groupOf(state: PetState): ActivityGroup {
   return GROUPS[state] ?? "resting";
 }
 
-export const GROUP_LABEL: Record<ActivityGroup, string> = {
-  working: "Trabajando",
-  thinking: "Investigando o planificando",
-  waiting: "Esperándote",
-  resting: "Descansando",
-};
+export function groupLabel(group: ActivityGroup): string {
+  return i18n.t(`activity.groups.${group}`);
+}
 
 /** `YYYY-MM-DD` en hora local: el daemon interpreta `day` así, no en UTC. */
 export function dayKey(date: Date): string {
@@ -46,10 +44,15 @@ export function yesterday(now: Date): Date {
 
 export function formatMinutes(minutes: number): string {
   const total = Math.round(minutes);
-  if (total < 60) return `${total} min`;
+  if (total < 60) return i18n.t("activity.minutes", { minutes: total });
   const h = Math.floor(total / 60);
   const m = total % 60;
-  return m === 0 ? `${h} h` : `${h} h ${String(m).padStart(2, "0")} min`;
+  return m === 0
+    ? i18n.t("activity.hours", { hours: h })
+    : i18n.t("activity.hoursMinutes", {
+        hours: h,
+        minutes: String(m).padStart(2, "0"),
+      });
 }
 
 export interface StateRow {
@@ -76,31 +79,36 @@ export function activeMinutes(rows: readonly StateRow[]): number {
   return rows.reduce((sum, r) => sum + r.minutes, 0);
 }
 
-function plural(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`;
-}
-
 export function headline(
   resp: ActivityResponse,
   rows: readonly StateRow[],
   isToday: boolean,
 ): { title: string; detail: string } {
-  const when = isToday ? "Hoy" : "Ayer";
+  const when = i18n.t(isToday ? "activity.today" : "activity.yesterday");
   if (resp.sessions.length === 0) {
     return {
-      title: `${when}, sin actividad de agentes`,
-      detail: "No llegó ningún evento de hook ese día.",
+      title: i18n.t("activity.emptyTitle", { when }),
+      detail: i18n.t("activity.emptyDetail"),
     };
   }
   const projects = new Set(resp.sessions.map((s) => s.project ?? s.sessionId));
-  const sessions = `${plural(resp.sessions.length, "sesión", "sesiones")} en ${plural(projects.size, "proyecto", "proyectos")}.`;
+  const sessions = i18n.t("activity.sessionsIn", {
+    sessions: i18n.t("activity.sessions", { count: resp.sessions.length }),
+    projects: i18n.t("activity.projects", { count: projects.size }),
+  });
   const { minutes, count } = resp.waiting;
   const waited =
     count > 0
-      ? ` Amnis te esperó ${formatMinutes(minutes)} en ${plural(count, "permiso", "permisos")}.`
-      : " Amnis no tuvo que esperarte.";
+      ? i18n.t("activity.waited", {
+          duration: formatMinutes(minutes),
+          permissions: i18n.t("activity.permissions", { count }),
+        })
+      : i18n.t("activity.notWaited");
   return {
-    title: `${when}, ${formatMinutes(activeMinutes(rows))} con agentes trabajando`,
+    title: i18n.t("activity.title", {
+      when,
+      duration: formatMinutes(activeMinutes(rows)),
+    }),
     detail: sessions + waited,
   };
 }

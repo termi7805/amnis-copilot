@@ -1,18 +1,14 @@
+import { useTranslation } from "react-i18next";
+import { dateFormat } from "../../../i18n/index.ts";
 import { formatUntil } from "../../../lib/countdown.ts";
 import { weeklyPace } from "../../../lib/nowCards.ts";
 import styles from "./NowCards.module.css";
 
-const RESET = new Intl.DateTimeFormat("es-ES", {
+const RESET: Intl.DateTimeFormatOptions = {
   weekday: "short",
   day: "numeric",
   hour: "2-digit",
   minute: "2-digit",
-});
-
-const VERDICT = {
-  below: "vas por debajo del ritmo lineal",
-  on: "vas al ritmo lineal",
-  above: "vas por encima del ritmo lineal",
 };
 
 /**
@@ -31,6 +27,7 @@ export function LimitMeter({
   /** Color de la barra; por defecto el de acento. */
   color?: string;
 }) {
+  const { t } = useTranslation();
   const pace = weeklyPace(utilization, resetsAt, now);
   const until = formatUntil(resetsAt, now);
   return (
@@ -43,9 +40,11 @@ export function LimitMeter({
         {resetsAt && (
           <small
             className={styles.note}
-            title={until ? `quedan ${until}` : undefined}
+            title={
+              until ? t("now.limit.left", { countdown: until }) : undefined
+            }
           >
-            {RESET.format(new Date(resetsAt)).replace(",", " ·")}
+            {dateFormat(RESET).format(new Date(resetsAt)).replace(",", " ·")}
           </small>
         )}
       </div>
@@ -67,7 +66,10 @@ export function LimitMeter({
       </div>
       {pace && (
         <small className={styles.note}>
-          Día {pace.day} de 7: {VERDICT[pace.verdict]}.
+          {t("now.limit.pace", {
+            day: pace.day,
+            verdict: t(`now.limit.${pace.verdict}`),
+          })}
         </small>
       )}
     </>

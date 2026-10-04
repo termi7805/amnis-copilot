@@ -6,11 +6,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { postAction } from "../../../api/actions.ts";
 import { useTodayActivity } from "../../../api/activity.ts";
 import { fetchMediaDevices, sendMediaCommand } from "../../../api/media.ts";
 import { useQuotaHistory } from "../../../api/quotaHistory.ts";
 import { useTodayUsage } from "../../../api/usage.ts";
+import { dateFormat } from "../../../i18n/index.ts";
 import { useNow } from "../../../lib/countdown.ts";
 import { fiveHourWindow, paceHeadline } from "../../../lib/fiveHour.ts";
 import { MediaPlayer } from "../../../lib/MediaPlayer/MediaPlayer.tsx";
@@ -34,6 +36,7 @@ const REFRESH_TIMEOUT_MS = 8_000;
  * (#116) deja de girar y avisa; los datos que había se quedan.
  */
 function RefreshButton({ sampledAt }: { sampledAt: string | null }) {
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const timer = useRef<number | undefined>(undefined);
@@ -81,7 +84,7 @@ function RefreshButton({ sampledAt }: { sampledAt: string | null }) {
         >
           <path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" />
         </svg>
-        Actualizar cuota
+        {t("now.refresh")}
       </button>
       {notice && (
         <p className={styles.refreshNotice} role="status">
@@ -92,13 +95,13 @@ function RefreshButton({ sampledAt }: { sampledAt: string | null }) {
   );
 }
 
-const EYEBROW = new Intl.DateTimeFormat("es-ES", {
+const EYEBROW: Intl.DateTimeFormatOptions = {
   weekday: "long",
   day: "numeric",
   month: "short",
   hour: "2-digit",
   minute: "2-digit",
-});
+};
 
 /**
  * La portada. Arriba manda la ventana de 5 h junto a Amnis (#91); debajo,
@@ -107,6 +110,7 @@ const EYEBROW = new Intl.DateTimeFormat("es-ES", {
  * eventos.
  */
 export function NowView({ state }: { state: StateResponse | null }) {
+  const { t } = useTranslation();
   const now = useNow();
   const quota = state?.quotas[0] ?? null;
   const window = quota ? fiveHourWindow(quota, now) : null;
@@ -158,8 +162,8 @@ export function NowView({ state }: { state: StateResponse | null }) {
     <section className={styles.view}>
       <header className={styles.pageHead}>
         <div>
-          <p className={styles.eyebrow}>{EYEBROW.format(now)}</p>
-          <h1>{headline?.title ?? "Conectando con el daemon…"}</h1>
+          <p className={styles.eyebrow}>{dateFormat(EYEBROW).format(now)}</p>
+          <h1>{headline?.title ?? t("now.connecting")}</h1>
           {headline && <p>{headline.detail}</p>}
         </div>
         <RefreshButton sampledAt={quota?.sampledAt ?? null} />
@@ -193,7 +197,7 @@ export function NowView({ state }: { state: StateResponse | null }) {
       <div className={styles.lower}>
         <article className={styles.player}>
           <div className={styles.playerHead}>
-            <h2>Sonando</h2>
+            <h2>{t("now.playing")}</h2>
             <span className={styles.eyebrow}>Spotify Connect</span>
           </div>
           <MediaPlayer

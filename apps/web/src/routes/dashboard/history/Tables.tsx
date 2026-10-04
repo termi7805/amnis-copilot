@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { UsageAggregateRow } from "../../../api/usage.ts";
 import {
   formatTokens,
@@ -22,6 +23,7 @@ const TOP_PROJECTS = 10;
  * el `cwd`, así que hay una fila por subdirectorio y la cola es larga; con la
  * fila agregada la tabla sigue sumando el total del rango. */
 export function ProjectsTable({ rows }: { rows: UsageAggregateRow[] }) {
+  const { t } = useTranslation();
   const sorted = [...rows].sort((a, b) => b.costUsd - a.costUsd);
   const total = rows.reduce((s, r) => s + r.costUsd, 0);
   const max = sorted[0]?.costUsd ?? 0;
@@ -38,11 +40,11 @@ export function ProjectsTable({ rows }: { rows: UsageAggregateRow[] }) {
     <table className={styles.table}>
       <thead>
         <tr>
-          <th>Proyecto</th>
-          <th className={styles.n}>Sesiones</th>
-          <th className={styles.n}>Tokens</th>
-          <th>Parte</th>
-          <th className={styles.n}>Equiv. API</th>
+          <th>{t("history.table.project")}</th>
+          <th className={styles.n}>{t("history.table.sessions")}</th>
+          <th className={styles.n}>{t("history.table.tokens")}</th>
+          <th>{t("history.table.share")}</th>
+          <th className={styles.n}>{t("history.table.apiEquiv")}</th>
         </tr>
       </thead>
       <tbody>
@@ -64,7 +66,9 @@ export function ProjectsTable({ rows }: { rows: UsageAggregateRow[] }) {
         ))}
         {rest.length > 0 && (
           <tr>
-            <td className={styles.proj}>Otros ({rest.length})</td>
+            <td className={styles.proj}>
+              {t("history.othersCount", { count: rest.length })}
+            </td>
             {/* Una sesión puede abarcar varios directorios: sumarlas contaría de más. */}
             <td className={styles.n}>—</td>
             <td className={styles.n}>{formatTokens(restTokens)}</td>
@@ -91,6 +95,7 @@ export function ModelsTable({
   rows: ModelTotal[];
   series: string[];
 }) {
+  const { t } = useTranslation();
   const colorOf = (model: string) => {
     const i = series.indexOf(modelFamily(model));
     return SERIES_VAR[i === -1 ? series.length - 1 : i];
@@ -99,9 +104,9 @@ export function ModelsTable({
     <table className={styles.table}>
       <thead>
         <tr>
-          <th>Modelo</th>
-          <th className={styles.n}>Tokens</th>
-          <th className={styles.n}>Equiv. API</th>
+          <th>{t("history.table.model")}</th>
+          <th className={styles.n}>{t("history.table.tokens")}</th>
+          <th className={styles.n}>{t("history.table.apiEquiv")}</th>
         </tr>
       </thead>
       <tbody>
@@ -124,11 +129,12 @@ export function ModelsTable({
 }
 
 export function TokenTypeTable({ totals }: { totals: TokenTypeTotals }) {
+  const { t } = useTranslation();
   const rows: [string, number][] = [
-    ["Lectura de caché", totals.cacheRead],
-    ["Escritura de caché", totals.cacheWrite],
-    ["Salida", totals.output],
-    ["Entrada", totals.input],
+    [t("history.table.cacheRead"), totals.cacheRead],
+    [t("history.table.cacheWrite"), totals.cacheWrite],
+    [t("history.table.output"), totals.output],
+    [t("history.table.input"), totals.input],
   ];
   return (
     <table className={styles.table}>

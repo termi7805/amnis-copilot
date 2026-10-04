@@ -1,5 +1,6 @@
 import { PLANS, type StateResponse } from "@amnis/shared";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   type SaveSettingsResult,
   saveSettings,
@@ -19,6 +20,7 @@ export interface PlanCardProps {
  * aparece cuando no hay nada detectado.
  */
 export function PlanCard({ state, save = saveSettings }: PlanCardProps) {
+  const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   const plan = state?.plan ?? null;
   const detected = plan?.source === "detected";
@@ -31,36 +33,35 @@ export function PlanCard({ state, save = saveSettings }: PlanCardProps) {
   return (
     <section className={styles.card} aria-labelledby="plan-title">
       <div className={styles.cardHead}>
-        <h2 id="plan-title">Plan</h2>
+        <h2 id="plan-title">{t("settings.plan.title")}</h2>
       </div>
       {detected ? (
         <div className={styles.planRow}>
           <div>
             <div className={styles.planName}>Claude {plan.label}</div>
             <p className={styles.muted}>
-              {formatUsd(plan.monthlyUsd)} al mes · detectado de tu sesión de
-              Claude
+              {t("settings.plan.detected", {
+                price: formatUsd(plan.monthlyUsd),
+              })}
             </p>
           </div>
-          <span className={styles.pill}>automático</span>
+          <span className={styles.pill}>{t("settings.plan.automatic")}</span>
         </div>
       ) : (
         <>
-          <p className={styles.noteStrip}>
-            No hemos podido detectar tu plan desde la sesión de Claude. Elígelo
-            para poder comparar con el equivalente de API.
-          </p>
+          <p className={styles.noteStrip}>{t("settings.plan.notDetected")}</p>
           <label className={styles.field}>
-            Tu suscripción
+            {t("settings.plan.subscription")}
             <select
               value={state?.settings.plan ?? ""}
               disabled={state === null}
               onChange={(e) => choose(e.target.value)}
             >
-              <option value="">Elige tu plan…</option>
+              <option value="">{t("settings.plan.choose")}</option>
               {Object.entries(PLANS).map(([id, { label, monthlyUsd }]) => (
                 <option key={id} value={id}>
-                  {label} · {formatUsd(monthlyUsd)} al mes
+                  {label} ·{" "}
+                  {t("settings.plan.monthly", { price: formatUsd(monthlyUsd) })}
                 </option>
               ))}
             </select>
@@ -73,7 +74,7 @@ export function PlanCard({ state, save = saveSettings }: PlanCardProps) {
         </>
       )}
       <p className={`${styles.muted} ${styles.footnote}`}>
-        Se usa para comparar con el equivalente de API.
+        {t("settings.plan.footnote")}
       </p>
     </section>
   );

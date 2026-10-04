@@ -1,4 +1,5 @@
 import type { PetFocus } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { FocusPicker } from "../../lib/FocusPicker/FocusPicker.tsx";
 import styles from "./PanelHeader.module.css";
@@ -12,10 +13,10 @@ const STATUS_COLOR: Record<ConnectionStatus, string> = {
   offline: "var(--ink-3)",
 };
 
-const TABS: { id: PanelId; label: string }[] = [
-  { id: "quota", label: "Cuota" },
-  { id: "media", label: "Música" },
-];
+const TABS = [
+  { id: "quota", label: "pet.window.quota" },
+  { id: "media", label: "pet.window.music" },
+] as const satisfies readonly { id: PanelId; label: string }[];
 
 export interface PanelHeaderProps {
   status: ConnectionStatus;
@@ -34,6 +35,7 @@ export function PanelHeader({
   focus,
   now,
 }: PanelHeaderProps) {
+  const { t } = useTranslation();
   return (
     <>
       <div className={styles.header}>
@@ -44,7 +46,11 @@ export function PanelHeader({
         <span className={styles.wordmark}>AMNIS</span>
         <div className={styles.actions}>
           {onSelect && (
-            <div className={styles.tabs} role="tablist" aria-label="Panel">
+            <div
+              className={styles.tabs}
+              role="tablist"
+              aria-label={t("pet.window.panel")}
+            >
               {TABS.map(({ id, label }) => (
                 <button
                   key={id}
@@ -58,7 +64,7 @@ export function PanelHeader({
                   onPointerUp={(e) => e.stopPropagation()}
                   onClick={() => onSelect(id)}
                 >
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -66,8 +72,8 @@ export function PanelHeader({
           <button
             type="button"
             className={styles.openDashboard}
-            aria-label="Abrir dashboard"
-            title="Abrir dashboard"
+            aria-label={t("pet.window.openDashboard")}
+            title={t("pet.window.openDashboard")}
             // Como las pestañas: abrir el dashboard no debe plegar la ventana.
             onPointerDown={(e) => e.stopPropagation()}
             onPointerUp={(e) => e.stopPropagation()}

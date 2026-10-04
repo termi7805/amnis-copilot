@@ -1,4 +1,5 @@
 import type { QuotaLimit } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import { scopeTitle } from "../../../lib/nowCards.ts";
 import { LimitMeter } from "./LimitMeter.tsx";
 import styles from "./NowCards.module.css";
@@ -14,13 +15,14 @@ export function ModelLimitCard({
   limit: QuotaLimit;
   now: Date;
 }) {
+  const { t } = useTranslation();
   const scope = limit.scope ?? limit.label;
   const name = scopeTitle(scope);
   return (
     <article className={styles.card} data-testid="card-model-limit">
       <div className={styles.row}>
-        <h2>Semana · {name}</h2>
-        <span className={styles.pill}>real</span>
+        <h2>{t("now.limit.modelTitle", { name })}</h2>
+        <span className={styles.pill}>{t("now.limit.real")}</span>
       </div>
       <LimitMeter
         utilization={limit.utilization}
@@ -29,7 +31,7 @@ export function ModelLimitCard({
         color="var(--s1)"
       />
       <small className={styles.note}>
-        Límite propio de {name} en tu plan, dentro del 7 d.
+        {t("now.limit.modelNote", { name })}
       </small>
     </article>
   );

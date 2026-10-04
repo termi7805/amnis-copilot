@@ -4,10 +4,11 @@ import type {
   StateResponse,
 } from "@amnis/shared";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { fetchActivity, fetchHeatmap } from "../../../api/activity.ts";
 import {
   dayKey,
-  GROUP_LABEL,
+  groupLabel,
   headline,
   stateRows,
   yesterday,
@@ -36,6 +37,7 @@ const LEGEND = [
  * una sesión nueva añada su carril y la marca "ahora" avance.
  */
 export function ActivityView({ state }: { state: StateResponse | null }) {
+  const { t } = useTranslation();
   const [day, setDay] = useState<Day>("today");
   const [data, setData] = useState<{
     activity: ActivityResponse;
@@ -106,32 +108,30 @@ export function ActivityView({ state }: { state: StateResponse | null }) {
     <section className={styles.view}>
       <header className={styles.pageHead}>
         <div>
-          <p className={styles.eyebrow}>
-            Derivada de los hooks · sin prompts ni código
-          </p>
+          <p className={styles.eyebrow}>{t("activity.eyebrow")}</p>
           <h1 data-testid="activity-title">
             {head
               ? head.title
               : failed
-                ? "No se pudo leer la actividad"
-                : "Cargando…"}
+                ? t("activity.loadFailed")
+                : t("activity.loading")}
           </h1>
           {head && <p data-testid="activity-detail">{head.detail}</p>}
         </div>
-        <fieldset className={styles.seg} aria-label="Día">
+        <fieldset className={styles.seg} aria-label={t("activity.day")}>
           <button
             type="button"
             aria-pressed={!isToday}
             onClick={() => setDay("yesterday")}
           >
-            Ayer
+            {t("activity.yesterday")}
           </button>
           <button
             type="button"
             aria-pressed={isToday}
             onClick={() => setDay("today")}
           >
-            Hoy
+            {t("activity.today")}
           </button>
         </fieldset>
       </header>
@@ -140,7 +140,7 @@ export function ActivityView({ state }: { state: StateResponse | null }) {
         <>
           <article className={styles.card}>
             <div className={styles.cardHead}>
-              <h2>Línea del día por sesión</h2>
+              <h2>{t("activity.timelineTitle")}</h2>
               <div className={styles.legend}>
                 {LEGEND.map(([group, color]) => (
                   <span key={group}>
@@ -152,7 +152,7 @@ export function ActivityView({ state }: { state: StateResponse | null }) {
                         group === "waiting" ? undefined : { background: color }
                       }
                     />
-                    {GROUP_LABEL[group]}
+                    {groupLabel(group)}
                   </span>
                 ))}
               </div>
@@ -166,31 +166,35 @@ export function ActivityView({ state }: { state: StateResponse | null }) {
 
           <div className={styles.grid}>
             <article className={`${styles.card} ${styles.span7}`}>
-              <h2>{isToday ? "Sesiones de hoy" : "Sesiones de ayer"}</h2>
+              <h2>
+                {isToday
+                  ? t("activity.sessionsToday")
+                  : t("activity.sessionsYesterday")}
+              </h2>
               <SessionsTable
                 sessions={shown.activity.sessions}
                 fetchedAt={isToday ? shown.fetchedAt : null}
               />
             </article>
             <article className={`${styles.card} ${styles.span5}`}>
-              <h2>En qué estuvo Amnis</h2>
+              <h2>{t("activity.breakdownTitle")}</h2>
               <StateBreakdown rows={rows} />
             </article>
             <article className={`${styles.card} ${styles.span12}`}>
               <div className={styles.cardHead}>
-                <h2>Cuándo trabajas</h2>
+                <h2>{t("activity.heatmapTitle")}</h2>
                 <span className={styles.ramp}>
-                  menos
+                  {t("activity.less")}
                   {[0, 1, 2, 3, 4].map((n) => (
                     <i key={n} data-level={n} className={styles.cell} />
                   ))}
-                  más · últimas 4 semanas
+                  {t("activity.more")}
                 </span>
               </div>
               {heatmap ? (
                 <HourHeatmap minutes={heatmap.minutes} />
               ) : (
-                <p className={styles.empty}>Cargando…</p>
+                <p className={styles.empty}>{t("activity.loading")}</p>
               )}
             </article>
           </div>

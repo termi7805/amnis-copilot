@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   Bar,
   BarChart,
@@ -27,12 +28,13 @@ function CostTooltip({
   payload,
   models,
 }: TooltipContentProps & { models: string[] }) {
+  const { t } = useTranslation();
   const day = payload?.[0]?.payload as CostDay | undefined;
   if (!day) return null;
   return (
     <div className={styles.tooltip}>
       <strong>{day.day}</strong> · {formatUsd(day.total)}
-      {day.total === 0 && <div>Sin actividad</div>}
+      {day.total === 0 && <div>{t("history.noActivity")}</div>}
       {models.map((m, i) =>
         day.byModel[m] ? (
           <div key={m} className={styles.tipRow}>

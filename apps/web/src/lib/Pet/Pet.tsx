@@ -1,5 +1,8 @@
 import type { Listening, PetSnapshot, PetState, Vibe } from "@amnis/shared";
 import type { CSSProperties, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+import { pet as petMessages } from "../../i18n/es/pet.ts";
+import i18n from "../../i18n/index.ts";
 import { useCoverArt } from "./coverArt.ts";
 import { Headphones } from "./Headphones.tsx";
 import { MusicFx } from "./MusicFx.tsx";
@@ -67,25 +70,17 @@ function OthersBadge({ count }: { count: number }) {
 }
 
 /**
- * Español, para `<title>` — describe el estado, no lo repite literal.
- * `Record<PetState, …>` exhaustivo: un estado nuevo sin entrada aquí no
+ * Para `<title>` — describe el estado, no lo repite literal. `pet.states`
+ * es un `Record<PetState, …>` exhaustivo: un estado nuevo sin entrada no
  * compila, la mascota nunca se queda muda ante un estado real
  * (docs/DESIGN.md §4).
  */
-export const STATE_TITLE: Record<PetState, string> = {
-  coding: "Escribiendo código",
-  testing: "Corriendo tests",
-  researching: "Buscando información",
-  planning: "Planificando",
-  waiting: "Esperando permiso",
-  resting: "Descansando",
-  sleeping: "Durmiendo",
-  terminal: "Ejecutando un comando",
-  subagents: "Repartiendo trabajo",
-  committing: "Haciendo commit",
-  pushing: "Subiendo al remoto",
-  limited: "Límite alcanzado",
-};
+/** Todos los estados, en el orden del catálogo de textos. */
+export const PET_STATES = Object.keys(petMessages.states) as PetState[];
+
+export function stateTitle(state: PetState): string {
+  return i18n.t(`pet.states.${state}`);
+}
 
 /**
  * docs/DESIGN.md §4: "fresca al 10%, agotada al 85%, revive en el
@@ -2399,6 +2394,7 @@ function Scene({
  * tiene nada que ver con el cansancio.
  */
 export function PetOffline() {
+  const { t } = useTranslation();
   const style = { "--pet-fatigue": 0 } as CSSProperties;
 
   return (
@@ -2411,7 +2407,7 @@ export function PetOffline() {
       data-testid="pet"
       style={style}
     >
-      <title>Sin conexión</title>
+      <title>{t("pet.offline")}</title>
       <g data-look="offline">
         <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(23,29,38,.08)" />
         <rect x="112" y="70" width="34" height="24" rx="2" fill="#CFD5DB" />
@@ -2492,6 +2488,7 @@ export function Pet({
   musicPrefs: musicPrefsProp,
   othersActive = 0,
 }: PetProps) {
+  const { t } = useTranslation();
   const musicPrefs: MusicPrefs = { ...DEFAULT_MUSIC_PREFS, ...musicPrefsProp };
   const style = {
     "--pet-fatigue": fatigueLevel(fatigue),
@@ -2562,8 +2559,8 @@ export function Pet({
     >
       <title>
         {othersActive > 0
-          ? `${STATE_TITLE[state]} · +${othersActive} ${othersActive === 1 ? "sesión activa" : "sesiones activas"}`
-          : STATE_TITLE[state]}
+          ? t("pet.others", { state: stateTitle(state), count: othersActive })
+          : stateTitle(state)}
       </title>
       <Scene
         state={state}

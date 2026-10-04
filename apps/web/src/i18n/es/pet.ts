@@ -1,0 +1,47 @@
+import type { PetState, Vibe } from "@amnis/shared";
+
+export const pet = {
+  states: {
+    coding: "Escribiendo código",
+    testing: "Corriendo tests",
+    researching: "Buscando información",
+    planning: "Planificando",
+    waiting: "Esperando permiso",
+    resting: "Descansando",
+    sleeping: "Durmiendo",
+    terminal: "Ejecutando un comando",
+    subagents: "Repartiendo trabajo",
+    committing: "Haciendo commit",
+    pushing: "Subiendo al remoto",
+    limited: "Límite alcanzado",
+  } satisfies Record<PetState, string>,
+  vibes: {
+    fiesta: "fiesta",
+    intensa: "intensa",
+    chill: "chill",
+    melancolica: "melancólica",
+    podcast: "podcast",
+    neutral: "neutral",
+  } satisfies Record<Vibe, string>,
+  others_one: "{{state}} · +{{count}} sesión activa",
+  others_other: "{{state}} · +{{count}} sesiones activas",
+  offline: "Sin conexión",
+  window: {
+    hooksMissing: "Claude Code no está conectado",
+    repair: "Reparar",
+    repairing: "Reparando…",
+    refreshQuota: "Recargar cuota",
+    stale: "Dato de hace {{elapsed}}",
+    exhausts: "Se agota <b>{{time}}</b> · en {{countdown}}",
+    now: "Ahora",
+    panel: "Panel",
+    quota: "Cuota",
+    music: "Música",
+    openDashboard: "Abrir dashboard",
+  },
+  ring: {
+    noData: "sin dato",
+    noEndpointData: "sin dato del endpoint",
+    estimated: "estimado",
+  },
+} as const;

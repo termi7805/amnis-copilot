@@ -328,6 +328,15 @@ export function isThemeId(v: unknown): v is ThemeId {
   return THEMES.some((t) => t.id === v);
 }
 
+/** Idioma de la interfaz; `system` sigue al idioma del navegador o del webview. */
+export const LOCALES = ["system", "es", "en"] as const;
+
+export type LocaleId = (typeof LOCALES)[number];
+
+export function isLocaleId(v: unknown): v is LocaleId {
+  return LOCALES.some((l) => l === v);
+}
+
 /**
  * Todos los ajustes de `~/.amnis/settings.json`: las preferencias de la capa
  * de música, el plan elegido a mano (#84), el foco de la mascota (#108) y el
@@ -340,6 +349,8 @@ export interface AmnisSettings extends MusicPrefs {
   petFocus: PetFocus;
   /** Una sola elección para dashboard y mascota, que no comparten `localStorage`. */
   theme: ThemeId;
+  /** Por la misma razón que `theme`: una sola elección para las dos ventanas. */
+  locale: LocaleId;
 }
 
 export const DEFAULT_SETTINGS: AmnisSettings = {
@@ -347,6 +358,7 @@ export const DEFAULT_SETTINGS: AmnisSettings = {
   plan: null,
   petFocus: { kind: "auto" },
   theme: "system",
+  locale: "system",
 };
 
 /** El plan de la suscripción, ya resuelto (detectado > manual). */

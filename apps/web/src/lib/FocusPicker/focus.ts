@@ -1,4 +1,5 @@
 import type { PetFocus, SessionsResponse } from "@amnis/shared";
+import i18n from "../../i18n/index.ts";
 
 /** Último tramo de una ruta: igual que `projectName` en el daemon. */
 function baseName(path: string): string {
@@ -26,7 +27,7 @@ export function sameFocus(a: PetFocus, b: PetFocus): boolean {
 export function focusLabel(focus: PetFocus): string {
   switch (focus.kind) {
     case "auto":
-      return "Automático";
+      return i18n.t("focus.auto");
     case "repo":
       return baseName(focus.repoRoot);
     case "worktree":

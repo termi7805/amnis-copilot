@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useHealth } from "../../api/health.ts";
-import { CONNECTION_LABEL, useAmnisStream } from "../../api/useAmnisStream.ts";
+import { useAmnisStream } from "../../api/useAmnisStream.ts";
 import { useNow } from "../../lib/countdown.ts";
+import { useLocale } from "../../lib/locale.ts";
 import { Pet, PetOffline } from "../../lib/Pet/Pet.tsx";
 import { useTheme } from "../../lib/theme.ts";
 import { HooksAlert } from "./HooksAlert.tsx";
@@ -64,6 +66,8 @@ export function PetWindow() {
   const health = useHealth(status);
   // Solo recibe: el tema se elige en el dashboard y llega por SSE (#121).
   useTheme(state?.settings);
+  useLocale(state?.settings);
+  const { t } = useTranslation();
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
   const dragStarted = useRef(false);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -167,7 +171,7 @@ export function PetWindow() {
         <span
           className={styles.hooksMark}
           role="img"
-          aria-label="Claude Code no está conectado"
+          aria-label={t("pet.window.hooksMissing")}
         >
           !
         </span>
@@ -190,7 +194,7 @@ export function PetWindow() {
               othersActive={state.pet.othersActive}
             />
           ) : (
-            <span>{CONNECTION_LABEL[status]}</span>
+            <span>{t(`common.connection.${status}`)}</span>
           )}
         </div>
       )}

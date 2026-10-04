@@ -1,4 +1,5 @@
 import type { QuotaHistoryResponse, QuotaSnapshot } from "@amnis/shared";
+import i18n from "../i18n/index.ts";
 
 export const FIVE_HOUR_MS = 5 * 60 * 60_000;
 
@@ -90,13 +91,6 @@ export function paceLevel(window: FiveHourWindow): Pace {
   return "margin";
 }
 
-const PACE_TITLE: Record<Exclude<Pace, "starting">, string> = {
-  exhausted: "Has agotado esta ventana",
-  over: "A este ritmo no llegas al reset",
-  tight: "Vas justo para esta ventana",
-  margin: "Te queda margen para esta ventana",
-};
-
 export interface PaceHeadline {
   title: string;
   detail: string;
@@ -113,32 +107,37 @@ export function paceHeadline(
 ): PaceHeadline {
   if (!window.known) {
     return {
-      title: "Sin dato fiable de esta ventana",
-      detail:
-        "Sin el endpoint de Anthropic y con la estimación local aún sin calibrar, no hay un % que enseñar.",
+      title: i18n.t("now.pace.unknownTitle"),
+      detail: i18n.t("now.pace.unknownDetail"),
     };
   }
   const used = Math.round(window.used);
   const elapsed = Math.round(window.elapsedPct);
   const prefix = window.estimated ? "~" : "";
-  const measured = `Llevas ${prefix}${used} % con el ${elapsed} % de la ventana pasado.`;
+  const measured = i18n.t("now.pace.measured", {
+    used: `${prefix}${used}`,
+    elapsed,
+  });
   const source = window.provisional
-    ? ` Es una estimación local provisional (${window.provisional.windows}/${CEILING_WINDOWS_NEEDED} ventanas): sin el endpoint no hay proyección.`
+    ? i18n.t("now.pace.provisional", {
+        windows: window.provisional.windows,
+        needed: CEILING_WINDOWS_NEEDED,
+      })
     : window.estimated
-      ? " Es una estimación local: sin el endpoint no hay proyección."
+      ? i18n.t("now.pace.estimated")
       : "";
 
   const pace = paceLevel(window);
   if (pace === "starting") {
     return {
-      title: "La ventana acaba de empezar",
+      title: i18n.t("now.pace.starting"),
       detail: `${measured}${source}`,
     };
   }
-  const title = PACE_TITLE[pace];
+  const title = i18n.t(`now.pace.${pace}`);
   const detail =
     !window.estimated && projectedAtReset !== null
-      ? `A este ritmo cierras la ventana de 5 h al ${Math.round(projectedAtReset)} %.`
+      ? i18n.t("now.pace.projected", { pct: Math.round(projectedAtReset) })
       : `${measured}${source}`;
   return { title, detail };
 }
@@ -152,14 +151,11 @@ const TONE_RANK: Record<PillTone, number> = {
   crit: 3,
 };
 
-const PACE_PILL: Record<
-  Exclude<Pace, "starting">,
-  { tone: PillTone; label: string }
-> = {
-  exhausted: { tone: "crit", label: "Agotada" },
-  over: { tone: "crit", label: "Ritmo insostenible" },
-  tight: { tone: "warn", label: "Vas justo" },
-  margin: { tone: "ok", label: "Ritmo sostenible" },
+const PACE_TONE: Record<Exclude<Pace, "starting">, PillTone> = {
+  exhausted: "crit",
+  over: "crit",
+  tight: "warn",
+  margin: "ok",
 };
 
 /**
@@ -177,25 +173,32 @@ export function severityPill(
   tone: PillTone;
   label: string;
 } {
-  if (!quota.authoritative) return { tone: "neutral", label: "estimado" };
+  if (!quota.authoritative)
+    return { tone: "neutral", label: i18n.t("now.pill.estimated") };
   const limit = quota.authoritative.limits.find(
     (l) => l.kind === "session" && l.scope === null,
   );
   const bySeverity = ((): { tone: PillTone; label: string } => {
     switch (limit?.severity) {
       case "normal":
-        return { tone: "ok", label: "Ritmo sostenible" };
+        return { tone: "ok", label: i18n.t("now.pill.normal") };
       case "warning":
-        return { tone: "warn", label: "Ritmo alto" };
+        return { tone: "warn", label: i18n.t("now.pill.warning") };
       case "critical":
-        return { tone: "crit", label: "Al límite" };
+        return { tone: "crit", label: i18n.t("now.pill.critical") };
       default:
-        return { tone: "neutral", label: limit?.severity ?? "sin severidad" };
+        return {
+          tone: "neutral",
+          label: limit?.severity ?? i18n.t("now.pill.noSeverity"),
+        };
     }
   })();
   const pace = paceLevel(window);
   if (pace === "starting") return bySeverity;
-  const byPace = PACE_PILL[pace];
+  const byPace = {
+    tone: PACE_TONE[pace],
+    label: i18n.t(`now.pill.${pace}`),
+  };
   // Una severidad desconocida no se pisa con un "todo bien" del ritmo.
   if (bySeverity.tone === "neutral" && byPace.tone === "ok") return bySeverity;
   return TONE_RANK[bySeverity.tone] > TONE_RANK[byPace.tone]

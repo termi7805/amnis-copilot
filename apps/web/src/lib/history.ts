@@ -1,13 +1,9 @@
 import type { PlanInfo, QuotaPeak } from "@amnis/shared";
 import type { UsageAggregateRow } from "../api/usage.ts";
+import i18n, { formatNumber } from "../i18n/index.ts";
 
 export type Range = 7 | 30 | 90 | "all";
-export const RANGES: { id: Range; label: string }[] = [
-  { id: 7, label: "7 d" },
-  { id: 30, label: "30 d" },
-  { id: 90, label: "90 d" },
-  { id: "all", label: "Todo" },
-];
+export const RANGES: readonly Range[] = [7, 30, 90, "all"];
 
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -49,7 +45,7 @@ export interface Headline {
 }
 
 export function formatUsd(value: number): string {
-  return `$${value.toLocaleString("es-ES", {
+  return `$${formatNumber(value, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -57,18 +53,18 @@ export function formatUsd(value: number): string {
 
 export function formatTokens(value: number): string {
   if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toLocaleString("es-ES", { maximumFractionDigits: 1 })} M`;
+    return `${formatNumber(value / 1_000_000, { maximumFractionDigits: 1 })} M`;
   }
   if (value >= 1_000) {
-    return `${(value / 1_000).toLocaleString("es-ES", { maximumFractionDigits: 1 })} k`;
+    return `${formatNumber(value / 1_000, { maximumFractionDigits: 1 })} k`;
   }
   return String(value);
 }
 
 function rangeText(range: Range, days: number): string {
   return range === "all"
-    ? `en todo el histórico (${days} días)`
-    : `en los últimos ${range} días`;
+    ? i18n.t("history.range.whole", { days })
+    : i18n.t("history.range.last", { days: range });
 }
 
 export function headline(
@@ -79,9 +75,14 @@ export function headline(
 ): Headline {
   if (!plan) {
     return {
-      title: `Equivalente de API ${rangeText(range, days).replace("en los últimos ", "en ")}: ${formatUsd(totalCost)}`,
-      detail:
-        "No se detecta tu plan: elígelo en Ajustes para comparar con lo que pagas.",
+      title: i18n.t("history.headline.noPlanTitle", {
+        range:
+          range === "all"
+            ? rangeText(range, days)
+            : i18n.t("history.range.short", { days: range }),
+        cost: formatUsd(totalCost),
+      }),
+      detail: i18n.t("history.headline.noPlanDetail"),
       multiplier: null,
     };
   }
@@ -89,14 +90,31 @@ export function headline(
   const multiplier = share > 0 ? totalCost / share : null;
   const prorated = days !== 30;
   const planText = prorated
-    ? `Plan ${plan.label}: ${formatUsd(plan.monthlyUsd)} al mes, ${formatUsd(share)} prorrateado a ${days} días.`
-    : `Plan ${plan.label}: ${formatUsd(plan.monthlyUsd)} al mes.`;
+    ? i18n.t("history.headline.planProrated", {
+        plan: plan.label,
+        price: formatUsd(plan.monthlyUsd),
+        share: formatUsd(share),
+        days,
+      })
+    : i18n.t("history.headline.plan", {
+        plan: plan.label,
+        price: formatUsd(plan.monthlyUsd),
+      });
   return {
     title:
       multiplier === null
-        ? "Todavía no hay consumo con el que comparar"
-        : `Tu suscripción rinde ${multiplier.toLocaleString("es-ES", { maximumFractionDigits: 1, minimumFractionDigits: 1 })} veces su precio`,
-    detail: `${capitalize(rangeText(range, days))}, ese consumo habría costado ${formatUsd(totalCost)} pagando la API pública. ${planText}`,
+        ? i18n.t("history.headline.noUsage")
+        : i18n.t("history.headline.multiplier", {
+            multiplier: formatNumber(multiplier, {
+              maximumFractionDigits: 1,
+              minimumFractionDigits: 1,
+            }),
+          }),
+    detail: i18n.t("history.headline.detail", {
+      range: capitalize(rangeText(range, days)),
+      cost: formatUsd(totalCost),
+      plan: planText,
+    }),
     multiplier,
   };
 }
@@ -107,7 +125,7 @@ function capitalize(text: string): string {
 
 /** `claude-opus-5-5` → `Opus 5.5`; vacío → `(sin modelo)`. */
 export function modelLabel(id: string): string {
-  if (id === "") return "(sin modelo)";
+  if (id === "") return i18n.t("history.noModel");
   const match = /^claude-([a-z]+)-(\d+(?:-\d+)?)$/.exec(id);
   if (!match) return id;
   const [, family = "", version = ""] = match;
@@ -121,7 +139,7 @@ export function modelLabel(id: string): string {
  * patrón `claude-<familia>-<versión>` se queda tal cual.
  */
 export function modelFamily(id: string): string {
-  if (id === "") return "(sin modelo)";
+  if (id === "") return i18n.t("history.noModel");
   const match = /^claude-([a-z]+)-\d+(?:-\d+)?$/.exec(id);
   const family = match?.[1];
   if (!family) return id;
@@ -130,11 +148,9 @@ export function modelFamily(id: string): string {
 
 /** El último tramo de la ruta, con `/` o con `\` (cwd de Windows, #133). */
 export function projectLabel(path: string): string {
-  if (path === "") return "(sin proyecto)";
+  if (path === "") return i18n.t("history.noProject");
   return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 }
-
-export const OTHER_MODELS = "Otros";
 
 export interface CostDay {
   day: string;
@@ -169,7 +185,8 @@ export function costSeries(
     .map(([m]) => m);
   const top = ranked.slice(0, 3);
   const hasOthers = ranked.length > 3;
-  const seriesOf = (m: string) => (top.includes(m) ? m : OTHER_MODELS);
+  const others = i18n.t("history.others");
+  const seriesOf = (m: string) => (top.includes(m) ? m : others);
 
   const byDay = new Map<string, CostDay>();
   for (const r of rows) {
@@ -196,7 +213,7 @@ export function costSeries(
     const key = new Date(t).toISOString().slice(0, 10);
     days.push(byDay.get(key) ?? { day: key, total: 0, byModel: {} });
   }
-  return { days, models: hasOthers ? [...top, OTHER_MODELS] : top };
+  return { days, models: hasOthers ? [...top, others] : top };
 }
 
 export interface ModelTotal {

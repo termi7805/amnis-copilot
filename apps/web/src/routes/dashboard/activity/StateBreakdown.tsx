@@ -1,9 +1,10 @@
+import { useTranslation } from "react-i18next";
 import {
   formatMinutes,
   groupOf,
   type StateRow,
 } from "../../../lib/activity.ts";
-import { Pet, STATE_TITLE } from "../../../lib/Pet/Pet.tsx";
+import { Pet, stateTitle } from "../../../lib/Pet/Pet.tsx";
 import styles from "./ActivityView.module.css";
 
 /**
@@ -12,7 +13,10 @@ import styles from "./ActivityView.module.css";
  * la línea del día (clase `.hatchBar`), no solo color.
  */
 export function StateBreakdown({ rows }: { rows: StateRow[] }) {
-  if (rows.length === 0) return <p className={styles.empty}>Sin actividad.</p>;
+  const { t } = useTranslation();
+  if (rows.length === 0) {
+    return <p className={styles.empty}>{t("activity.noActivity")}</p>;
+  }
   const max = rows[0]?.minutes ?? 1;
   return (
     <div className={styles.states}>
@@ -23,7 +27,7 @@ export function StateBreakdown({ rows }: { rows: StateRow[] }) {
             <div className={styles.mini} aria-hidden="true">
               <Pet state={state} level={1} fatigue={0} />
             </div>
-            <span>{STATE_TITLE[state]}</span>
+            <span>{stateTitle(state)}</span>
             <div className={styles.bar}>
               <i
                 className={group === "waiting" ? styles.hatchBar : undefined}

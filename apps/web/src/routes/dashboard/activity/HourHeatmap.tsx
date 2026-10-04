@@ -1,10 +1,17 @@
+import { useTranslation } from "react-i18next";
+import { dateFormat } from "../../../i18n/index.ts";
 import { formatMinutes, heatLevel } from "../../../lib/activity.ts";
 import styles from "./ActivityView.module.css";
 
-const DAYS = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"];
+/** Lunes primero, como las filas del daemon; el 1-1-2024 fue lunes. */
+const weekdays = () =>
+  Array.from({ length: 7 }, (_, d) =>
+    dateFormat({ weekday: "short" }).format(new Date(2024, 0, 1 + d)),
+  );
 
 /** Rampa secuencial de un solo tono (`--heat-0…4`): más oscuro, más minutos. */
 export function HourHeatmap({ minutes }: { minutes: number[][] }) {
+  useTranslation();
   const max = Math.max(0, ...minutes.flat());
   return (
     <div className={styles.tableWrap}>
@@ -16,7 +23,7 @@ export function HourHeatmap({ minutes }: { minutes: number[][] }) {
             {h % 3 === 0 ? h : ""}
           </span>
         ))}
-        {DAYS.map((day, d) => (
+        {weekdays().map((day, d) => (
           <HeatRow key={day} day={day} row={minutes[d] ?? []} max={max} />
         ))}
       </div>

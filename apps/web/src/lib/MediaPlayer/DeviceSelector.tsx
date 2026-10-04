@@ -1,5 +1,6 @@
 import type { MediaDevice, MediaDeviceOption } from "@amnis/shared";
 import { type KeyboardEvent, type ReactNode, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { MediaDevicesResult } from "../../api/media.ts";
 import styles from "./MediaPlayer.module.css";
 
@@ -111,6 +112,7 @@ export function DeviceSelector({
   disabled = false,
   variant = "inline",
 }: DeviceSelectorProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [load, setLoad] = useState<Load>({ status: "loading" });
   const [transferringId, setTransferringId] = useState<string | null>(null);
@@ -123,7 +125,7 @@ export function DeviceSelector({
     const result = await loadDevices().catch(
       (): MediaDevicesResult => ({
         ok: false,
-        message: "No se pudo cargar la lista de dispositivos.",
+        message: t("media.devices.loadFailed"),
       }),
     );
     if (mine !== request.current) return;
@@ -175,11 +177,11 @@ export function DeviceSelector({
         onClick={toggle}
         disabled={disabled}
         aria-expanded={open}
-        aria-label="Dispositivo de reproducción"
+        aria-label={t("media.devices.trigger")}
       >
         {current && <DeviceIcon type={current.type} />}
         <span className={styles.deviceName}>
-          {current ? current.name : "Elegir dispositivo"}
+          {current ? current.name : t("media.devices.choose")}
         </span>
         {variant === "popover" && (
           <svg
@@ -200,28 +202,29 @@ export function DeviceSelector({
       </button>
 
       {open && (
-        <fieldset className={styles.deviceList} aria-label="Dispositivos">
+        <fieldset
+          className={styles.deviceList}
+          aria-label={t("media.devices.list")}
+        >
           {load.status === "loading" && (
-            <span className={styles.hint}>Buscando dispositivos…</span>
+            <span className={styles.hint}>{t("media.devices.loading")}</span>
           )}
           {load.status === "error" && (
             <span className={styles.hint}>{load.message}</span>
           )}
           {load.status === "ready" && load.devices.length === 0 && (
-            <span className={styles.hint}>
-              Ningún dispositivo disponible. Abre Spotify en alguno.
-            </span>
+            <span className={styles.hint}>{t("media.devices.none")}</span>
           )}
           {load.status === "ready" &&
             load.devices.map((device) => {
               const restricted = device.isRestricted || device.id === null;
               const id = device.id;
               const note = device.isActive
-                ? "Sonando aquí"
+                ? t("media.devices.active")
                 : restricted
-                  ? "No admite control remoto"
+                  ? t("media.devices.restricted")
                   : transferringId !== null && transferringId === id
-                    ? "Cambiando…"
+                    ? t("media.devices.switching")
                     : null;
               return (
                 <button

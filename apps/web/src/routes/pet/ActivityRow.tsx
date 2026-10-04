@@ -1,7 +1,8 @@
 import type { MusicPrefs, PetSnapshot } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { formatElapsed } from "../../lib/countdown.ts";
-import { Pet, PetOffline, STATE_TITLE } from "../../lib/Pet/Pet.tsx";
+import { Pet, PetOffline, stateTitle } from "../../lib/Pet/Pet.tsx";
 import styles from "./ActivityRow.module.css";
 
 export interface ActivityRowProps {
@@ -19,6 +20,7 @@ export function ActivityRow({
   now,
   musicPrefs,
 }: ActivityRowProps) {
+  const { t } = useTranslation();
   return (
     <div className={styles.activity}>
       <div className={styles.activityPet}>
@@ -38,9 +40,9 @@ export function ActivityRow({
         )}
       </div>
       <div className={styles.activityText}>
-        <span className={styles.cap}>Ahora</span>
+        <span className={styles.cap}>{t("pet.window.now")}</span>
         <span className={styles.activityLabel} data-testid="activity-label">
-          {STATE_TITLE[pet.state]}
+          {stateTitle(pet.state)}
         </span>
         <span
           className={styles.activityDuration}

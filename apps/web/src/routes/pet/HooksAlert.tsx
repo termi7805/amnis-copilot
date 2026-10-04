@@ -1,5 +1,6 @@
 import type { RepairHooksResponse } from "@amnis/shared";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ActionResult } from "../../api/actions.ts";
 import { repairHooks } from "../../api/health.ts";
 import styles from "./HooksAlert.module.css";
@@ -18,6 +19,7 @@ export function HooksAlert({
   onRepaired,
   repair = repairHooks,
 }: HooksAlertProps) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +35,7 @@ export function HooksAlert({
   return (
     <div className={styles.alert} role="alert">
       <div className={styles.row}>
-        <span className={styles.text}>Claude Code no está conectado</span>
+        <span className={styles.text}>{t("pet.window.hooksMissing")}</span>
         <button
           type="button"
           className={styles.btn}
@@ -44,7 +46,7 @@ export function HooksAlert({
           onPointerUp={(e) => e.stopPropagation()}
           onClick={run}
         >
-          {busy ? "Reparando…" : "Reparar"}
+          {busy ? t("pet.window.repairing") : t("pet.window.repair")}
         </button>
       </div>
       {error && <div className={styles.error}>{error}</div>}

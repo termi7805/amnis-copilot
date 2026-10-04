@@ -185,3 +185,27 @@ test("PUT con un theme del catálogo: guarda y avisa por SSE", async () => {
     assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
   });
 });
+
+test("PUT con un locale desconocido: 400 con la lista, sin guardar ni avisar", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ locale: "fr" }));
+    assert.equal(res.status, 400);
+    const body = (await res.json()) as { field: string; error: string };
+    assert.equal(body.field, "locale");
+    assert.match(body.error, /system, es, en/);
+    assert.deepEqual(state.saves, []);
+    assert.deepEqual(state.events, []);
+    assert.deepEqual(state.prefs, DEFAULT_SETTINGS);
+  });
+});
+
+test("PUT con un locale conocido: guarda y avisa por SSE", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ locale: "en" }));
+    assert.equal(res.status, 200);
+    const expected = { ...DEFAULT_SETTINGS, locale: "en" };
+    assert.deepEqual(await res.json(), expected);
+    assert.deepEqual(state.saves, [expected]);
+    assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
+  });
+});

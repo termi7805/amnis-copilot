@@ -141,3 +141,15 @@ test("un theme guardado sobrevive a 'reiniciar'; uno desconocido cae a system", 
     assert.equal(readSettings(path).theme, "system");
   });
 });
+
+test("un locale guardado sobrevive a 'reiniciar'; uno desconocido cae a system", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    writeSettings({ ...DEFAULT_SETTINGS, locale: "en" }, path);
+    assert.equal(readSettings(path).locale, "en");
+    writeFileSync(path, JSON.stringify({ locale: "fr" }));
+    assert.equal(readSettings(path).locale, "system");
+    writeFileSync(path, JSON.stringify({}));
+    assert.equal(readSettings(path).locale, "system");
+  });
+});

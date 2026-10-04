@@ -1,0 +1,71 @@
+import type { history as es } from "../es/history.ts";
+import type { Messages } from "../messages.ts";
+
+export const history: Messages<typeof es> = {
+  range: {
+    label: "Range",
+    days: "{{days}} d",
+    all: "All",
+    last: "in the last {{days}} days",
+    whole: "across the whole history ({{days}} days)",
+    short: "in {{days}} days",
+  },
+  headline: {
+    noPlanTitle: "API equivalent {{range}}: {{cost}}",
+    noPlanDetail:
+      "Your plan isn't detected: pick it in Settings to compare with what you pay.",
+    plan: "{{plan}} plan: {{price}} a month.",
+    planProrated:
+      "{{plan}} plan: {{price}} a month, {{share}} prorated to {{days}} days.",
+    noUsage: "No usage to compare with yet",
+    multiplier: "Your subscription returns {{multiplier}}× its price",
+    detail:
+      "{{range}}, that usage would have cost {{cost}} on the public API. {{plan}}",
+  },
+  noModel: "(no model)",
+  noProject: "(no project)",
+  others: "Others",
+  othersCount: "Others ({{count}})",
+  eyebrow: "API equivalent, never money spent",
+  loadFailed: "Couldn't read the history",
+  loading: "Loading…",
+  kpi: {
+    cost: "API equivalent",
+    planMonthly: "{{plan}} plan: {{price}} a month",
+    noPlan: "No plan detected",
+    tokens: "Tokens",
+    cacheShare: "{{pct}} % cache reads",
+    noTokens: "No tokens",
+    limitDays: "Days at the 5 h limit",
+    lastLimit: "the last one, {{day}}",
+    noLimit: "none in range",
+    activeDays: "Active days",
+    streak: "current streak: {{days}} days",
+  },
+  costTitle: "Equivalent cost by day and model",
+  projects: "Projects",
+  models: "Models",
+  tokenType: "Token type",
+  peakTitle: "Daily peak of the 5 h window",
+  peakEyebrow: "endpoint data · 100 % is the limit",
+  pricesUpdated: "API prices updated on {{date}}.",
+  onlyClaudeCode:
+    "Only counts what goes through Claude Code: claude.ai leaves no transcripts.",
+  unpriced: "No price (count as $0): {{models}}",
+  noActivity: "No activity",
+  peak: "5 h peak: {{pct}} %",
+  hitLimit: "You hit the limit",
+  noPeaks: "No quota samples in this range.",
+  table: {
+    project: "Project",
+    sessions: "Sessions",
+    tokens: "Tokens",
+    share: "Share",
+    apiEquiv: "API equiv.",
+    model: "Model",
+    cacheRead: "Cache read",
+    cacheWrite: "Cache write",
+    output: "Output",
+    input: "Input",
+  },
+};

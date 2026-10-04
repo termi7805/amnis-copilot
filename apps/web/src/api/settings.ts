@@ -1,4 +1,5 @@
 import type { AmnisSettings } from "@amnis/shared";
+import i18n from "../i18n/index.ts";
 import { errorMessage } from "./actions.ts";
 import { daemonUrl } from "./config.ts";
 
@@ -20,7 +21,7 @@ export async function saveSettings(
       body: JSON.stringify(partial),
     });
   } catch {
-    return { ok: false, message: "No se pudo contactar con Amnis." };
+    return { ok: false, message: i18n.t("common.errors.unreachable") };
   }
   if (response.ok) return { ok: true };
   return { ok: false, message: await errorMessage(response) };

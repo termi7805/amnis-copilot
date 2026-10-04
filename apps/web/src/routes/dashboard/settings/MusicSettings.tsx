@@ -7,8 +7,10 @@ import {
   type Vibe,
 } from "@amnis/shared";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { SaveSettingsResult } from "../../../api/settings.ts";
-import { Pet, STATE_TITLE } from "../../../lib/Pet/Pet.tsx";
+import { settings as settingsMessages } from "../../../i18n/es/settings.ts";
+import { PET_STATES, Pet, stateTitle } from "../../../lib/Pet/Pet.tsx";
 import styles from "./MusicSettings.module.css";
 import { previewTrack } from "./previewTracks.ts";
 
@@ -16,43 +18,15 @@ import { previewTrack } from "./previewTracks.ts";
  * saturaría el SSE de la mascota. */
 export const SLIDER_DEBOUNCE_MS = 300;
 
-const SCREEN_LABEL: Record<ScreenMode, string> = {
-  "two-phase": "Portada pixelada y luego nítida",
-  cover: "Portada",
-  "cover-title": "Portada + título",
-  pixel: "Pixelada",
-  text: "Solo texto",
-  none: "Nada",
-};
-
-const VIBE_LABEL: Record<Vibe, string> = {
-  fiesta: "Fiesta",
-  intensa: "Intensa",
-  chill: "Chill",
-  melancolica: "Melancólica",
-  podcast: "Podcast",
-  neutral: "Neutral",
-};
+const SCREENS = Object.keys(settingsMessages.music.screens) as ScreenMode[];
+const VIBES = Object.keys(settingsMessages.music.vibes) as Vibe[];
 
 type Option<T extends string> = { value: T; label: string };
 
-const MOTION_OPTIONS: Option<MusicPrefs["motion"]>[] = [
-  { value: "head", label: "Cabeza y cascos" },
-  { value: "accessory", label: "Solo cascos" },
-];
-const COLOR_OPTIONS: Option<MusicPrefs["color"]>[] = [
-  { value: "vibe", label: "Vibe" },
-  { value: "cover", label: "Portada" },
-  { value: "teal", label: "Teal" },
-];
-const FALLBACK_OPTIONS: Option<MusicPrefs["fallback"]>[] = [
-  { value: "neutral", label: "Notas neutras" },
-  { value: "quiet", label: "Solo cascos" },
-];
-const ENTRY_OPTIONS: Option<MusicPrefs["screenEntry"]>[] = [
-  { value: "tv", label: "Tele" },
-  { value: "fade", label: "Fundido" },
-];
+const options = <T extends string>(
+  values: readonly T[],
+  label: (value: T) => string,
+): Option<T>[] => values.map((value) => ({ value, label: label(value) }));
 
 type SliderKey = "damping" | "screenSeconds";
 
@@ -132,6 +106,7 @@ function Segmented<T extends string>({
  * locales, sin esperar al guardado ni al eco del SSE.
  */
 export function MusicSettings({ settings, save }: MusicSettingsProps) {
+  const { t } = useTranslation();
   // Valores de sliders aún sin guardar: mientras se arrastra, mandan sobre el
   // eco del SSE para que el control no salte.
   const [drafts, setDrafts] = useState<Partial<Pick<MusicPrefs, SliderKey>>>(
@@ -199,53 +174,54 @@ export function MusicSettings({ settings, save }: MusicSettingsProps) {
 
   const disabled = settings === undefined;
   const layerOff = !prefs.enabled
-    ? "La música está desactivada: Amnis no lleva nada de la capa."
+    ? t("settings.music.layerDisabled")
     : state === "waiting" || state === "limited"
-      ? "En este estado Amnis pide atención y no lleva la capa de música."
+      ? t("settings.music.layerAttention")
       : null;
 
   return (
     <section className={styles.panel} aria-labelledby="music-settings-title">
       <div className={styles.head}>
-        <h2 id="music-settings-title">Mascota · Música</h2>
-        <span className={styles.eyebrow}>
-          se aplica al instante en la ventana flotante
-        </span>
+        <h2 id="music-settings-title">{t("settings.music.title")}</h2>
+        <span className={styles.eyebrow}>{t("settings.music.eyebrow")}</span>
       </div>
       <div className={styles.layout}>
         <fieldset className={styles.controls} disabled={disabled}>
           <div className={styles.switchRow}>
             <div>
-              <div className={styles.t}>Capa de música</div>
-              <div className={styles.s}>
-                Cascos, notas y cabeceo cuando suena Spotify. Se apaga sola en
-                «esperando permiso» y «límite».
-              </div>
+              <div className={styles.t}>{t("settings.music.layer")}</div>
+              <div className={styles.s}>{t("settings.music.layerHint")}</div>
             </div>
             <Switch
-              label="Capa de música"
+              label={t("settings.music.layer")}
               checked={prefs.enabled}
               onChange={(enabled) => commit({ enabled })}
             />
           </div>
           <div className={styles.fields}>
             <Segmented
-              label="Qué se mueve"
+              label={t("settings.music.whatMoves")}
               value={prefs.motion}
-              options={MOTION_OPTIONS}
+              options={options<MusicPrefs["motion"]>(
+                ["head", "accessory"],
+                (v) => t(`settings.music.motion.${v}`),
+              )}
               onChange={(motion) => commit({ motion })}
             />
             <Segmented
-              label="Color de la capa"
+              label={t("settings.music.layerColor")}
               value={prefs.color}
-              options={COLOR_OPTIONS}
+              options={options<MusicPrefs["color"]>(
+                ["vibe", "cover", "teal"],
+                (v) => t(`settings.music.color.${v}`),
+              )}
               onChange={(color) => commit({ color })}
             />
-            <Field label="Cuánto frena la fatiga">
+            <Field label={t("settings.music.damping")}>
               <div className={styles.rangeRow}>
                 <input
                   type="range"
-                  aria-label="Amortiguación por fatiga"
+                  aria-label={t("settings.music.dampingLabel")}
                   min={0}
                   max={1}
                   step={0.05}
@@ -259,30 +235,33 @@ export function MusicSettings({ settings, save }: MusicSettingsProps) {
               </div>
             </Field>
             <Segmented
-              label="Sin datos de la canción"
+              label={t("settings.music.noData")}
               value={prefs.fallback}
-              options={FALLBACK_OPTIONS}
+              options={options<MusicPrefs["fallback"]>(
+                ["neutral", "quiet"],
+                (v) => t(`settings.music.fallback.${v}`),
+              )}
               onChange={(fallback) => commit({ fallback })}
             />
-            <Field label="Pantalla al cambiar de canción">
+            <Field label={t("settings.music.screen")}>
               <select
                 value={prefs.screen}
                 onChange={(e) =>
                   commit({ screen: e.target.value as ScreenMode })
                 }
               >
-                {(Object.keys(SCREEN_LABEL) as ScreenMode[]).map((mode) => (
+                {SCREENS.map((mode) => (
                   <option key={mode} value={mode}>
-                    {SCREEN_LABEL[mode]}
+                    {t(`settings.music.screens.${mode}`)}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Tiempo en pantalla">
+            <Field label={t("settings.music.screenTime")}>
               <div className={styles.rangeRow}>
                 <input
                   type="range"
-                  aria-label="Tiempo en pantalla"
+                  aria-label={t("settings.music.screenTime")}
                   min={2}
                   max={8}
                   step={0.5}
@@ -298,22 +277,24 @@ export function MusicSettings({ settings, save }: MusicSettingsProps) {
               </div>
             </Field>
             <Segmented
-              label="Entrada"
+              label={t("settings.music.entryLabel")}
               value={prefs.screenEntry}
-              options={ENTRY_OPTIONS}
+              options={options<MusicPrefs["screenEntry"]>(["tv", "fade"], (v) =>
+                t(`settings.music.entry.${v}`),
+              )}
               onChange={(screenEntry) => commit({ screenEntry })}
             />
             <div className={styles.field}>
-              <span>Líneas de pantalla</span>
+              <span>{t("settings.music.scanlines")}</span>
               <Switch
-                label="Líneas de pantalla"
+                label={t("settings.music.scanlines")}
                 checked={prefs.scanlines}
                 onChange={(scanlines) => commit({ scanlines })}
               />
             </div>
           </div>
           <button type="button" className={styles.btn} onClick={reset}>
-            Restablecer valores por defecto
+            {t("settings.music.reset")}
           </button>
           {error && (
             <p role="alert" className={styles.error}>
@@ -334,34 +315,34 @@ export function MusicSettings({ settings, save }: MusicSettingsProps) {
           </div>
           {layerOff && <p className={styles.note}>{layerOff}</p>}
           <div className={styles.sample}>
-            <Field label="Estado de ejemplo">
+            <Field label={t("settings.music.sampleState")}>
               <select
                 value={state}
                 onChange={(e) => setState(e.target.value as PetState)}
               >
-                {(Object.keys(STATE_TITLE) as PetState[]).map((s) => (
+                {PET_STATES.map((s) => (
                   <option key={s} value={s}>
-                    {STATE_TITLE[s]}
+                    {stateTitle(s)}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Vibe de ejemplo">
+            <Field label={t("settings.music.sampleVibe")}>
               <select
                 value={vibe}
                 onChange={(e) => setVibe(e.target.value as Vibe)}
               >
-                {(Object.keys(VIBE_LABEL) as Vibe[]).map((v) => (
+                {VIBES.map((v) => (
                   <option key={v} value={v}>
-                    {VIBE_LABEL[v]}
+                    {t(`settings.music.vibes.${v}`)}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label={`BPM de ejemplo: ${bpm}`}>
+            <Field label={t("settings.music.sampleBpm", { bpm })}>
               <input
                 type="range"
-                aria-label="BPM de ejemplo"
+                aria-label={t("settings.music.sampleBpmLabel")}
                 min={60}
                 max={180}
                 step={5}
@@ -375,7 +356,7 @@ export function MusicSettings({ settings, save }: MusicSettingsProps) {
               className={styles.btn}
               onClick={() => setTrackIndex((i) => i + 1)}
             >
-              Siguiente canción
+              {t("settings.music.nextTrack")}
             </button>
           </div>
         </div>

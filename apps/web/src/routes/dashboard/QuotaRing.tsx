@@ -1,4 +1,5 @@
 import type { QuotaWindow } from "@amnis/shared";
+import { useTranslation } from "react-i18next";
 import { formatUntil } from "../../lib/countdown.ts";
 import styles from "./QuotaRing.module.css";
 
@@ -42,6 +43,7 @@ export function QuotaRing({
   layout = "column",
   tone = "default",
 }: QuotaRingProps) {
+  const { t } = useTranslation();
   const hasData = authoritative !== null || estimated !== null;
   const displayValue = authoritative?.utilization ?? estimated;
   const countdown = authoritative
@@ -52,7 +54,7 @@ export function QuotaRing({
     <div className={styles.ring} data-layout={layout} data-tone={tone}>
       <svg viewBox="0 0 100 100" width={size} height={size} role="img">
         <title>
-          {label}: {hasData ? `${displayValue}%` : "sin dato"}
+          {label}: {hasData ? `${displayValue}%` : t("pet.ring.noData")}
         </title>
         <circle
           className={styles.track}
@@ -91,14 +93,14 @@ export function QuotaRing({
               {displayValue}%
             </>
           ) : (
-            "sin dato"
+            t("pet.ring.noData")
           )}
         </span>
         <span className={styles.countdown} data-testid="quota-countdown">
           {authoritative
-            ? (countdown ?? "sin dato del endpoint")
+            ? (countdown ?? t("pet.ring.noEndpointData"))
             : estimated !== null
-              ? "estimado"
+              ? t("pet.ring.estimated")
               : null}
         </span>
       </div>

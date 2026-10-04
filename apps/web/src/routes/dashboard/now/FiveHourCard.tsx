@@ -1,4 +1,6 @@
 import type { QuotaHistoryResponse, QuotaSnapshot } from "@amnis/shared";
+import { Trans, useTranslation } from "react-i18next";
+import { dateFormat, formatNumber } from "../../../i18n/index.ts";
 import { formatElapsed, formatUntil } from "../../../lib/countdown.ts";
 import {
   CEILING_WINDOWS_NEEDED,
@@ -13,10 +15,8 @@ import {
 } from "../../../lib/fiveHour.ts";
 import styles from "./FiveHourCard.module.css";
 
-const HHMM = new Intl.DateTimeFormat("es-ES", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
+const hhmm = (date: Date) =>
+  dateFormat({ hour: "2-digit", minute: "2-digit" }).format(date);
 
 /** Línea y área de la serie; la proyección sigue discontinua hasta el reset. */
 function Sparkline({
@@ -28,6 +28,7 @@ function Sparkline({
   window: FiveHourWindow;
   projection: number | null;
 }) {
+  const { t } = useTranslation();
   const points = sparkPoints(samples, window);
   const last = points.at(-1);
   const baseline = SPARK_H - 4;
@@ -37,7 +38,7 @@ function Sparkline({
       viewBox={`0 0 ${SPARK_W} ${SPARK_H}`}
       preserveAspectRatio="none"
       role="img"
-      aria-label={`Uso de la ventana desde las ${HHMM.format(window.start)}`}
+      aria-label={t("now.fiveHour.sparkLabel", { time: hhmm(window.start) })}
       data-testid="sparkline"
     >
       <line
@@ -97,6 +98,7 @@ export function FiveHourCard({
   samples: QuotaHistoryResponse["samples"];
   now: Date;
 }) {
+  const { t } = useTranslation();
   const window = fiveHourWindow(quota, now);
   const pill = severityPill(quota, window);
   const countdown = formatUntil(window.end.toISOString(), now);
@@ -111,8 +113,8 @@ export function FiveHourCard({
   return (
     <article className={styles.card}>
       <div className={styles.head}>
-        <h2>Ventana de 5 horas</h2>
-        <span className={styles.eyebrow}>Claude · cuenta activa</span>
+        <h2>{t("now.fiveHour.title")}</h2>
+        <span className={styles.eyebrow}>{t("now.fiveHour.account")}</span>
       </div>
 
       <div className={styles.top}>
@@ -130,8 +132,8 @@ export function FiveHourCard({
           </div>
           <p className={styles.source}>
             {window.estimated
-              ? `estimación local${window.provisional ? ` · provisional, ${window.provisional.windows}/${CEILING_WINDOWS_NEEDED} ventanas` : ""}${quota.error ? ` · ${quota.error}` : ""}`
-              : `del endpoint de Anthropic · hace ${formatElapsed(quota.sampledAt, now)}${quota.rateLimitedAt ? " · la última consulta dio 429" : ""}`}
+              ? `${t("now.fiveHour.sourceLocal")}${window.provisional ? t("now.fiveHour.sourceProvisional", { windows: window.provisional.windows, needed: CEILING_WINDOWS_NEEDED }) : ""}${quota.error ? ` · ${quota.error}` : ""}`
+              : `${t("now.fiveHour.sourceEndpoint", { elapsed: formatElapsed(quota.sampledAt, now) })}${quota.rateLimitedAt ? t("now.fiveHour.rateLimited") : ""}`}
           </p>
         </div>
         <div className={styles.side}>
@@ -139,10 +141,18 @@ export function FiveHourCard({
             {pill.label}
           </span>
           <p className={styles.reset}>
-            Se reinicia a las <b>{HHMM.format(window.end)}</b>
+            <Trans
+              i18nKey="now.fiveHour.resetsAt"
+              values={{ time: hhmm(window.end) }}
+              components={{ b: <b /> }}
+            />
           </p>
           <p className={styles.reset}>
-            quedan <b>{countdown}</b>
+            <Trans
+              i18nKey="now.fiveHour.left"
+              values={{ countdown: countdown ?? "" }}
+              components={{ b: <b /> }}
+            />
           </p>
         </div>
       </div>
@@ -152,11 +162,18 @@ export function FiveHourCard({
           className={styles.track}
           title={[
             window.known &&
-              `Uso ${window.estimated ? "estimado" : "real"} ${Math.round(window.used)} %`,
+              t(
+                window.estimated
+                  ? "now.fiveHour.trackUsedEstimated"
+                  : "now.fiveHour.trackUsedReal",
+                { pct: Math.round(window.used) },
+              ),
             !window.estimated &&
               calibrated &&
-              `estimación local ${Math.round(localPct)} %`,
-            `tiempo transcurrido ${Math.round(window.elapsedPct)} %`,
+              t("now.fiveHour.trackLocal", { pct: Math.round(localPct) }),
+            t("now.fiveHour.trackElapsed", {
+              pct: Math.round(window.elapsedPct),
+            }),
           ]
             .filter(Boolean)
             .join(", ")}
@@ -181,9 +198,11 @@ export function FiveHourCard({
           />
         </div>
         <div className={styles.legend}>
-          <span>{HHMM.format(window.start)} inicio</span>
-          <span>│ estimación local · ┆ ahora</span>
-          <span>{HHMM.format(window.end)}</span>
+          <span>
+            {t("now.fiveHour.legendStart", { time: hhmm(window.start) })}
+          </span>
+          <span>{t("now.fiveHour.legendMarks")}</span>
+          <span>{hhmm(window.end)}</span>
         </div>
       </div>
 
@@ -199,7 +218,7 @@ export function FiveHourCard({
 
       <div className={styles.facts}>
         <div className={styles.fact}>
-          <div className={styles.k}>Estimación local</div>
+          <div className={styles.k}>{t("now.fiveHour.localTitle")}</div>
           <div className={styles.v} data-testid="fact-local">
             {calibrated
               ? `~${Math.round(localPct)} %`
@@ -208,61 +227,73 @@ export function FiveHourCard({
                 : "—"}
           </div>
           <div className={styles.d}>
-            {quota.local.fiveHourTokens.toLocaleString("es-ES")} tokens de
-            Claude Code
+            {t("now.fiveHour.localTokens", {
+              tokens: formatNumber(quota.local.fiveHourTokens),
+            })}
           </div>
           {!calibrated && (
             <div className={styles.d} data-testid="uncalibrated">
               {quota.local.provisionalUtilization !== null
-                ? `provisional: ${quota.local.ceilingWindows}/${CEILING_WINDOWS_NEEDED} ventanas cerradas para fijar el techo`
-                : "sin calibrar: faltan ventanas cerradas para fijar el techo"}
+                ? t("now.fiveHour.provisional", {
+                    windows: quota.local.ceilingWindows,
+                    needed: CEILING_WINDOWS_NEEDED,
+                  })
+                : t("now.fiveHour.uncalibrated")}
             </div>
           )}
         </div>
         {!window.estimated && (
           <>
             <div className={styles.fact} data-testid="fact-divergence">
-              <div className={styles.k}>Fuera de Claude Code</div>
+              <div className={styles.k}>{t("now.fiveHour.outsideTitle")}</div>
               <div className={styles.v}>
                 {divergence === null || !calibrated
                   ? "—"
-                  : `${divergence > 0 ? "+" : ""}${Math.round(divergence)} pts`}
+                  : t("now.fiveHour.points", {
+                      sign: divergence > 0 ? "+" : "",
+                      points: Math.round(divergence),
+                    })}
               </div>
               <div className={styles.d}>
                 {calibrated
-                  ? "claude.ai, móvil u otro equipo"
-                  : "aparece cuando la estimación local esté calibrada"}
+                  ? t("now.fiveHour.outsideDetail")
+                  : t("now.fiveHour.outsidePending")}
               </div>
             </div>
             <div className={styles.fact} data-testid="fact-projection">
-              <div className={styles.k}>Proyección al reset</div>
+              <div className={styles.k}>
+                {t("now.fiveHour.projectionTitle")}
+              </div>
               <div className={styles.v}>
                 {projection === null ? "—" : `${Math.round(projection)} %`}
               </div>
               <div className={styles.d}>
                 {projection === null
-                  ? "pocas muestras aún"
-                  : "al ritmo de la última hora"}
+                  ? t("now.fiveHour.fewSamples")
+                  : t("now.fiveHour.lastHourPace")}
               </div>
             </div>
             <div className={styles.fact} data-testid="fact-exhausts">
-              <div className={styles.k}>Se agota</div>
+              <div className={styles.k}>{t("now.fiveHour.exhaustsTitle")}</div>
               <div className={styles.v}>
                 {exhaustion.kind === "at"
-                  ? HHMM.format(exhaustion.at)
+                  ? hhmm(exhaustion.at)
                   : exhaustion.kind === "lasts"
-                    ? "te llega al reset"
+                    ? t("now.fiveHour.lasts")
                     : exhaustion.kind === "exhausted"
-                      ? "agotada"
+                      ? t("now.fiveHour.exhausted")
                       : "—"}
               </div>
               <div className={styles.d}>
                 {exhaustion.kind === "at"
-                  ? `en ${formatUntil(exhaustion.at.toISOString(), now)}`
+                  ? t("now.fiveHour.inTime", {
+                      countdown:
+                        formatUntil(exhaustion.at.toISOString(), now) ?? "",
+                    })
                   : exhaustion.kind === "lasts"
-                    ? "al ritmo de la última hora"
+                    ? t("now.fiveHour.lastHourPace")
                     : exhaustion.kind === "unknown"
-                      ? "pocas muestras aún"
+                      ? t("now.fiveHour.fewSamples")
                       : ""}
               </div>
             </div>
