@@ -168,3 +168,19 @@ describe("FocusPicker", () => {
     expect(screen.queryByRole("button", { name: "Automático" })).toBeNull();
   });
 });
+
+describe("FocusPicker — aspecto por layout", () => {
+  it("en el dashboard el disparador lleva chevron de trazo, no el ▾ del panel", () => {
+    setup({ layout: "popover" });
+    const trigger = screen.getByRole("button", { name: "Foco de la mascota" });
+    expect(screen.getByTestId("focus-chevron")).toBeInTheDocument();
+    expect(trigger).not.toHaveTextContent("▾");
+  });
+
+  it("en el panel de la mascota conserva el ▾", () => {
+    setup();
+    const trigger = screen.getByRole("button", { name: "Foco de la mascota" });
+    expect(trigger).toHaveTextContent("▾");
+    expect(screen.queryByTestId("focus-chevron")).toBeNull();
+  });
+});

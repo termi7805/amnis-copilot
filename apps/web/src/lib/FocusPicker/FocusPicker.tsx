@@ -7,6 +7,16 @@ import { STATE_TITLE } from "../Pet/Pet.tsx";
 import styles from "./FocusPicker.module.css";
 import { focusLabel, sameFocus } from "./focus.ts";
 
+/** Trazo de los iconos del dashboard (mockup v6); en `compact` no se usan. */
+const STROKE_ICON = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+} as const;
+
 type Load =
   | { status: "loading" }
   | { status: "error"; message: string }
@@ -118,8 +128,25 @@ export function FocusPicker({
         aria-label="Foco de la mascota"
         onClick={toggle}
       >
+        {layout === "popover" && (
+          <svg {...STROKE_ICON} className={styles.icon} aria-hidden="true">
+            <circle cx="12" cy="12" r="8" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        )}
         <span className={styles.name}>{focusLabel(focus)}</span>
-        <span aria-hidden="true">▾</span>
+        {layout === "popover" ? (
+          <svg
+            {...STROKE_ICON}
+            className={styles.chevron}
+            data-testid="focus-chevron"
+            aria-hidden="true"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        ) : (
+          <span aria-hidden="true">▾</span>
+        )}
       </button>
 
       {open && (
