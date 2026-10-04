@@ -7,5 +7,9 @@
   "remote": {
     "urls": ["http://127.0.0.1:*"]
   },
-  "permissions": ["allow-resize-pet", "allow-start-drag"]
+  "permissions": [
+    "allow-resize-pet",
+    "allow-start-drag",
+    "allow-open-dashboard"
+  ]
 }

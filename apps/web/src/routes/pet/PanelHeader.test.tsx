@@ -74,4 +74,27 @@ describe("PanelHeader", () => {
       screen.queryByRole("button", { name: "Foco de la mascota" }),
     ).toBeNull();
   });
+
+  it("el botón de dashboard no pliega la ventana", () => {
+    const onDown = vi.fn();
+    const onUp = vi.fn();
+    render(
+      <div onPointerDown={onDown} onPointerUp={onUp}>
+        <PanelHeader status="connected" active="quota" />
+      </div>,
+    );
+    const button = screen.getByRole("button", { name: "Abrir dashboard" });
+    fireEvent.pointerDown(button);
+    fireEvent.pointerUp(button);
+    expect(onDown).not.toHaveBeenCalled();
+    expect(onUp).not.toHaveBeenCalled();
+  });
+
+  it("fuera de Tauri el botón abre el dashboard del mismo origen en otra pestaña", () => {
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    render(<PanelHeader status="connected" active="quota" />);
+    fireEvent.click(screen.getByRole("button", { name: "Abrir dashboard" }));
+    expect(open).toHaveBeenCalledExactlyOnceWith("/", "_blank");
+    open.mockRestore();
+  });
 });

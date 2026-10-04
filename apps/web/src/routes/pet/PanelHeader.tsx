@@ -2,6 +2,7 @@ import type { PetFocus } from "@amnis/shared";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { FocusPicker } from "../../lib/FocusPicker/FocusPicker.tsx";
 import styles from "./PanelHeader.module.css";
+import { openDashboard } from "./useTauriWindow.ts";
 
 export type PanelId = "quota" | "media";
 
@@ -41,26 +42,51 @@ export function PanelHeader({
           style={{ background: STATUS_COLOR[status] }}
         />
         <span className={styles.wordmark}>AMNIS</span>
-        {onSelect && (
-          <div className={styles.tabs} role="tablist" aria-label="Panel">
-            {TABS.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                className={styles.tab}
-                aria-selected={active === id}
-                // La ventana alterna plegado/desplegado con el clic de toda
-                // ella (PetWindow.tsx): sin esto cada pestaña también la plegaría.
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-                onClick={() => onSelect(id)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className={styles.actions}>
+          {onSelect && (
+            <div className={styles.tabs} role="tablist" aria-label="Panel">
+              {TABS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  className={styles.tab}
+                  aria-selected={active === id}
+                  // La ventana alterna plegado/desplegado con el clic de toda
+                  // ella (PetWindow.tsx): sin esto cada pestaña también la plegaría.
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerUp={(e) => e.stopPropagation()}
+                  onClick={() => onSelect(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            className={styles.openDashboard}
+            aria-label="Abrir dashboard"
+            title="Abrir dashboard"
+            // Como las pestañas: abrir el dashboard no debe plegar la ventana.
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={openDashboard}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="11"
+              height="11"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="square"
+              aria-hidden="true"
+            >
+              <path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6" />
+            </svg>
+          </button>
+        </div>
       </div>
       {focus && now && (
         // Como las pestañas: abrir el selector no debe plegar la ventana.

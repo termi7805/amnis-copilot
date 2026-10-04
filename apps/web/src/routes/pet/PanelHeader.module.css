@@ -21,10 +21,30 @@
   color: var(--ink);
 }
 
-.tabs {
+.actions {
   display: flex;
   gap: 4px;
   margin-left: auto;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.openDashboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 5px;
+  border: 2px solid var(--ink);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.openDashboard:hover {
+  background: var(--raised);
 }
 
 .tab {

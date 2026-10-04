@@ -16,6 +16,7 @@ use tauri::{
     App, AppHandle, LogicalSize, Manager, PhysicalPosition, RunEvent, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder, WindowEvent,
 };
+use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use url::Url;
@@ -242,17 +243,32 @@ fn start_drag(window: WebviewWindow, state: tauri::State<PetAnchor>) {
     }
 }
 
+/// Origen del daemon (sin `/pet`), el que abre el botón de la mascota (#131).
+/// Sale de la misma `url` que carga la ventana, así respeta `AMNIS_URL`.
+struct DashboardUrl(String);
+
+/// Abre el dashboard en el navegador por defecto (#131). Lo hace el proceso
+/// nativo porque un enlace dentro del webview no sale al navegador del
+/// sistema. No toca la ventana: la mascota sigue desplegada y en su sitio.
+#[tauri::command]
+fn open_dashboard(app: AppHandle, state: tauri::State<DashboardUrl>) {
+    if let Err(e) = app.opener().open_url(&state.0, None::<&str>) {
+        log::warn!("no se pudo abrir el dashboard en {}: {e}", state.0);
+    }
+}
+
 fn main() {
     env_logger::init();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(Sidecar(Mutex::new(None)))
         .manage(PetAnchor {
             anchor: Mutex::new(Anchor::default()),
             resizing: Mutex::new(()),
         })
-        .invoke_handler(tauri::generate_handler![resize_pet, start_drag])
+        .invoke_handler(tauri::generate_handler![resize_pet, start_drag, open_dashboard])
         .on_window_event(|window, event| {
             // Cada paso del arrastre se persiste al momento: no hay un "fin
             // de arrastre" fiable ni un cierre limpio en el que guardar.
@@ -273,6 +289,10 @@ fn main() {
             let url_str = std::env::var("AMNIS_URL")
                 .unwrap_or_else(|_| "http://127.0.0.1:4747/pet".to_string());
             let url: Url = url_str.parse()?;
+            app.manage(DashboardUrl(format!(
+                "{}/",
+                url.origin().ascii_serialization()
+            )));
 
             let mut alive = daemon_alive(&url);
             if !alive {

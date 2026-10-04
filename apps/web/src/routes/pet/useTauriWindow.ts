@@ -1,3 +1,5 @@
+import { daemonUrl } from "../../api/config.ts";
+
 /**
  * Único punto donde el frontend habla con Tauri (issue #42): en un
  * navegador normal `isTauri()` es `false` y `resizeWindow` no hace nada
@@ -39,5 +41,18 @@ export function resizeWindow(width: number, height: number): void {
     // disponible, ventana ya destruida), no hay nada sensato que hacer
     // salvo no redimensionar — mismo criterio que `set_always_on_top`
     // en main.rs, que tampoco entra en pánico si el compositor lo rechaza.
+    .catch(() => {});
+}
+
+/* Dentro de Tauri un enlace no sale al navegador del sistema (navegaría
+ * dentro del propio webview o no haría nada): lo abre el proceso nativo
+ * (#131). Fuera, un `window.open` normal al dashboard del mismo origen. */
+export function openDashboard(): void {
+  if (!isTauri()) {
+    window.open(`${daemonUrl()}/`, "_blank");
+    return;
+  }
+  import("@tauri-apps/api/core")
+    .then(({ invoke }) => invoke("open_dashboard"))
     .catch(() => {});
 }
