@@ -29,6 +29,9 @@ function makeDeps(overrides: Partial<RecordHookDeps> = {}): {
       };
     },
     resolveCheckout: (cwd) => ({ repoRoot: cwd, worktree: cwd }),
+    focus: () => ({ kind: "auto" }),
+    focusFacts: () => ({ session: "alive", worktreeExists: true }),
+    setFocus: () => {},
     deriveState: () => null,
     insertHookEvent: (event) => inserted.push(event),
     ...overrides,
@@ -112,4 +115,45 @@ test("sin cwd no se resuelve nada y las dos claves van a null", () => {
 
   assert.equal(inserted[0]?.repoRoot, null);
   assert.equal(inserted[0]?.worktree, null);
+});
+
+test("un SessionEnd de la sesión enfocada devuelve el foco a auto", () => {
+  const calls: unknown[] = [];
+  const { deps } = makeDeps({
+    normalizeHookEvent: () => ({
+      provider: "anthropic",
+      hook: "SessionEnd",
+      toolName: null,
+      sessionId: "a",
+      project: "/r/wt",
+      permissionMode: null,
+      command: null,
+      sessionReason: "prompt_input_exit",
+      at: "2026-01-01T00:00:00.000Z",
+    }),
+    focus: () => ({ kind: "session", sessionId: "a", worktree: "/r/wt" }),
+    focusFacts: () => ({ session: "ended", worktreeExists: true }),
+    setFocus: (f) => calls.push(f),
+  });
+
+  recordHook(deps, { hook_event_name: "SessionEnd" });
+
+  assert.deepEqual(calls, [{ kind: "auto" }]);
+});
+
+test("un PreToolUse no evalúa el foco, y si no cambia no se guarda nada", () => {
+  const evaluated: string[] = [];
+  const base = {
+    focus: () => ({ kind: "auto" }) as const,
+    focusFacts: () => {
+      evaluated.push("facts");
+      return { session: "alive", worktreeExists: true } as const;
+    },
+    setFocus: () => evaluated.push("set"),
+  };
+  recordHook(makeDeps(base).deps, { hook_event_name: "PreToolUse" });
+  assert.deepEqual(evaluated, []);
+
+  recordHook(makeDeps(base).deps, { hook_event_name: "SessionStart" });
+  assert.deepEqual(evaluated, ["facts"]);
 });

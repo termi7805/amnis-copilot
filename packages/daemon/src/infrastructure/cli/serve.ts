@@ -1,4 +1,6 @@
+import { existsSync } from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
+import type { AmnisSettings, PetFocus } from "@amnis/shared";
 import {
   fatigueFrom,
   type GetStateDeps,
@@ -17,6 +19,7 @@ import {
   SPOTIFY_REDIRECT_URI,
   VERSION,
 } from "../../config.ts";
+import { type FocusFacts, focusAfter } from "../../domain/petFocus.ts";
 import { derivePetState } from "../../domain/petState.ts";
 import { makeRepairHooksDeps } from "../claudeSettings.ts";
 import { currentPlan } from "../currentPlan.ts";
@@ -50,6 +53,7 @@ import {
   countHookEvents,
   insertHookEvent,
   lastKnownStateEvent,
+  sessionStatus,
 } from "../persistence/hookEvents.ts";
 import { savePrices } from "../persistence/prices.ts";
 import { readSettings, writeSettings } from "../persistence/settings.ts";
@@ -76,11 +80,13 @@ function makeHookDeps(
   db: DatabaseSync,
   accountId: number,
   onInserted: () => void,
+  focus: Pick<RecordHookDeps, "focus" | "focusFacts" | "setFocus">,
 ): RecordHookDeps {
   return {
     normalizeHookEvent: (raw) => anthropicProvider.normalizeHookEvent(raw),
     deriveState: (event) => derivePetState(event)?.state ?? null,
     resolveCheckout,
+    ...focus,
     insertHookEvent: (event) => {
       insertHookEvent(db, { accountId, ...event });
       onInserted();
@@ -173,7 +179,36 @@ export function runServeCli(args: readonly string[] = []): void {
   // debe pagar un poll en vivo (PreToolUse dispara muchísimo).
   let cachedFatigue = 0;
   let cachedExhausted = false;
+  // El foco se suelta por el mismo camino que un cambio de ajustes: si no, el
+  // dashboard seguiría enseñando un foco que el daemon ya no aplica (#110).
+  const saveSettings = (next: AmnisSettings): void => {
+    writeSettings(next);
+    settings = next;
+    // La mascota y el dashboard las aplican en vivo, sin reiniciar.
+    broadcaster.broadcast({ event: "settings", data: next });
+    // Otro foco es otro estado: el snapshot sale ya, sin esperar a un
+    // hook ni al temporizador del watcher.
+    watcher.check();
+  };
+  const focusControl = {
+    focus: stateDeps.focus,
+    focusFacts: (focus: PetFocus): FocusFacts => ({
+      session:
+        focus.kind === "session"
+          ? sessionStatus(db, accountId, focus.sessionId, new Date())
+          : "alive",
+      worktreeExists: focus.kind !== "worktree" || existsSync(focus.worktree),
+    }),
+    setFocus: (petFocus: PetFocus) => saveSettings({ ...settings, petFocus }),
+  };
   const watcher = startPetStateWatcher({
+    reconcileFocus: () => {
+      const focus = settings.petFocus;
+      const next = focusAfter(focus, null, focusControl.focusFacts(focus));
+      if (JSON.stringify(next) !== JSON.stringify(focus)) {
+        focusControl.setFocus(next);
+      }
+    },
     focus: stateDeps.focus,
     lastKnownStateEvent: stateDeps.lastKnownStateEvent,
     startedAt,
@@ -232,7 +267,7 @@ export function runServeCli(args: readonly string[] = []): void {
     routes: {
       "GET /debug": createDashboardRoute(),
       "POST /api/hook/claude": createHookRoute(
-        makeHookDeps(db, accountId, () => watcher.check()),
+        makeHookDeps(db, accountId, () => watcher.check(), focusControl),
       ),
       "GET /api/usage": createUsageRoute(db, accountId),
       ...createQuotaHistoryRoutes(db, accountId),
@@ -289,15 +324,7 @@ export function runServeCli(args: readonly string[] = []): void {
       }),
       ...createSettingsRoutes({
         get: () => settings,
-        save: (next) => {
-          writeSettings(next);
-          settings = next;
-          // La mascota y el dashboard las aplican en vivo, sin reiniciar.
-          broadcaster.broadcast({ event: "settings", data: next });
-          // Otro foco es otro estado: el snapshot sale ya, sin esperar a un
-          // hook ni al temporizador del watcher.
-          watcher.check();
-        },
+        save: saveSettings,
       }),
       ...createMediaRoutes({
         control: createMediaControl(),

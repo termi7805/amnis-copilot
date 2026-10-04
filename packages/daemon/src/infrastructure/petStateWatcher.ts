@@ -32,6 +32,9 @@ export interface PetStateWatcherDeps {
   /** `HEAD` corto del repo — solo se llama en `pushing` (commitHashFrom). */
   readCommitHash(project: string): string | null;
   broadcast(snapshot: PetSnapshot): void;
+  /** Se llama solo desde el temporizador, no en cada `check()`: suelta un
+   * foco cuya sesión se quedó inactiva o cuyo worktree ya no existe (#110). */
+  reconcileFocus?(): void;
   intervalMs?: number;
 }
 
@@ -116,7 +119,12 @@ export function startPetStateWatcher(
   }
 
   check();
-  const timer = setInterval(() => check(), deps.intervalMs ?? 30_000);
+  const timer = setInterval(() => {
+    // Antes de `check()`: si suelta el foco, `setFocus` ya recalcula, y el
+    // `check()` siguiente no emite nada de más.
+    deps.reconcileFocus?.();
+    check();
+  }, deps.intervalMs ?? 30_000);
   timer.unref();
 
   return {

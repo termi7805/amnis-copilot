@@ -9,6 +9,7 @@ import {
   insertHookEvent,
   lastKnownStateEvent,
   recentSessions,
+  sessionStatus,
 } from "../src/infrastructure/persistence/hookEvents.ts";
 
 const AUTO: PetFocus = { kind: "auto" };
@@ -323,4 +324,48 @@ test("la racha (stateEnteredAt) se calcula solo con las filas del foco", () => {
     lastKnownStateEvent(db, accountId, AUTO)?.stateEnteredAt,
     "2026-01-01T00:02:00.000Z",
   );
+});
+
+test("sessionStatus: viva, cleared tras un clear, ended tras otro SessionEnd o por inactividad", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const ev = (
+    ts: string,
+    sessionId: string,
+    hook: string,
+    reason: string | null = null,
+  ) =>
+    insertHookEvent(db, {
+      accountId,
+      provider: "anthropic",
+      ts,
+      hook,
+      toolName: null,
+      sessionId,
+      project: null,
+      sessionReason: reason,
+      repoRoot: null,
+      worktree: null,
+      derivedState: "unknown",
+    });
+  const now = new Date("2026-01-01T01:00:00.000Z");
+  const recent = "2026-01-01T00:59:00.000Z";
+  const old = "2026-01-01T00:00:00.000Z";
+  const status = (id: string) => sessionStatus(db, accountId, id, now);
+
+  ev(recent, "viva", "PreToolUse");
+  ev(recent, "clear", "SessionEnd", "clear");
+  ev(recent, "salida", "SessionEnd", "prompt_input_exit");
+  ev(old, "inactiva", "PreToolUse");
+  ev(old, "clear-viejo", "SessionEnd", "clear");
+  ev("2026-01-01T00:58:00.000Z", "resume", "SessionEnd", "prompt_input_exit");
+  ev(recent, "resume", "SessionStart", "resume");
+
+  assert.equal(status("viva"), "alive");
+  assert.equal(status("clear"), "cleared");
+  assert.equal(status("salida"), "ended");
+  assert.equal(status("inactiva"), "ended");
+  assert.equal(status("clear-viejo"), "ended");
+  assert.equal(status("resume"), "alive");
+  assert.equal(status("no-existe"), "ended");
 });

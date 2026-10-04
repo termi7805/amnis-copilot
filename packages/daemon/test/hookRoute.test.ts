@@ -26,6 +26,9 @@ async function withHookServer(
       };
     },
     resolveCheckout: (cwd) => ({ repoRoot: cwd, worktree: cwd }),
+    focus: () => ({ kind: "auto" }),
+    focusFacts: () => ({ session: "alive", worktreeExists: true }),
+    setFocus: () => {},
     deriveState: () => null,
     insertHookEvent: (event) => inserted.push(event),
   });

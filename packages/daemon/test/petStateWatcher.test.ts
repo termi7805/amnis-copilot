@@ -309,3 +309,27 @@ test("lastKnownStateEvent recibe el foco vigente", () => {
   assert.deepEqual(seen, [focus]);
   watcher.stop();
 });
+
+test("el temporizador reconcilia el foco; check() a mano no", async () => {
+  let reconciled = 0;
+  const watcher = startPetStateWatcher({
+    focus: () => ({ kind: "auto" }),
+    lastKnownStateEvent: () => null,
+    startedAt: STARTED_AT,
+    getCachedFatigue: () => 0,
+    getCachedExhausted: () => false,
+    getCachedMedia: () => null,
+    readCommitHash: () => null,
+    broadcast: () => 0,
+    reconcileFocus: () => {
+      reconciled++;
+    },
+    intervalMs: 10,
+  });
+
+  watcher.check();
+  assert.equal(reconciled, 0);
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.ok(reconciled >= 1);
+  watcher.stop();
+});

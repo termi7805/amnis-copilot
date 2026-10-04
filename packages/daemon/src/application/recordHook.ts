@@ -1,4 +1,5 @@
-import type { NormalizedHookEvent, PetState } from "@amnis/shared";
+import type { NormalizedHookEvent, PetFocus, PetState } from "@amnis/shared";
+import { type FocusFacts, focusAfter } from "../domain/petFocus.ts";
 
 export interface HookEventInput {
   provider: string;
@@ -26,6 +27,12 @@ export interface RecordHookDeps {
   /** Repo y worktree de un `cwd`; con caché, no lanza `git` cada vez. */
   resolveCheckout(cwd: string): { repoRoot: string; worktree: string };
   insertHookEvent(event: HookEventInput): void;
+  /** El foco vigente y los hechos para decidir si sigue valiendo (#110). */
+  focus(): PetFocus;
+  focusFacts(focus: PetFocus): FocusFacts;
+  /** Cambia el foco por el mismo camino que un `PUT /api/settings`: guarda,
+   * avisa por SSE y recalcula el estado. */
+  setFocus(focus: PetFocus): void;
 }
 
 /**
@@ -54,6 +61,21 @@ export function recordHook(
     worktree: checkout?.worktree ?? null,
     derivedState: deps.deriveState(event) ?? "unknown",
   });
+
+  if (event.hook === "SessionStart" || event.hook === "SessionEnd") {
+    const focus = deps.focus();
+    const next = focusAfter(
+      focus,
+      {
+        hook: event.hook,
+        sessionId: event.sessionId,
+        sessionReason: event.sessionReason,
+        worktree: checkout?.worktree ?? null,
+      },
+      deps.focusFacts(focus),
+    );
+    if (JSON.stringify(next) !== JSON.stringify(focus)) deps.setFocus(next);
+  }
 
   return event;
 }

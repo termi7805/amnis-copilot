@@ -1,5 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { PetFocus } from "@amnis/shared";
+import type { SessionStatus } from "../../domain/petFocus.ts";
+import { sleepAfter } from "../../domain/petState.ts";
 
 export interface HookEventRecord {
   accountId: number;
@@ -252,4 +254,31 @@ export function recentSessions(
     });
   }
   return out;
+}
+
+/**
+ * Cómo está una sesión según su último hook (#110). `ended` si no hay hooks,
+ * si lleva más inactiva que la ventana de `alive` (un terminal matado no
+ * manda `SessionEnd`) o si su último hook es un `SessionEnd` que no es de un
+ * `/clear`; ese es `cleared`. Cualquier hook posterior (`--resume`) la
+ * devuelve a `alive`.
+ */
+export function sessionStatus(
+  db: DatabaseSync,
+  accountId: number,
+  sessionId: string,
+  now: Date,
+): SessionStatus {
+  const last = db
+    .prepare(`
+      SELECT ts, hook, session_reason FROM hook_events
+      WHERE account_id = ? AND session_id = ?
+      ORDER BY ts DESC LIMIT 1
+    `)
+    .get(accountId, sessionId) as
+    | { ts: string; hook: string; session_reason: string | null }
+    | undefined;
+  if (!last || sleepAfter(new Date(last.ts), now)) return "ended";
+  if (last.hook !== "SessionEnd") return "alive";
+  return last.session_reason === "clear" ? "cleared" : "ended";
 }
