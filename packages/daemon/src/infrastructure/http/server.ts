@@ -45,10 +45,13 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
  * entre otra *web*: cualquier página abierta en el navegador puede mandar un
  * POST a 127.0.0.1, y con DNS rebinding hasta leer la respuesta. Devuelve el
  * motivo del rechazo, o `null` si la petición pasa.
- * - `Host` tiene que ser el del daemon: corta el DNS rebinding, donde el
- *   navegador manda el dominio del atacante.
- * - `Origin`, si viene, tiene que ser el del daemon. Sin él (curl del hook,
- *   CLI) se acepta: un navegador siempre lo manda en un POST cross-origin.
+ * - `Host` tiene que ser el del daemon, también en las lecturas (#135): corta
+ *   el DNS rebinding, donde el navegador manda el dominio del atacante y la
+ *   política de mismo origen le deja leer `/api/sessions` o `/api/usage`.
+ * - `Origin`, si viene, tiene que ser el del daemon, solo en escrituras. Sin él
+ *   (curl del hook, CLI) se acepta: un navegador siempre lo manda en un POST
+ *   cross-origin. En un GET cross-origin el navegador no deja leer la
+ *   respuesta sin cabeceras CORS, que el daemon no manda.
  */
 export function checkOrigin(
   req: IncomingMessage,
@@ -58,6 +61,7 @@ export function checkOrigin(
   if (host === undefined || !allowed.hosts.has(host)) {
     return `Host no permitido (${host ?? "ausente"}).`;
   }
+  if (req.method === "GET" || req.method === "HEAD") return null;
   const origin = req.headers.origin;
   if (origin !== undefined && !allowed.origins.has(origin)) {
     return `Origin no permitido (${origin}).`;
@@ -96,12 +100,10 @@ export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
 
     const method = req.method ?? "GET";
     // Antes de buscar ruta: a un origen ajeno no se le dice qué rutas existen.
-    if (method !== "GET" && method !== "HEAD") {
-      const reason = checkOrigin(req, allowed);
-      if (reason !== null) {
-        sendJson(res, 403, { error: `Origen no permitido: ${reason}` });
-        return;
-      }
+    const reason = checkOrigin(req, allowed);
+    if (reason !== null) {
+      sendJson(res, 403, { error: `Origen no permitido: ${reason}` });
+      return;
     }
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     const ctx: RouteContext = { req, res, url };

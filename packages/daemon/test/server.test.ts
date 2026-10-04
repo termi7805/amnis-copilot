@@ -332,6 +332,31 @@ test("las lecturas (GET) no pasan por la comprobación de origen", async () => {
   });
 });
 
+test("una lectura con Host ajeno da 403 (DNS rebinding, #135)", async () => {
+  await withWriteServer(undefined, async (send, port) => {
+    const response = await send({
+      method: "GET",
+      path: "/api/lee",
+      headers: { Host: `evil.example:${port}` },
+    });
+    assert.equal(response.status, 403);
+    assert.match(JSON.parse(response.body).error, /Host/);
+  });
+});
+
+test("una lectura con el Host del daemon pasa, por IP y por localhost", async () => {
+  await withWriteServer(undefined, async (send, port) => {
+    for (const host of [`127.0.0.1:${port}`, `localhost:${port}`]) {
+      const response = await send({
+        method: "GET",
+        path: "/api/lee",
+        headers: { Host: host },
+      });
+      assert.equal(response.status, 200, host);
+    }
+  });
+});
+
 test("allowedOrigins deriva hosts y orígenes del puerto", () => {
   const allowed = allowedOrigins(4747, "http://localhost:5173");
   assert.deepEqual([...allowed.hosts].sort(), [
