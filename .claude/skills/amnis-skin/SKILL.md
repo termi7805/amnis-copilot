@@ -27,6 +27,15 @@ Puede dibujar Claude o la persona, y se puede partir de cero o de algo ya hecho.
    (el daemon vigila la carpeta: cada cambio se ve al momento). Si trabajas dentro del repo de
    Amnis con `pnpm dev`, `/lab` pinta la skin en los 12 estados a la vez, con selector de fatiga.
    Si tienes navegador (Claude in Chrome), míralo tú; si no, pide a la persona que te cuente.
+   Si ya hay un Amnis instalado ocupando el puerto 4747 (o es una versión sin skins), lanza el
+   daemon del repo aparte y apunta Vite a él con el mismo `AMNIS_PORT`:
+
+   ```bash
+   # AMNIS_DIR propio con `skins` enlazado a ~/.amnis/skins; CLAUDE_CONFIG_DIR vacío: no sondea Anthropic
+   AMNIS_DIR=<tmp>/amnis AMNIS_PORT=4748 CLAUDE_CONFIG_DIR=<tmp>/vacio \
+     AMNIS_DEV_ORIGIN=http://localhost:5173 node packages/daemon/src/cli.ts serve
+   AMNIS_PORT=4748 pnpm --filter web dev
+   ```
 4. **Un estado a la vez, validando cada paso.** No escribas los 12 y valides al final.
 
 ## 0. Preparar
@@ -150,7 +159,11 @@ grande que la pantalla**, con `clip: [x, y, ancho, alto]` sobre la pantalla y un
 **Cabeza y música.** Si la skin quiere cascos y pantalla «sonando» cuando suena música, la cabeza va
 en su capa con `role: "head"`, y **`anchor` es obligatorio**: el centro de la cara, donde se centran
 cascos y pantalla (en BIT, el centro de su pantalla). `scale` ≈ ancho de la cabeza del personaje / 62
-(la cabeza de BIT mide 62 px de ancho; 1 = igual). Con `pivot` la cabeza cabecea girando en torno a
+(la cabeza de BIT mide 62 px de ancho; 1 = igual). Para afinarlo: los cascos quedan a ±40·`scale`
+px de `anchor` en horizontal, así que `scale` = media distancia entre las orejas / 40 los pone sobre
+ellas; la pantalla «sonando» mide 54×40·`scale` y tapa la cara mientras se ve la canción. Si en un
+estado el personaje se dibuja a otra escala o en otra posición, `anchor`, `pivot` y `scale` de ese
+estado se recalculan con la misma transformación. Con `pivot` la cabeza cabecea girando en torno a
 él (el cuello); sin él, en torno a `anchor`. Como mucho **una** capa `head` por estado. Sin capa
 `head` un estado funciona igual, pero sin cascos ni pantalla (conserva notas y color de la música).
 `waiting` y `limited` no llevan capa de música, como en BIT.
@@ -159,7 +172,8 @@ cascos y pantalla (en BIT, el centro de su pantalla). `scale` ≈ ancho de la ca
 `······`) y `resetsCountdown` (para `limited`). Eres tú quien decide `at` (línea base, esquina
 inferior izquierda del texto), `size` (px del viewBox; el hash son 7 caracteres ≈ 4·`size` px de
 ancho en monoespaciada) y `color` (solo hex). Colócalos sobre algo de fondo liso con contraste:
-caja, cartel, pantalla.
+caja, cartel, pantalla. Si ese fondo se mueve, da a la capa de texto la misma `anim` y el mismo
+`pivot` que a su imagen: si no, el texto se queda quieto y se despega.
 
 **Qué evitar.** `<script>` y manejadores `onclick`; `<foreignObject>`; `<image href="fichero.png">` o
 cualquier URL externa (incrusta con `data:`); `@import`; `<text>` con fuentes (pásalo a trazos);

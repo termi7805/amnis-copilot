@@ -27,7 +27,10 @@ export default defineConfig({
       // suyo, #88) y deja el `Origin` del navegador, que el daemon admite
       // vía AMNIS_DEV_ORIGIN. No reescribir `Origin` aquí: abriría la
       // escritura a cualquier web que llegue a este dev server.
-      "/api": { target: "http://127.0.0.1:4747", changeOrigin: true },
+      "/api": {
+        target: `http://127.0.0.1:${process.env.AMNIS_PORT ?? 4747}`,
+        changeOrigin: true,
+      },
     },
   },
   test: {
