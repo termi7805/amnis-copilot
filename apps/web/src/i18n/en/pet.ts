@@ -43,6 +43,9 @@ export const pet: Messages<typeof es> = {
     downloadUpdate: "Download v{{version}}",
   },
   ring: {
+    weeklyScope: "7d · {{name}}",
+    sessionScope: "5h · {{name}}",
+    otherLimit: "Other limit",
     noData: "no data",
     noEndpointData: "no endpoint data",
     estimated: "estimated",

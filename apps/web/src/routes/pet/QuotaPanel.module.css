@@ -67,16 +67,21 @@
 }
 
 .rings {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .ringCell {
-  flex: 1;
+  min-width: 0;
   padding: 14px 12px;
 }
 
-.ringCell + .ringCell {
+.ringCell:nth-child(even) {
   border-left: 1px solid var(--line);
+}
+
+.ringCell:nth-child(n + 3) {
+  border-top: 1px solid var(--line);
 }
 
 .error {

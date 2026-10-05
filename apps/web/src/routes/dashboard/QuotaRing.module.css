@@ -70,6 +70,14 @@
 .ring[data-layout="row"] .readout {
   align-items: flex-start;
   text-align: left;
+  min-width: 0;
+}
+
+.ring[data-layout="row"] .label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Jerarquía visual (5h manda, 7d acompaña) sin tocar el dato. */

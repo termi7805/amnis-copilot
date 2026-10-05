@@ -1,6 +1,13 @@
 import { msg, type PetSnapshot, type QuotaSnapshot } from "@amnis/shared";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import i18n from "../../i18n/index.ts";
 import { QuotaPanel } from "./QuotaPanel.tsx";
 
 const NOW = new Date("2026-01-01T00:00:00Z");
@@ -172,6 +179,74 @@ describe("QuotaPanel", () => {
     );
 
     expect(screen.getAllByTestId("quota-value")).toHaveLength(3);
+  });
+
+  const withLimit = (
+    limit: Partial<NonNullable<QuotaSnapshot["authoritative"]>["limits"][0]>,
+  ): QuotaSnapshot => {
+    const authoritative = baseQuota.authoritative;
+    if (!authoritative) throw new Error("baseQuota.authoritative no existe");
+    return {
+      ...baseQuota,
+      authoritative: {
+        ...authoritative,
+        limits: [
+          {
+            kind: "weekly_fable",
+            group: "weekly",
+            scope: "fable",
+            utilization: 7,
+            resetsAt: null,
+            severity: "normal",
+            isActive: true,
+            label: "weekly_fable · fable",
+            ...limit,
+          },
+        ],
+      },
+    };
+  };
+
+  it("el límite de Fable se lee traducido, sin el kind crudo de la API", async () => {
+    const quota = withLimit({});
+    const { container } = render(
+      <QuotaPanel
+        pet={basePet}
+        status="connected"
+        quotas={[quota]}
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByText("7d · Fable")).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/weekly_|_/);
+
+    await act(async () => {
+      await i18n.changeLanguage("en");
+    });
+    expect(screen.getByText("7d · Fable")).toBeInTheDocument();
+    await act(async () => {
+      await i18n.changeLanguage("es");
+    });
+  });
+
+  it("un límite sin scope no enseña su kind", () => {
+    const quota = withLimit({
+      kind: "weekly_oauth_apps",
+      scope: null,
+      label: "weekly_oauth_apps",
+    });
+    const { container } = render(
+      <QuotaPanel
+        pet={basePet}
+        status="connected"
+        quotas={[quota]}
+        now={NOW}
+      />,
+    );
+
+    expect(screen.getByText("Otro límite")).toBeInTheDocument();
+    expect(container.textContent).not.toContain("weekly_oauth_apps");
   });
 
   it("con status offline, pinta la escena de 'sin conexión'", () => {

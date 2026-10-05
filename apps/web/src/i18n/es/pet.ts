@@ -42,6 +42,9 @@ export const pet = {
     downloadUpdate: "Descargar v{{version}}",
   },
   ring: {
+    weeklyScope: "7d · {{name}}",
+    sessionScope: "5h · {{name}}",
+    otherLimit: "Otro límite",
     noData: "sin dato",
     noEndpointData: "sin dato del endpoint",
     estimated: "estimado",

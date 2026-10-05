@@ -2,8 +2,10 @@ import type {
   MusicPrefs,
   PetSnapshot,
   ProviderId,
+  QuotaLimit,
   QuotaSnapshot,
 } from "@amnis/shared";
+import type { TFunction } from "i18next";
 import { useEffect, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { postAction } from "../../api/actions.ts";
@@ -11,6 +13,7 @@ import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { daemonText, dateFormat } from "../../i18n/index.ts";
 import { formatElapsed, formatUntil } from "../../lib/countdown.ts";
 import { fiveHourExhaustion, fiveHourWindow } from "../../lib/fiveHour.ts";
+import { scopeTitle } from "../../lib/nowCards.ts";
 import { extraLimits } from "../../lib/quotaLimits.ts";
 import { QuotaRing } from "../dashboard/QuotaRing.tsx";
 import { ActivityRow } from "./ActivityRow.tsx";
@@ -25,6 +28,15 @@ const PROVIDER_LABEL: Record<ProviderId, string> = {
 };
 
 const RING_SIZE = 54;
+
+/** `limit.label` es un identificador de la API: la etiqueta sale del `scope`. */
+function extraLimitLabel(limit: QuotaLimit, t: TFunction): string {
+  if (limit.scope === null) return t("pet.ring.otherLimit");
+  const name = scopeTitle(limit.scope);
+  if (limit.group === "weekly") return t("pet.ring.weeklyScope", { name });
+  if (limit.group === "session") return t("pet.ring.sessionScope", { name });
+  return name;
+}
 
 const hhmm = (date: Date) =>
   dateFormat({ hour: "2-digit", minute: "2-digit" }).format(date);
@@ -207,7 +219,7 @@ export function QuotaPanel({
                   className={styles.ringCell}
                 >
                   <QuotaRing
-                    label={limit.label}
+                    label={extraLimitLabel(limit, t)}
                     authoritative={limit}
                     estimated={null}
                     now={now}
