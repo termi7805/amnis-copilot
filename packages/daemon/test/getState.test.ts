@@ -394,8 +394,9 @@ function live(
   };
 }
 
-test("othersActiveFrom: en auto no hay otras, el foco ya las mira a todas", () => {
+test("othersActiveFrom: en auto y all no hay otras, el foco ya las mira a todas", () => {
   assert.equal(othersActiveFrom({ kind: "auto" }, [live("A")], NOW), 0);
+  assert.equal(othersActiveFrom({ kind: "all" }, [live("A")], NOW), 0);
 });
 
 test("othersActiveFrom: cuenta las vivas que el foco deja fuera, sea sesión, worktree o repo", () => {

@@ -45,7 +45,7 @@ export interface PetSnapshot {
   /** A qué mira la mascota: el foco con el que se calculó este estado. */
   focus: PetFocus;
   /** Sesiones vivas fuera del foco (#112): lo que `state` ya no cuenta. Siempre
-   * 0 con el foco en `auto`, que mira a todas. */
+   * 0 con el foco en `auto` o `all`, que miran a todas. */
   othersActive: number;
 }
 
@@ -289,6 +289,7 @@ export const DEFAULT_MUSIC_PREFS: MusicPrefs = {
  */
 export type PetFocus =
   | { kind: "auto" }
+  | { kind: "all" }
   | { kind: "repo"; repoRoot: string }
   | { kind: "worktree"; worktree: string }
   | { kind: "session"; sessionId: string; worktree: string };

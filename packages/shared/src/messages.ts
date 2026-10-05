@@ -102,7 +102,7 @@ export const DAEMON_MESSAGES_ES = {
   "validation.oneOf": "uno de: {{values}}",
   "settings.invalidPlan": "plan debe ser null o uno de: {{allowed}}.",
   "settings.invalidPetFocus":
-    'petFocus debe ser {"kind":"auto"}, {"kind":"repo","repoRoot"}, {"kind":"worktree","worktree"} o {"kind":"session","sessionId","worktree"}, con textos no vacíos.',
+    'petFocus debe ser {"kind":"auto"}, {"kind":"all"}, {"kind":"repo","repoRoot"}, {"kind":"worktree","worktree"} o {"kind":"session","sessionId","worktree"}, con textos no vacíos.',
   "settings.invalidTheme": "theme debe ser uno de: {{allowed}}.",
   "settings.invalidLocale": "locale debe ser uno de: {{allowed}}.",
   "settings.invalidPetScale": "petScale debe ser uno de: {{allowed}}.",
@@ -227,7 +227,7 @@ export const DAEMON_MESSAGES_EN: Record<MessageKey, string> = {
   "validation.oneOf": "one of: {{values}}",
   "settings.invalidPlan": "plan must be null or one of: {{allowed}}.",
   "settings.invalidPetFocus":
-    'petFocus must be {"kind":"auto"}, {"kind":"repo","repoRoot"}, {"kind":"worktree","worktree"} or {"kind":"session","sessionId","worktree"}, with non-empty strings.',
+    'petFocus must be {"kind":"auto"}, {"kind":"all"}, {"kind":"repo","repoRoot"}, {"kind":"worktree","worktree"} or {"kind":"session","sessionId","worktree"}, with non-empty strings.',
   "settings.invalidTheme": "theme must be one of: {{allowed}}.",
   "settings.invalidLocale": "locale must be one of: {{allowed}}.",
   "settings.invalidPetScale": "petScale must be one of: {{allowed}}.",

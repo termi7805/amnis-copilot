@@ -51,6 +51,7 @@ export function insertHookEvent(
 function focusFilter(focus: PetFocus): { clause: string; params: string[] } {
   switch (focus.kind) {
     case "auto":
+    case "all":
       return { clause: "", params: [] };
     case "repo":
       return { clause: " AND repo_root = ?", params: [focus.repoRoot] };

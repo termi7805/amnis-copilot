@@ -332,6 +332,7 @@ test("lastKnownStateEvent filtra por repo, worktree y sesión; auto mira todo", 
     lastKnownStateEvent(db, accountId, focus)?.derivedState ?? null;
 
   assert.equal(last(AUTO), "researching");
+  assert.equal(last({ kind: "all" }), "researching");
   assert.equal(last({ kind: "repo", repoRoot: "/r" }), "testing");
   assert.equal(last({ kind: "worktree", worktree: "/r" }), "coding");
   assert.equal(

@@ -11,6 +11,7 @@ const session: PetFocus = {
 describe("focusLabel", () => {
   it("nombra cada tipo de foco", () => {
     expect(focusLabel({ kind: "auto" })).toBe("Automático");
+    expect(focusLabel({ kind: "all" })).toBe("Todas");
     expect(focusLabel({ kind: "repo", repoRoot: "/home/x/repo" })).toBe("repo");
     expect(focusLabel({ kind: "worktree", worktree: "/home/x/repo-1/" })).toBe(
       "repo-1",
@@ -22,6 +23,7 @@ describe("focusLabel", () => {
 describe("sameFocus", () => {
   it("compara por el identificador de cada tipo", () => {
     expect(sameFocus({ kind: "auto" }, { kind: "auto" })).toBe(true);
+    expect(sameFocus({ kind: "all" }, { kind: "all" })).toBe(true);
     expect(
       sameFocus(
         { kind: "worktree", worktree: "/a" },
@@ -45,6 +47,7 @@ describe("sameFocus", () => {
       ),
     ).toBe(false);
     expect(sameFocus(session, { kind: "auto" })).toBe(false);
+    expect(sameFocus({ kind: "all" }, { kind: "auto" })).toBe(false);
   });
 });
 

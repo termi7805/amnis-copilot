@@ -11,6 +11,8 @@ export function sameFocus(a: PetFocus, b: PetFocus): boolean {
   switch (a.kind) {
     case "auto":
       return b.kind === "auto";
+    case "all":
+      return b.kind === "all";
     case "repo":
       return b.kind === "repo" && a.repoRoot === b.repoRoot;
     case "worktree":
@@ -28,6 +30,8 @@ export function focusLabel(focus: PetFocus): string {
   switch (focus.kind) {
     case "auto":
       return i18n.t("focus.auto");
+    case "all":
+      return i18n.t("focus.all");
     case "repo":
       return baseName(focus.repoRoot);
     case "worktree":

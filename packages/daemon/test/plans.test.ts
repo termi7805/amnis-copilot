@@ -105,9 +105,10 @@ const SESSION_FOCUS = {
   worktree: "/home/x/repo-1",
 } as const;
 
-test("validateSettings: acepta los cuatro tipos de petFocus", () => {
+test("validateSettings: acepta los cinco tipos de petFocus", () => {
   for (const petFocus of [
     { kind: "auto" },
+    { kind: "all" },
     { kind: "repo", repoRoot: "/home/x/repo" },
     { kind: "worktree", worktree: "/home/x/repo-1" },
     SESSION_FOCUS,
@@ -130,6 +131,7 @@ test("validateSettings: un petFocus malformado da error de campo", () => {
     { kind: "repo", repoRoot: 3 },
     { kind: "repo", repo_root: "/x" },
     { kind: "auto", extra: 1 },
+    { kind: "all", repoRoot: "/r" },
     { kind: "session", sessionId: "abc" },
     { kind: "worktree", worktree: "/x", repoRoot: "/y" },
     { kind: "toString" },

@@ -20,10 +20,11 @@ function start(overrides: Partial<FocusEvent> = {}): FocusEvent {
   };
 }
 
-test("auto y repo no terminan nunca", () => {
+test("auto, all y repo no terminan nunca", () => {
   const dead: FocusFacts = { session: "ended", worktreeExists: false };
   for (const focus of [
     { kind: "auto" },
+    { kind: "all" },
     { kind: "repo", repoRoot: "/r" },
   ] as PetFocus[]) {
     assert.deepEqual(focusAfter(focus, null, dead), focus);

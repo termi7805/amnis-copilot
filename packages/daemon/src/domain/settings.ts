@@ -31,6 +31,7 @@ function isKnownPlan(v: unknown): v is string | null {
 /** Campos de texto obligatorios de cada `kind` de foco. */
 const FOCUS_FIELDS: Record<PetFocus["kind"], readonly string[]> = {
   auto: [],
+  all: [],
   repo: ["repoRoot"],
   worktree: ["worktree"],
   session: ["sessionId", "worktree"],

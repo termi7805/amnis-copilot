@@ -187,3 +187,11 @@ test("un petSkin guardado sobrevive a 'reiniciar'; uno inválido o ausente cae a
     assert.equal(readSettings(path).petSkin, null);
   });
 });
+
+test("un petFocus all sobrevive a reiniciar (releer del disco)", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    writeSettings({ ...DEFAULT_SETTINGS, petFocus: { kind: "all" } }, path);
+    assert.deepEqual(readSettings(path).petFocus, { kind: "all" });
+  });
+});

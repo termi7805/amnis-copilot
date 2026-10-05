@@ -29,7 +29,7 @@ export interface FocusEvent {
  * - sesión: termina con su `SessionEnd` o por inactividad; un `/clear` la
  *   sigue en la conversación nueva (otro `session_id`, mismo worktree);
  * - worktree: termina cuando su directorio desaparece;
- * - repo: no termina nunca.
+ * - repo y all: no terminan nunca.
  */
 export function focusAfter(
   focus: PetFocus,
@@ -39,7 +39,9 @@ export function focusAfter(
   if (focus.kind === "worktree") {
     return facts.worktreeExists ? focus : { kind: "auto" };
   }
-  if (focus.kind !== "session") return focus;
+  if (focus.kind === "auto" || focus.kind === "all" || focus.kind === "repo") {
+    return focus;
+  }
 
   // Solo el traspaso desde una sesión que acaba de hacer `/clear`: el
   // `/clear` de otra sesión del mismo worktree no debe robar el foco.

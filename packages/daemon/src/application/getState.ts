@@ -147,7 +147,8 @@ export function petPhaseFrom(
 
 /**
  * Sesiones vivas que el foco deja fuera (#112). En `auto` el foco ya las mira
- * a todas, así que no hay "otras". Una sesión sin repo no casa con un foco de
+ * a todas (`all` se comporta como `auto` hasta que exista el snapshot por
+ * sesión), así que no hay "otras". Una sesión sin repo no casa con un foco de
  * repo o worktree: igual que en `focusFilter`, queda fuera de él.
  */
 export function othersActiveFrom(
@@ -155,7 +156,7 @@ export function othersActiveFrom(
   sessions: readonly LiveSessionCandidate[],
   now: Date,
 ): number {
-  if (focus.kind === "auto") return 0;
+  if (focus.kind === "auto" || focus.kind === "all") return 0;
   const inFocus = (s: LiveSessionCandidate): boolean => {
     switch (focus.kind) {
       case "repo":
@@ -177,7 +178,7 @@ export function countOthersActive(
   focus: PetFocus,
   now: Date,
 ): number {
-  if (focus.kind === "auto") return 0;
+  if (focus.kind === "auto" || focus.kind === "all") return 0;
   const since = new Date(now.getTime() - SLEEP_AFTER_MS);
   return othersActiveFrom(focus, deps.liveSessionCandidates(since), now);
 }
