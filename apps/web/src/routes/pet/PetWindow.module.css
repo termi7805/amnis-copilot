@@ -32,10 +32,12 @@
 
 /* Tamaño fijo del bicho en las dos vistas (#42): la ventana nativa es
    la que crece/encoge vía setSize(), no el propio Pet. Apaisado
-   (150×110) porque la escena de BIT lo es (#47). */
+   (150×110 a escala 1) porque la escena de BIT lo es (#47). El tamaño sale
+   de la escala elegida en Ajustes: PetWindow.tsx pasa las variables, las
+   mismas cifras que le pide a la ventana nativa. */
 .petArea {
-  width: 150px;
-  height: 110px;
+  width: var(--pet-w, 150px);
+  height: var(--pet-h, 110px);
   flex-shrink: 0;
 }
 

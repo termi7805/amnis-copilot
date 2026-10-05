@@ -212,3 +212,27 @@ test("PUT con un locale conocido: guarda y avisa por SSE", async () => {
     assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
   });
 });
+
+test("PUT con una escala de mascota desconocida: 400 con la lista, sin guardar", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ petScale: 2 }));
+    assert.equal(res.status, 400);
+    const body = (await res.json()) as ApiError;
+    assert.equal(body.field, "petScale");
+    assert.equal(body.error.key, "settings.invalidPetScale");
+    assert.match(formatMessage("es", body.error), /0\.75, 1, 1\.3, 1\.6/);
+    assert.deepEqual(state.saves, []);
+    assert.deepEqual(state.events, []);
+  });
+});
+
+test("PUT con una escala de mascota conocida: guarda y avisa por SSE", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ petScale: 1.6 }));
+    assert.equal(res.status, 200);
+    const expected = { ...DEFAULT_SETTINGS, petScale: 1.6 };
+    assert.deepEqual(await res.json(), expected);
+    assert.deepEqual(state.saves, [expected]);
+    assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
+  });
+});

@@ -56,6 +56,8 @@ export const settings = {
     theme: "Tema",
     lessThemes: "Menos temas",
     moreThemes: "Más temas ({{count}})",
+    petSize: "Tamaño de la mascota",
+    petSizeHint: "El tamaño de BIT plegado en el escritorio.",
     groups: {
       system: "Sistema",
       light: "Claros",

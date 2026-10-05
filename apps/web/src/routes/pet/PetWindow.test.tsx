@@ -281,6 +281,25 @@ describe("PetWindow", () => {
     expect(setUpdateMenu).toHaveBeenLastCalledWith(null);
   });
 
+  it("plegada, la ventana y la escena siguen la escala de los ajustes", () => {
+    const { container } = render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", fakeState));
+    expect(resizeWindow).toHaveBeenLastCalledWith(150, 110);
+
+    act(() => source?.emit("settings", { ...DEFAULT_SETTINGS, petScale: 1.6 }));
+    expect(resizeWindow).toHaveBeenLastCalledWith(240, 176);
+    expect(
+      container.querySelector<HTMLElement>("[style*='--pet-w']")?.style.cssText,
+    ).toContain("--pet-w: 240px");
+
+    act(() =>
+      source?.emit("settings", { ...DEFAULT_SETTINGS, petScale: 0.75 }),
+    );
+    expect(resizeWindow).toHaveBeenLastCalledWith(113, 83);
+  });
+
   it("el estado desplegado sobrevive a un remontaje vía localStorage", () => {
     localStorage.setItem(PANEL_KEY, "quota");
     render(<PetWindow />);

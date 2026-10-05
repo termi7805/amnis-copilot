@@ -339,6 +339,15 @@ export function isLocaleId(v: unknown): v is LocaleId {
   return LOCALES.some((l) => l === v);
 }
 
+/** Escalas del tamaño plegado de la mascota sobre 150×110. Rust repite la lista en `main.rs`. */
+export const PET_SCALES = [0.75, 1, 1.3, 1.6] as const;
+
+export type PetScale = (typeof PET_SCALES)[number];
+
+export function isPetScale(v: unknown): v is PetScale {
+  return PET_SCALES.some((s) => s === v);
+}
+
 /**
  * Todos los ajustes de `~/.amnis/settings.json`: las preferencias de la capa
  * de música, el plan elegido a mano (#84), el foco de la mascota (#108) y el
@@ -353,6 +362,8 @@ export interface AmnisSettings extends MusicPrefs {
   theme: ThemeId;
   /** Por la misma razón que `theme`: una sola elección para las dos ventanas. */
   locale: LocaleId;
+  /** Tamaño de la mascota plegada: va en el daemon porque el ajuste se hace en el navegador y se aplica en el webview. */
+  petScale: PetScale;
   /** Consultar a GitHub si hay una release más nueva (#148). */
   checkUpdates: boolean;
   /** Versión cuyo aviso se descartó (#149): en el daemon y no en `localStorage`
@@ -366,6 +377,7 @@ export const DEFAULT_SETTINGS: AmnisSettings = {
   petFocus: { kind: "auto" },
   theme: "system",
   locale: "system",
+  petScale: 1,
   checkUpdates: true,
   dismissedUpdate: null,
 };

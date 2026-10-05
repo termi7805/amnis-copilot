@@ -57,6 +57,8 @@ export const settings: Messages<typeof es> = {
     theme: "Theme",
     lessThemes: "Fewer themes",
     moreThemes: "More themes ({{count}})",
+    petSize: "Pet size",
+    petSizeHint: "The size of BIT when collapsed on the desktop.",
     groups: {
       system: "System",
       light: "Light",

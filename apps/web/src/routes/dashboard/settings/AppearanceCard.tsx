@@ -1,4 +1,4 @@
-import { THEMES, type ThemeId } from "@amnis/shared";
+import { PET_SCALES, type PetScale, THEMES, type ThemeId } from "@amnis/shared";
 import { type KeyboardEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { SaveSettingsResult } from "../../../api/settings.ts";
@@ -16,6 +16,8 @@ const BASIC: readonly ThemeId[] = ["system", "light", "dark"];
 export interface AppearanceCardProps {
   theme: ThemeId;
   onTheme: (theme: ThemeId) => Promise<SaveSettingsResult>;
+  petScale: PetScale;
+  onPetScale: (scale: PetScale) => Promise<SaveSettingsResult>;
 }
 
 /** Mitad de muestra: `data-theme` propio, así los tokens salen de theme.css. */
@@ -81,7 +83,12 @@ function Swatch({
  * tiene paleta propia y depende del escritorio, así que su muestra va partida
  * en claro y oscuro en vez de fingir un aspecto.
  */
-export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
+export function AppearanceCard({
+  theme,
+  onTheme,
+  petScale,
+  onPetScale,
+}: AppearanceCardProps) {
   const { t } = useTranslation();
   const [error, setError] = useState<string | null>(null);
   // Solo local y sin persistir: abrirla plegada en cada visita es lo que evita el desplazamiento.
@@ -93,6 +100,11 @@ export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
 
   async function choose(id: ThemeId) {
     const result = await onTheme(id);
+    setError(result.ok ? null : result.message);
+  }
+
+  async function chooseScale(scale: PetScale) {
+    const result = await onPetScale(scale);
     setError(result.ok ? null : result.message);
   }
 
@@ -187,6 +199,29 @@ export function AppearanceCard({ theme, onTheme }: AppearanceCardProps) {
           </div>
         )}
       </div>
+      <div className={styles.themeGroupLabel} id="pet-scale-label">
+        {t("settings.appearance.petSize")}
+      </div>
+      {/* biome-ignore lint/a11y/useSemanticElements: ídem LanguageCard, un conmutador segmentado */}
+      <div
+        className={styles.seg}
+        role="group"
+        aria-labelledby="pet-scale-label"
+      >
+        {PET_SCALES.map((scale) => (
+          <button
+            key={scale}
+            type="button"
+            aria-pressed={petScale === scale}
+            onClick={() => void chooseScale(scale)}
+          >
+            {Math.round(scale * 100)} %
+          </button>
+        ))}
+      </div>
+      <p className={`${styles.muted} ${styles.footnote}`}>
+        {t("settings.appearance.petSizeHint")}
+      </p>
       {error && (
         <p role="alert" className={styles.error}>
           {error}

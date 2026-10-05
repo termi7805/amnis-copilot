@@ -1,4 +1,4 @@
-import type { LocaleId, StateResponse, ThemeId } from "@amnis/shared";
+import type { LocaleId, PetScale, StateResponse, ThemeId } from "@amnis/shared";
 import { useTranslation } from "react-i18next";
 import type { HealthState } from "../../../api/health.ts";
 import {
@@ -58,7 +58,12 @@ export function SettingsView({
         </div>
         <div className={styles.side}>
           <PlanCard state={state} />
-          <AppearanceCard theme={theme} onTheme={onTheme} />
+          <AppearanceCard
+            theme={theme}
+            onTheme={onTheme}
+            petScale={state?.settings.petScale ?? 1}
+            onPetScale={(petScale: PetScale) => saveSettings({ petScale })}
+          />
           <LanguageCard locale={locale} onLocale={onLocale} />
           <DataCard rebuild={rebuild} />
           <UpdatesCard state={state} />

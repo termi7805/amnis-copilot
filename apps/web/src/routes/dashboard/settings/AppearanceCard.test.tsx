@@ -12,7 +12,14 @@ const desplegar = () =>
 
 describe("AppearanceCard", () => {
   it("pinta una muestra por tema del catálogo, agrupadas por esquema", () => {
-    render(<AppearanceCard theme="system" onTheme={ok()} />);
+    render(
+      <AppearanceCard
+        theme="system"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     desplegar();
     expect(screen.getAllByRole("radio")).toHaveLength(THEMES.length);
 
@@ -37,7 +44,14 @@ describe("AppearanceCard", () => {
   });
 
   it("solo la muestra activa está marcada", () => {
-    render(<AppearanceCard theme="nord" onTheme={ok()} />);
+    render(
+      <AppearanceCard
+        theme="nord"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     const marcadas = screen
       .getAllByRole("radio")
       .filter((r) => r.getAttribute("aria-checked") === "true");
@@ -45,7 +59,14 @@ describe("AppearanceCard", () => {
   });
 
   it("cada muestra lleva su data-theme y Sistema va partida en claro/oscuro", () => {
-    render(<AppearanceCard theme="light" onTheme={ok()} />);
+    render(
+      <AppearanceCard
+        theme="light"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     desplegar();
     const temas = (nombre: string) =>
       [
@@ -59,7 +80,14 @@ describe("AppearanceCard", () => {
 
   it("elegir una muestra llama a onTheme con su id", async () => {
     const onTheme = ok();
-    render(<AppearanceCard theme="light" onTheme={onTheme} />);
+    render(
+      <AppearanceCard
+        theme="light"
+        onTheme={onTheme}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     desplegar();
     fireEvent.click(screen.getByRole("radio", { name: "Gruvbox" }));
     expect(onTheme).toHaveBeenCalledWith("gruvbox");
@@ -71,7 +99,14 @@ describe("AppearanceCard", () => {
       .fn()
       .mockResolvedValueOnce({ ok: false, message: "No se pudo contactar" })
       .mockResolvedValueOnce({ ok: true });
-    render(<AppearanceCard theme="light" onTheme={onTheme} />);
+    render(
+      <AppearanceCard
+        theme="light"
+        onTheme={onTheme}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     desplegar();
     fireEvent.click(screen.getByRole("radio", { name: "Nord" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -83,7 +118,14 @@ describe("AppearanceCard", () => {
 
   it("las flechas pasan a la muestra siguiente y la eligen", () => {
     const onTheme = ok();
-    render(<AppearanceCard theme="system" onTheme={onTheme} />);
+    render(
+      <AppearanceCard
+        theme="system"
+        onTheme={onTheme}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     const sistema = screen.getByRole("radio", { name: "Sistema" });
     sistema.focus();
     fireEvent.keyDown(sistema, { key: "ArrowRight" });
@@ -93,7 +135,14 @@ describe("AppearanceCard", () => {
   });
 
   it("solo la muestra activa entra en el orden de tabulación", () => {
-    render(<AppearanceCard theme="nord" onTheme={ok()} />);
+    render(
+      <AppearanceCard
+        theme="nord"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     const tabulables = screen
       .getAllByRole("radio")
       .filter((r) => r.tabIndex === 0);
@@ -101,7 +150,14 @@ describe("AppearanceCard", () => {
   });
 
   it("plegada por defecto: Sistema, Claro y Oscuro y un botón para el resto", () => {
-    render(<AppearanceCard theme="system" onTheme={ok()} />);
+    render(
+      <AppearanceCard
+        theme="system"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual([
       "Sistema",
       "Claro",
@@ -117,7 +173,14 @@ describe("AppearanceCard", () => {
   });
 
   it("con un tema oculto activo, la fila plegada lo enseña marcado y tabulable", () => {
-    render(<AppearanceCard theme="nord" onTheme={ok()} />);
+    render(
+      <AppearanceCard
+        theme="nord"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     const radios = screen.getAllByRole("radio");
     expect(radios.map((r) => r.textContent)).toContain("Nord");
     expect(radios).toHaveLength(4);
@@ -134,7 +197,14 @@ describe("AppearanceCard", () => {
   });
 
   it("«Más temas» despliega el catálogo y «Menos temas» lo pliega", () => {
-    render(<AppearanceCard theme="light" onTheme={ok()} />);
+    render(
+      <AppearanceCard
+        theme="light"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     desplegar();
     expect(screen.getAllByRole("radio")).toHaveLength(THEMES.length);
     const boton = screen.getByRole("button", { name: "Menos temas" });
@@ -145,7 +215,14 @@ describe("AppearanceCard", () => {
 
   it("plegada, las flechas recorren solo las muestras visibles", () => {
     const onTheme = ok();
-    render(<AppearanceCard theme="dark" onTheme={onTheme} />);
+    render(
+      <AppearanceCard
+        theme="dark"
+        onTheme={onTheme}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     const oscuro = screen.getByRole("radio", { name: "Oscuro" });
     oscuro.focus();
     fireEvent.keyDown(oscuro, { key: "ArrowRight" });
@@ -153,10 +230,42 @@ describe("AppearanceCard", () => {
   });
 
   it("al volver a montar la tarjeta sale plegada aunque se hubiera desplegado", () => {
-    const { unmount } = render(<AppearanceCard theme="light" onTheme={ok()} />);
+    const { unmount } = render(
+      <AppearanceCard
+        theme="light"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     desplegar();
     unmount();
-    render(<AppearanceCard theme="light" onTheme={ok()} />);
+    render(
+      <AppearanceCard
+        theme="light"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={ok()}
+      />,
+    );
     expect(screen.getAllByRole("radio")).toHaveLength(3);
+  });
+
+  it("el tamaño de la mascota marca la escala recibida y guarda la elegida", () => {
+    const onPetScale = ok();
+    render(
+      <AppearanceCard
+        theme="system"
+        onTheme={ok()}
+        petScale={1}
+        onPetScale={onPetScale}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "100 %" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "130 %" }));
+    expect(onPetScale).toHaveBeenCalledWith(1.3);
   });
 });

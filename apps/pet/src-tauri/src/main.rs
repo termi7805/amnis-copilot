@@ -23,11 +23,40 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use url::Url;
 
-/// Tamaño de arranque plegado (#42): antes de que cargue el JS que decide
-/// si el panel de cuota estaba desplegado. Debe coincidir con
-/// `COLLAPSED_SIZE` de `useTauriWindow.ts` — si diverge, la ventana nace
-/// con un tamaño y salta al correcto en cuanto el JS llama a `resizeWindow`.
-const COLLAPSED_SIZE: (f64, f64) = (150.0, 110.0);
+/// Tamaño plegado a escala 1 (#42). Con la escala de los ajustes da el de
+/// arranque, antes de que cargue el JS que decide si el panel estaba
+/// desplegado. Debe coincidir con `collapsedSize` de `useTauriWindow.ts`,
+/// redondeo incluido — si diverge, la ventana nace con un tamaño y salta al
+/// correcto en cuanto el JS llama a `resizeWindow`.
+const BASE_SIZE: (f64, f64) = (150.0, 110.0);
+
+/// Escalas admitidas: la lista `PET_SCALES` de `packages/shared/src/types.ts`.
+const PET_SCALES: [f64; 4] = [0.75, 1.0, 1.3, 1.6];
+
+/// Escala de la mascota plegada (#151) según `settings.json` del daemon.
+/// Rust no tiene otro modo de saberla antes de que cargue el JS; un fichero
+/// ausente o un valor desconocido dan 1, como `sanitizeSettings`.
+fn load_pet_scale() -> f64 {
+    let dir = std::env::var_os("AMNIS_DIR")
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::var_os("USERPROFILE")
+                .or_else(|| std::env::var_os("HOME"))
+                .map(|home| PathBuf::from(home).join(".amnis"))
+        });
+    let scale = dir
+        .and_then(|dir| std::fs::read_to_string(dir.join("settings.json")).ok())
+        .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+        .and_then(|json| json.get("petScale")?.as_f64());
+    match scale {
+        Some(s) if PET_SCALES.contains(&s) => s,
+        _ => 1.0,
+    }
+}
+
+fn collapsed_size(scale: f64) -> (f64, f64) {
+    ((BASE_SIZE.0 * scale).round(), (BASE_SIZE.1 * scale).round())
+}
 
 // 500ms basta para distinguir "nada escuchando" de "está tardando": el
 // daemon en 127.0.0.1 responde en microsegundos si está vivo.
@@ -144,7 +173,7 @@ fn save_anchor(app: &AppHandle, pos: PhysicalPosition<i32>) {
 /// Coloca la ventana en el ancla guardada antes de mostrarla. Si ya no cae
 /// en ningún monitor (uno desconectado, otra resolución), se reencaja en
 /// el principal en vez de abrir la ventana fuera de la vista.
-fn restore_anchor(app: &AppHandle, window: &WebviewWindow) {
+fn restore_anchor(app: &AppHandle, window: &WebviewWindow, collapsed: (f64, f64)) {
     let Some(saved) = load_anchor(app) else {
         return;
     };
@@ -158,8 +187,8 @@ fn restore_anchor(app: &AppHandle, window: &WebviewWindow) {
     } else {
         match window.primary_monitor() {
             Ok(Some(monitor)) => {
-                let size = LogicalSize::new(COLLAPSED_SIZE.0, COLLAPSED_SIZE.1)
-                    .to_physical(monitor.scale_factor());
+                let size =
+                    LogicalSize::new(collapsed.0, collapsed.1).to_physical(monitor.scale_factor());
                 anchor::clamp(saved, size, monitor.work_area())
             }
             _ => return,
@@ -457,19 +486,20 @@ fn main() {
                     ))
             };
 
+            let collapsed = collapsed_size(load_pet_scale());
             builder = builder
                 .decorations(false)
                 .shadow(false)
                 .transparent(true)
                 .resizable(true)
                 .skip_taskbar(true)
-                .inner_size(COLLAPSED_SIZE.0, COLLAPSED_SIZE.1)
+                .inner_size(collapsed.0, collapsed.1)
                 // Oculta hasta colocarla en el ancla (#71): sin esto se ve
                 // un salto desde la posición por defecto del gestor.
                 .visible(false);
 
             let window = builder.build()?;
-            restore_anchor(app.handle(), &window);
+            restore_anchor(app.handle(), &window, collapsed);
             window.show()?;
 
             // Wayland no tiene protocolo estándar de always-on-top ni de
@@ -490,8 +520,8 @@ fn main() {
             // los `setSize()` posteriores (plegar y desplegar) respeten el
             // tamaño exacto pedido, sin tocarlo de nuevo desde el JS.
             if let Err(e) = window.set_min_size(Some(tauri::LogicalSize {
-                width: COLLAPSED_SIZE.0,
-                height: COLLAPSED_SIZE.1,
+                width: collapsed.0,
+                height: collapsed.1,
             })) {
                 log::warn!("no se pudo fijar el tamaño mínimo de la ventana: {e}");
             }

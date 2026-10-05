@@ -3,9 +3,11 @@ import {
   type DaemonMessage,
   DEFAULT_SETTINGS,
   isLocaleId,
+  isPetScale,
   isThemeId,
   LOCALES,
   msg,
+  PET_SCALES,
   type PetFocus,
   THEMES,
 } from "@amnis/shared";
@@ -73,6 +75,7 @@ export function validateSettings(
     petFocus,
     theme,
     locale,
+    petScale,
     checkUpdates,
     dismissedUpdate,
     ...rest
@@ -131,6 +134,20 @@ export function validateSettings(
     nextLocale = locale;
   }
 
+  let nextPetScale = current.petScale;
+  if ("petScale" in input) {
+    if (!isPetScale(petScale)) {
+      return {
+        ok: false,
+        field: "petScale",
+        message: msg("settings.invalidPetScale", {
+          allowed: PET_SCALES.join(", "),
+        }),
+      };
+    }
+    nextPetScale = petScale;
+  }
+
   let nextCheckUpdates = current.checkUpdates;
   if ("checkUpdates" in input) {
     if (typeof checkUpdates !== "boolean") {
@@ -166,6 +183,7 @@ export function validateSettings(
     petFocus: _petFocus,
     theme: _theme,
     locale: _locale,
+    petScale: _petScale,
     checkUpdates: _checkUpdates,
     dismissedUpdate: _dismissedUpdate,
     ...currentPrefs
@@ -180,6 +198,7 @@ export function validateSettings(
       petFocus: nextFocus,
       theme: nextTheme,
       locale: nextLocale,
+      petScale: nextPetScale,
       checkUpdates: nextCheckUpdates,
       dismissedUpdate: nextDismissed,
     },
@@ -202,6 +221,7 @@ export function sanitizeSettings(raw: unknown): AmnisSettings {
     petFocus: parsePetFocus(source.petFocus) ?? { kind: "auto" },
     theme: isThemeId(source.theme) ? source.theme : "system",
     locale: isLocaleId(source.locale) ? source.locale : "system",
+    petScale: isPetScale(source.petScale) ? source.petScale : 1,
     checkUpdates:
       typeof source.checkUpdates === "boolean" ? source.checkUpdates : true,
     dismissedUpdate: isDismissedUpdate(source.dismissedUpdate)

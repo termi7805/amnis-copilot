@@ -105,6 +105,7 @@ export const DAEMON_MESSAGES_ES = {
     'petFocus debe ser {"kind":"auto"}, {"kind":"repo","repoRoot"}, {"kind":"worktree","worktree"} o {"kind":"session","sessionId","worktree"}, con textos no vacíos.',
   "settings.invalidTheme": "theme debe ser uno de: {{allowed}}.",
   "settings.invalidLocale": "locale debe ser uno de: {{allowed}}.",
+  "settings.invalidPetScale": "petScale debe ser uno de: {{allowed}}.",
 
   "http.internal": "Error interno.",
   "http.hostNotAllowed": "Origen no permitido: Host no permitido ({{host}}).",
@@ -227,6 +228,7 @@ export const DAEMON_MESSAGES_EN: Record<MessageKey, string> = {
     'petFocus must be {"kind":"auto"}, {"kind":"repo","repoRoot"}, {"kind":"worktree","worktree"} or {"kind":"session","sessionId","worktree"}, with non-empty strings.',
   "settings.invalidTheme": "theme must be one of: {{allowed}}.",
   "settings.invalidLocale": "locale must be one of: {{allowed}}.",
+  "settings.invalidPetScale": "petScale must be one of: {{allowed}}.",
 
   "http.internal": "Internal error.",
   "http.hostNotAllowed": "Origin not allowed: Host not allowed ({{host}}).",

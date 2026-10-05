@@ -1,4 +1,4 @@
-import { pendingUpdate } from "@amnis/shared";
+import { isPetScale, type PetScale, pendingUpdate } from "@amnis/shared";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHealth } from "../../api/health.ts";
@@ -13,7 +13,7 @@ import type { PanelId } from "./PanelHeader.tsx";
 import styles from "./PetWindow.module.css";
 import { QuotaPanel } from "./QuotaPanel.tsx";
 import {
-  COLLAPSED_SIZE,
+  collapsedSize,
   EXPANDED_WIDTH,
   isTauri,
   quitApp,
@@ -31,6 +31,9 @@ const DRAG_THRESHOLD_PX = 10;
  * datos es un bug difícil de atribuir. */
 const PANEL_KEY = "amnis-pet-panel";
 const LAST_PANEL_KEY = "amnis-pet-last-panel";
+/** Solo caché de arranque de la escala: la fuente de verdad es el daemon. Sin
+ * ella la ventana encogería a 150×110 hasta que llegue el primer SSE. */
+const SCALE_KEY = "amnis-pet-scale";
 /** Preferencia anterior a #57: "1" = cuota desplegada. */
 const LEGACY_EXPANDED_KEY = "amnis-pet-quota-panel-expanded";
 
@@ -45,6 +48,11 @@ function readPanel(): Panel {
   const stored = localStorage.getItem(PANEL_KEY);
   if (stored === "none" || isOpenPanel(stored)) return stored;
   return localStorage.getItem(LEGACY_EXPANDED_KEY) === "1" ? "quota" : "none";
+}
+
+function readScale(): PetScale {
+  const stored = Number(localStorage.getItem(SCALE_KEY));
+  return isPetScale(stored) ? stored : 1;
 }
 
 function readLastPanel(): OpenPanel {
@@ -77,6 +85,14 @@ export function PetWindow() {
   const [panel, setPanel] = useState<Panel>(readPanel);
   const [lastPanel, setLastPanel] = useState<OpenPanel>(readLastPanel);
   const expanded = panel !== "none";
+  const [petScale, setPetScale] = useState<PetScale>(readScale);
+  const settingsScale = state?.settings.petScale;
+  useEffect(() => {
+    if (settingsScale === undefined) return;
+    setPetScale(settingsScale);
+    localStorage.setItem(SCALE_KEY, String(settingsScale));
+  }, [settingsScale]);
+  const collapsed = collapsedSize(petScale);
   // Con el daemon sin responder no se sabe nada de los hooks (#34, #39 ya
   // cubren ese caso); `useHealth` conserva la última respuesta, de ahí el filtro.
   const hooksMissing =
@@ -107,12 +123,12 @@ export function PetWindow() {
   useEffect(() => {
     localStorage.setItem(PANEL_KEY, panel);
     if (panel === "none") {
-      resizeWindow(COLLAPSED_SIZE.width, COLLAPSED_SIZE.height);
+      resizeWindow(collapsed.width, collapsed.height);
     } else {
       setLastPanel(panel);
       localStorage.setItem(LAST_PANEL_KEY, panel);
     }
-  }, [panel]);
+  }, [panel, collapsed.width, collapsed.height]);
 
   // Desplegada, el alto real depende de cuántos proveedores hay y de
   // si el countdown envuelve a dos líneas — una constante fija recorta
@@ -204,7 +220,15 @@ export function PetWindow() {
         </span>
       )}
       {!expanded && (
-        <div className={styles.petArea}>
+        <div
+          className={styles.petArea}
+          style={
+            {
+              "--pet-w": `${collapsed.width}px`,
+              "--pet-h": `${collapsed.height}px`,
+            } as React.CSSProperties
+          }
+        >
           {status === "offline" ? (
             <PetOffline />
           ) : state ? (

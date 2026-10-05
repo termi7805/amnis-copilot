@@ -217,3 +217,9 @@ test("pendingUpdate: la versión descartada no se avisa; otra más nueva, sí", 
   );
   assert.equal(pendingUpdate(null, { dismissedUpdate: null }), null);
 });
+
+test("sanitizeSettings: una escala de mascota desconocida o ausente cae a 1", () => {
+  assert.equal(sanitizeSettings({ petScale: 1.3 }).petScale, 1.3);
+  assert.equal(sanitizeSettings({ petScale: 3 }).petScale, 1);
+  assert.equal(sanitizeSettings({}).petScale, 1);
+});

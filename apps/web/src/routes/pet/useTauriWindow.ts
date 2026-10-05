@@ -12,9 +12,20 @@ export function isTauri(): boolean {
 
 /** Tamaño lógico de la ventana flotante: plegada solo el bicho, desplegada
  * con el panel de cuota debajo (#42). */
-/* Exactamente el tamaño de `.petArea` (150×110, PetWindow.module.css) — ni
- * un píxel de chrome alrededor de BIT, la ventana es el bicho. */
-export const COLLAPSED_SIZE = { width: 150, height: 110 };
+/* Exactamente el tamaño de `.petArea` — ni un píxel de chrome alrededor de
+ * BIT, la ventana es el bicho. 150×110 es la base a escala 1; `main.rs`
+ * repite la cuenta, con el mismo redondeo, para el tamaño de arranque. */
+export const COLLAPSED_BASE = { width: 150, height: 110 };
+
+export function collapsedSize(scale: number): {
+  width: number;
+  height: number;
+} {
+  return {
+    width: Math.round(COLLAPSED_BASE.width * scale),
+    height: Math.round(COLLAPSED_BASE.height * scale),
+  };
+}
 
 /* Ancho fijo del panel 3b (BIT a 196px + texto de actividad al lado). El
  * alto NO es constante: PetWindow.tsx lo mide con `scrollHeight` tras
