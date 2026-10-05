@@ -3,11 +3,14 @@ import {
   type PetState,
   type ScreenMode,
   SERIES_ANIMATIONS,
+  type SkinSummary,
   type Vibe,
 } from "@amnis/shared";
-import { type CSSProperties, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
+import { fetchSkin, fetchSkins } from "../../api/skins.ts";
 import petStyles from "../../lib/Pet/Pet.module.css";
 import { Pet } from "../../lib/Pet/Pet.tsx";
+import type { PetSkin } from "../../lib/Pet/SkinScene.tsx";
 import {
   animationClass,
   animationCss,
@@ -93,6 +96,9 @@ const PIVOTS: [number, number][] = [
 const ANIMATIONS_CSS = `${catalogCss()}
 ${animationCss("lab-hecha-a-mano", HANDMADE)}`;
 
+/** Dato fijo para las capas de texto: dentro de 2 h al abrir el banco. */
+const RESETS_AT = new Date(Date.now() + 2 * 3_600_000).toISOString();
+
 /**
  * Banco de pruebas de la capa de música (#60): el `<Pet>` real en cada estado
  * y vibe, a los dos tamaños reales de la ventana de la mascota. Solo existe en
@@ -105,6 +111,27 @@ export function PetLab() {
   const [screen, setScreen] = useState<ScreenMode>("two-phase");
   const [track, setTrack] = useState(0);
   const [dark, setDark] = useState(false);
+  const [skins, setSkins] = useState<SkinSummary[]>([]);
+  const [skinId, setSkinId] = useState("");
+  const [skin, setSkin] = useState<PetSkin | null>(null);
+  const [skinError, setSkinError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchSkins().then(setSkins, () => setSkins([]));
+  }, []);
+
+  const pickSkin = (id: string) => {
+    setSkinId(id);
+    setSkinError(null);
+    if (id === "") {
+      setSkin(null);
+      return;
+    }
+    fetchSkin(id).then(setSkin, (err: Error) => {
+      setSkin(null);
+      setSkinError(err.message);
+    });
+  };
 
   return (
     <div
@@ -137,6 +164,27 @@ export function PetLab() {
               </option>
             ))}
           </select>
+        </label>
+        <label>
+          Skin{" "}
+          <select
+            value={skinId}
+            onChange={(e) => pickSkin(e.target.value)}
+            data-testid="skin-select"
+          >
+            <option value="">BIT</option>
+            {skins.map((s) => (
+              <option
+                key={s.id}
+                value={s.id}
+                disabled={s.errors.length > 0}
+                title={s.errors.join("\n")}
+              >
+                {s.name ?? s.id}
+              </option>
+            ))}
+          </select>
+          {skinError && <span role="alert"> {skinError}</span>}
         </label>
         <label>
           Pantalla{" "}
@@ -236,6 +284,9 @@ export function PetLab() {
                       fatigue={fatigue}
                       listening={listeningFor(vibe, track)}
                       musicPrefs={{ screen }}
+                      skin={skin}
+                      commitHash="a1b2c3d"
+                      resetsAt={RESETS_AT}
                     />
                   </div>
                 </td>

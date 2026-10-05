@@ -84,6 +84,28 @@ test("lista una skin buena y una rota con su error", () =>
     assert.match(skins[1]?.errors[0] ?? "", /falta\.png/);
   }));
 
+test("GET /api/skins/<id> devuelve el manifest validado", () =>
+  withSkins(async ({ port }) => {
+    const r = await get(port, "/api/skins/buena");
+    assert.equal(r.status, 200);
+    const body = JSON.parse(r.body.toString());
+    assert.equal(body.id, "buena");
+    assert.equal(body.manifest.name, "Buena");
+    assert.deepEqual(body.manifest.states.coding.layers, [
+      { src: "coding/body.png" },
+    ]);
+  }));
+
+test("una skin rota da 422 con sus errores; una que no existe, 404", () =>
+  withSkins(async ({ port }) => {
+    const rota = await get(port, "/api/skins/rota");
+    assert.equal(rota.status, 422);
+    assert.match(JSON.parse(rota.body.toString()).errors[0], /falta\.png/);
+    for (const path of ["/api/skins/nada", "/api/skins/%2e%2e"]) {
+      assert.equal((await get(port, path)).status, 404, path);
+    }
+  }));
+
 test("sirve una imagen con su MIME y sin sniffing", () =>
   withSkins(async ({ port }) => {
     const r = await get(port, "/api/skins/buena/coding/body.png");
@@ -112,7 +134,6 @@ test("ninguna forma de salir de la carpeta devuelve el fichero", () =>
       "/api/skins/%2e%2e/settings.json",
       "/api/skins/buena/skin.json",
       "/api/skins/buena/coding",
-      "/api/skins/buena",
       "/api/skins/buena/%00.png",
       "/api/skins/buena/%zz",
     ];

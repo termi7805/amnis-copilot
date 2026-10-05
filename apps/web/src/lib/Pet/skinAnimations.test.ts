@@ -4,7 +4,12 @@ import {
   validateSkinAnimation,
 } from "@amnis/shared";
 import { describe, expect, it } from "vitest";
-import { animationCss, catalogCss, pivotStyle } from "./skinAnimations.ts";
+import {
+  animationCss,
+  catalogCss,
+  pivotStyle,
+  stripStyle,
+} from "./skinAnimations.ts";
 
 const handmade: SkinAnimation = {
   beats: 2,
@@ -170,5 +175,21 @@ describe("pivotStyle", () => {
   it("rechaza no finitos", () => {
     expect(() => pivotStyle([Number.NaN, 0])).toThrow();
     expect(() => pivotStyle(["1px" as unknown as number, 0])).toThrow();
+  });
+});
+
+describe("stripStyle", () => {
+  it("desplaza la tira N fotogramas con steps(N) al tempo de la fatiga", () => {
+    const { className, style } = stripStyle(4, 2);
+    expect(className).toBe("amnis-strip");
+    expect(style.animation).toBe(
+      "amnis-strip calc(var(--t)*2) steps(4,end) infinite",
+    );
+    expect((style as Record<string, string>)["--strip-shift"]).toBe("-600px");
+  });
+
+  it("rechaza lo que no es un número", () => {
+    expect(() => stripStyle("4);}body{" as unknown as number)).toThrow();
+    expect(() => stripStyle(4, Number.NaN)).toThrow();
   });
 });

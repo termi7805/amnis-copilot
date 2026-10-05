@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { pet as petMessages } from "../../i18n/es/pet.ts";
 import i18n from "../../i18n/index.ts";
+import { countdownText } from "./countdown.ts";
 import { useCoverArt } from "./coverArt.ts";
 import { Headphones } from "./Headphones.tsx";
 import { MusicFx } from "./MusicFx.tsx";
@@ -16,6 +17,7 @@ import {
 } from "./musicLayer.ts";
 import { NowPlayingScreen } from "./NowPlayingScreen.tsx";
 import styles from "./Pet.module.css";
+import { type PetSkin, SkinScene, useSkinPreload } from "./SkinScene.tsx";
 import { useNowPlaying } from "./useNowPlaying.ts";
 
 export interface PetProps {
@@ -37,6 +39,8 @@ export interface PetProps {
    * mayor que 0 sale una insignia "+N"; no cambia la forma ni el color de la
    * mascota (docs/DESIGN.md §4). */
   othersActive?: number;
+  /** Skin elegida; los estados que no trae se pintan como BIT. */
+  skin?: PetSkin | null;
 }
 
 /** La insignia "+N" de `othersActive`, fuera de `<Scene>` para que ningún
@@ -2201,16 +2205,7 @@ function Scene({
         </g>
       );
     case "limited": {
-      const minutesLeft = resetsAt
-        ? Math.max(
-            0,
-            Math.round((new Date(resetsAt).getTime() - Date.now()) / 60_000),
-          )
-        : null;
-      const countdown =
-        minutesLeft === null
-          ? ""
-          : `${Math.floor(minutesLeft / 60)}h ${String(minutesLeft % 60).padStart(2, "0")}m`;
+      const countdown = countdownText(resetsAt);
       return (
         <g data-look="limited">
           <ellipse cx="55" cy="99" rx="26" ry="2.8" fill="rgba(90,20,10,.12)" />
@@ -2487,8 +2482,11 @@ export function Pet({
   listening = null,
   musicPrefs: musicPrefsProp,
   othersActive = 0,
+  skin = null,
 }: PetProps) {
   const { t } = useTranslation();
+  useSkinPreload(skin);
+  const skinLayers = skin?.manifest.states[state]?.layers;
   const musicPrefs: MusicPrefs = { ...DEFAULT_MUSIC_PREFS, ...musicPrefsProp };
   const style = {
     "--pet-fatigue": fatigueLevel(fatigue),
@@ -2552,6 +2550,7 @@ export function Pet({
       data-testid="pet"
       data-state={state}
       data-level={level}
+      data-skin={skinLayers ? skin?.id : undefined}
       data-vibe={shown?.vibe}
       data-motion={shown ? musicPrefs.motion : undefined}
       data-fallback={shown ? musicPrefs.fallback : undefined}
@@ -2562,13 +2561,22 @@ export function Pet({
           ? t("pet.others", { state: stateTitle(state), count: othersActive })
           : stateTitle(state)}
       </title>
-      <Scene
-        state={state}
-        resetsAt={resetsAt}
-        commitHash={commitHash}
-        music={music && { ...music, visible }}
-        screen={screen}
-      />
+      {skin && skinLayers ? (
+        <SkinScene
+          skin={skin}
+          layers={skinLayers}
+          commitHash={commitHash}
+          resetsAt={resetsAt}
+        />
+      ) : (
+        <Scene
+          state={state}
+          resetsAt={resetsAt}
+          commitHash={commitHash}
+          music={music && { ...music, visible }}
+          screen={screen}
+        />
+      )}
       {shown &&
         !(shown.vibe === "neutral" && musicPrefs.fallback === "quiet") && (
           <MusicFx visible={visible} />

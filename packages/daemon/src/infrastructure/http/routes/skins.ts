@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { msg } from "@amnis/shared";
-import { listSkins } from "../../../application/skins.ts";
+import { checkSkin, listSkins } from "../../../application/skins.ts";
 import {
   isSkinId,
   resolveInside,
@@ -26,8 +26,24 @@ function notFound(res: Parameters<RouteHandler>[0]["res"]): void {
   res.end(JSON.stringify({ error: msg("http.notFound") }));
 }
 
+/** El manifest ya validado, con las imágenes comprobadas: la web no re-lee el disco. */
+function sendManifest(
+  res: Parameters<RouteHandler>[0]["res"],
+  root: string,
+  id: string,
+): void {
+  if (!isSkinId(id) || !skinIds(root).includes(id)) {
+    notFound(res);
+    return;
+  }
+  const { manifest, errors, warnings } = checkSkin(skinFolder(join(root, id)));
+  res.writeHead(manifest ? 200 : 422, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(manifest ? { id, manifest, warnings } : { errors }));
+}
+
 /**
  * `GET /api/skins` lista las skins de `root` leyendo el disco en cada petición;
+ * `GET /api/skins/<id>` devuelve su manifest validado y
  * `GET /api/skins/<id>/<ruta>` sirve una imagen de una skin.
  *
  * ⚠️ La ruta viene de la URL: `new URL` solo normaliza los `..` literales, no
@@ -56,6 +72,10 @@ export function createSkinsRoutes(root: string): Record<string, RouteHandler> {
       }
       const slash = rest.indexOf("/");
       const id = slash === -1 ? rest : rest.slice(0, slash);
+      if (slash === -1) {
+        sendManifest(res, root, id);
+        return;
+      }
       const file =
         isSkinId(id) && slash !== -1
           ? resolveInside(join(root, id), rest.slice(slash + 1))

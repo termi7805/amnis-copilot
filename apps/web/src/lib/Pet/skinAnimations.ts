@@ -79,6 +79,31 @@ export function pivotStyle(pivot: readonly [number, number]): CSSProperties {
   };
 }
 
+/** Ancho de un fotograma de una tira: el de la escena (viewBox 150×110). */
+export const STRIP_FRAME_WIDTH = 150;
+
+const STRIP = "amnis-strip";
+
+/** `@keyframes` fijo de las tiras de fotogramas: el desplazamiento llega por `--strip-shift`. */
+export const STRIP_CSS = [
+  `@keyframes ${STRIP}{to{transform:translateX(var(--strip-shift))}}`,
+  `@media (prefers-reduced-motion:reduce){.${STRIP}{animation:none}}`,
+].join("\n");
+
+/** Clase y estilo de una tira de `frames` fotogramas que dura `beats` beats. */
+export function stripStyle(
+  frames: number,
+  beats = 1,
+): { className: string; style: CSSProperties } {
+  return {
+    className: STRIP,
+    style: {
+      "--strip-shift": `${num(-STRIP_FRAME_WIDTH * frames)}px`,
+      animation: `${STRIP} calc(var(--t)*${num(beats)}) steps(${num(frames)},end) infinite`,
+    } as CSSProperties,
+  };
+}
+
 /** CSS de todo el catálogo; se inyecta una vez por página. */
 export function catalogCss(): string {
   return Object.entries(SERIES_ANIMATIONS)

@@ -132,6 +132,8 @@ El daemon lee el disco en cada petición, sin reiniciar:
 
 - `GET /api/skins` — todas las carpetas: `{id, name, states, errors, warnings}`. Una skin rota se
   lista con sus errores; no impide el arranque ni al resto.
+- `GET /api/skins/<id>` — el manifest ya validado, `{id, manifest, warnings}`; `422 {errors}` si la skin no
+  carga (también si falta una imagen) y 404 si no existe. La mascota lo revalida antes de pintar.
 - `GET /api/skins/<id>/<ruta>` — una imagen de la skin. Solo sirve imágenes de dentro de su carpeta
   (rutas con `..`, codificadas o no, o enlaces que salen: 404).
 
@@ -216,3 +218,15 @@ en el catálogo: se quedan en `Pet.module.css`.
 
 El banco de pruebas de desarrollo (`/lab`, `PetLab`) muestra todo el catálogo y una animación a
 mano, con el selector de fatiga.
+
+## Cómo se pinta
+
+`<Pet skin={…}>` pinta, para el estado actual, las capas que la skin declara; si no declara ese estado, la escena de BIT.
+Cada capa es un `<image href>` (nunca SVG incrustado: una imagen no ejecuta scripts ni carga recursos externos) en el viewBox
+150×110. Por capa: `clip` fija el recorte y la animación se mueve dentro de él; `frames` desplaza la tira con `steps()` al
+tempo de la fatiga. Las capas de texto reciben `commitHash` (el marcador `······` si no hay dato) y `resetsCountdown`.
+Las imágenes de todos los estados se precargan al elegir la skin.
+
+El daemon solo manda `commitHash` en `pushing` (en `committing`, `HEAD` aún es el commit anterior): una capa `commitHash`
+de `committing` enseñará el marcador salvo que el dato exista.
+
