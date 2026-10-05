@@ -97,6 +97,12 @@ export type SkinManifestResult =
   | { manifest: SkinManifest; warnings: string[] }
   | { errors: string[] };
 
+const SKIN_ID_RE = /^[A-Za-z0-9._-]+$/;
+
+/** El `id` de una skin es el nombre de su carpeta en `~/.amnis/skins/`. */
+export const isSkinId = (id: unknown): id is string =>
+  typeof id === "string" && SKIN_ID_RE.test(id) && id !== "." && id !== "..";
+
 /** Una skin instalada tal como la lista el daemon. */
 export interface SkinSummary {
   /** Nombre de la carpeta en `~/.amnis/skins/`. */
@@ -108,6 +114,16 @@ export interface SkinSummary {
   /** Vacío si la skin carga. */
   errors: string[];
   warnings: string[];
+}
+
+/**
+ * Las skins instaladas y su revisión: `rev` sube con cada relectura de la
+ * carpeta, también si la lista queda igual, para que la web vuelva a pedir las
+ * imágenes que se hayan retocado.
+ */
+export interface SkinsSnapshot {
+  rev: number;
+  skins: SkinSummary[];
 }
 
 export const isSkinTextLayer = (layer: SkinLayer): layer is SkinTextLayer =>

@@ -223,3 +223,24 @@ test("sanitizeSettings: una escala de mascota desconocida o ausente cae a 1", ()
   assert.equal(sanitizeSettings({ petScale: 3 }).petScale, 1);
   assert.equal(sanitizeSettings({}).petScale, 1);
 });
+
+test("validateSettings: petSkin admite null o el nombre de una carpeta, exista o no", () => {
+  const ok = validateSettings({ petSkin: "robi" }, DEFAULT_SETTINGS);
+  assert.ok(ok.ok);
+  assert.equal(ok.settings.petSkin, "robi");
+  const back = validateSettings({ petSkin: null }, ok.settings);
+  assert.ok(back.ok);
+  assert.equal(back.settings.petSkin, null);
+  for (const bad of ["", "..", "a/b", "a b", 3, undefined]) {
+    const res = validateSettings({ petSkin: bad }, DEFAULT_SETTINGS);
+    assert.ok(!res.ok, String(bad));
+    assert.equal(res.field, "petSkin");
+  }
+});
+
+test("validateSettings: un cambio ajeno conserva el petSkin", () => {
+  const current = { ...DEFAULT_SETTINGS, petSkin: "robi" };
+  const res = validateSettings({ theme: "nord" }, current);
+  assert.ok(res.ok);
+  assert.equal(res.settings.petSkin, "robi");
+});

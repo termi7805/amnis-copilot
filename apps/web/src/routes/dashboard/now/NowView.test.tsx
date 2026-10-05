@@ -89,6 +89,7 @@ function stateWith(limits: QuotaLimit[]): StateResponse {
       bpm: null,
     },
     settings: DEFAULT_SETTINGS,
+    skins: { rev: 1, skins: [] },
     plan: null,
     update: null,
     quotas: [quota],

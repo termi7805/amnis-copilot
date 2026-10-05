@@ -26,6 +26,7 @@ const HELLO_STATE: StateResponse = {
   quotas: [],
   media: emptyMedia("not-configured", "2026-01-01T00:00:00.000Z"),
   settings: DEFAULT_SETTINGS,
+  skins: { rev: 1, skins: [] },
   plan: null,
   update: null,
   daemon: {

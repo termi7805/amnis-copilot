@@ -173,3 +173,17 @@ test("un aviso descartado sobrevive a 'reiniciar'", () => {
     assert.equal(readSettings(path).dismissedUpdate, "0.3.0");
   });
 });
+
+test("un petSkin guardado sobrevive a 'reiniciar'; uno inválido o ausente cae a null", () => {
+  withDir((dir) => {
+    const path = join(dir, "settings.json");
+    writeSettings({ ...DEFAULT_SETTINGS, petSkin: "robi" }, path);
+    assert.equal(readSettings(path).petSkin, "robi");
+    writeFileSync(path, JSON.stringify({ petSkin: "../fuera" }));
+    assert.equal(readSettings(path).petSkin, null);
+    writeFileSync(path, JSON.stringify({ petSkin: 3 }));
+    assert.equal(readSettings(path).petSkin, null);
+    writeFileSync(path, JSON.stringify({}));
+    assert.equal(readSettings(path).petSkin, null);
+  });
+});

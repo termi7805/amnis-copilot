@@ -1,4 +1,8 @@
-import { type SkinSummary, validateSkinManifest } from "@amnis/shared";
+import {
+  type SkinSummary,
+  type SkinsSnapshot,
+  validateSkinManifest,
+} from "@amnis/shared";
 import type { PetSkin } from "../lib/Pet/SkinScene.tsx";
 import { daemonUrl } from "./config.ts";
 
@@ -11,9 +15,10 @@ export async function fetchSkins(): Promise<SkinSummary[]> {
 /**
  * El manifest llega por la red: se revalida aquí y nada sin validar llega a
  * `<Pet>`. Las rutas de imagen ya cumplen `skinPathProblem`, así que solo se
- * codifica cada segmento.
+ * codifica cada segmento. `rev` (la revisión del catálogo) va en la URL de las
+ * imágenes: sin ella el navegador serviría de caché la que se acaba de retocar.
  */
-export async function fetchSkin(id: string): Promise<PetSkin> {
+export async function fetchSkin(id: string, rev?: number): Promise<PetSkin> {
   const base = `${daemonUrl()}/api/skins/${encodeURIComponent(id)}`;
   const response = await fetch(base);
   if (!response.ok)
@@ -27,6 +32,16 @@ export async function fetchSkin(id: string): Promise<PetSkin> {
     id,
     manifest: checked.manifest,
     imageUrl: (src) =>
-      `${base}/${src.split("/").map(encodeURIComponent).join("/")}`,
+      `${base}/${src.split("/").map(encodeURIComponent).join("/")}${rev === undefined ? "" : `?v=${rev}`}`,
   };
+}
+
+/** Vuelve a leer la carpeta de skins; los clientes reciben el resultado por SSE. */
+export async function reloadSkins(): Promise<SkinsSnapshot> {
+  const response = await fetch(`${daemonUrl()}/api/skins/reload`, {
+    method: "POST",
+  });
+  if (!response.ok)
+    throw new Error(`POST /api/skins/reload → ${response.status}`);
+  return response.json();
 }

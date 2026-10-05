@@ -13,6 +13,7 @@ import { LanguageCard } from "./LanguageCard.tsx";
 import { MusicSettings } from "./MusicSettings.tsx";
 import { PlanCard } from "./PlanCard.tsx";
 import styles from "./SettingsView.module.css";
+import { SkinCard } from "./SkinCard.tsx";
 import { UpdatesCard } from "./UpdatesCard.tsx";
 
 export interface SettingsViewProps {
@@ -63,6 +64,11 @@ export function SettingsView({
             onTheme={onTheme}
             petScale={state?.settings.petScale ?? 1}
             onPetScale={(petScale: PetScale) => saveSettings({ petScale })}
+          />
+          <SkinCard
+            petSkin={state?.settings.petSkin ?? null}
+            catalog={state?.skins}
+            onPetSkin={(petSkin) => saveSettings({ petSkin })}
           />
           <LanguageCard locale={locale} onLocale={onLocale} />
           <DataCard rebuild={rebuild} />

@@ -22,6 +22,7 @@ async function withSkins(
 ): Promise<void> {
   const root = mkdtempSync(join(tmpdir(), "amnis-skins-"));
   const skins = join(root, "skins");
+  let reloads = 0;
   writeFileSync(join(root, "settings.json"), '{"secreto":true}');
   mkdirSync(join(skins, "buena", "coding"), { recursive: true });
   writeFileSync(
@@ -38,7 +39,12 @@ async function withSkins(
     join(skins, "rota", "skin.json"),
     JSON.stringify({ states: { coding: { layers: [{ src: "falta.png" }] } } }),
   );
-  const server = createHttpServer({ routes: createSkinsRoutes(skins) });
+  const server = createHttpServer({
+    routes: createSkinsRoutes(skins, () => {
+      reloads += 1;
+      return { rev: reloads, skins: [] };
+    }),
+  });
   const port = await server.listen(0);
   try {
     await fn({ port, root });
@@ -52,9 +58,10 @@ async function withSkins(
 function get(
   port: number,
   path: string,
+  method = "GET",
 ): Promise<{ status: number; headers: Record<string, unknown>; body: Buffer }> {
   return new Promise((resolve, reject) => {
-    request({ host: "127.0.0.1", port, path }, (res) => {
+    request({ host: "127.0.0.1", port, path, method }, (res) => {
       const chunks: Buffer[] = [];
       res.on("data", (c: Buffer) => chunks.push(c));
       res.on("end", () =>
@@ -82,6 +89,15 @@ test("lista una skin buena y una rota con su error", () =>
     assert.deepEqual(skins[0]?.errors, []);
     assert.deepEqual(skins[0]?.states, ["coding"]);
     assert.match(skins[1]?.errors[0] ?? "", /falta\.png/);
+  }));
+
+test("POST /api/skins/reload relee y devuelve el snapshot", () =>
+  withSkins(async ({ port }) => {
+    const r = await get(port, "/api/skins/reload", "POST");
+    assert.equal(r.status, 200);
+    assert.deepEqual(JSON.parse(r.body.toString()), { rev: 1, skins: [] });
+    // No es una skin llamada «reload»: GET sigue siendo 404.
+    assert.equal((await get(port, "/api/skins/reload")).status, 404);
   }));
 
 test("GET /api/skins/<id> devuelve el manifest validado", () =>

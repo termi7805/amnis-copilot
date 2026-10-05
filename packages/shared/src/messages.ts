@@ -106,6 +106,8 @@ export const DAEMON_MESSAGES_ES = {
   "settings.invalidTheme": "theme debe ser uno de: {{allowed}}.",
   "settings.invalidLocale": "locale debe ser uno de: {{allowed}}.",
   "settings.invalidPetScale": "petScale debe ser uno de: {{allowed}}.",
+  "settings.invalidPetSkin":
+    "petSkin debe ser null o el nombre de una carpeta de skin (letras, números, «.», «_» y «-»).",
 
   "http.internal": "Error interno.",
   "http.hostNotAllowed": "Origen no permitido: Host no permitido ({{host}}).",
@@ -229,6 +231,8 @@ export const DAEMON_MESSAGES_EN: Record<MessageKey, string> = {
   "settings.invalidTheme": "theme must be one of: {{allowed}}.",
   "settings.invalidLocale": "locale must be one of: {{allowed}}.",
   "settings.invalidPetScale": "petScale must be one of: {{allowed}}.",
+  "settings.invalidPetSkin":
+    "petSkin must be null or the name of a skin folder (letters, digits, '.', '_' and '-').",
 
   "http.internal": "Internal error.",
   "http.hostNotAllowed": "Origin not allowed: Host not allowed ({{host}}).",

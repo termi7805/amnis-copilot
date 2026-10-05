@@ -66,6 +66,7 @@ const hello: StateResponse = {
     bpm: null,
   },
   settings: DEFAULT_SETTINGS,
+  skins: { rev: 1, skins: [] },
   plan: null,
   update: null,
   quotas: [
@@ -133,6 +134,23 @@ describe("useAmnisStream", () => {
     expect(result.current.state?.settings).toEqual(next);
     expect(result.current.state?.pet.state).toBe("coding");
     expect(result.current.state?.quotas).toHaveLength(1);
+  });
+
+  it("aplica skins sin perder el resto", () => {
+    const { result } = renderHook(() => useAmnisStream());
+    const [source] = FakeEventSource.instances;
+
+    act(() => source?.emit("hello", hello));
+    const skins = {
+      rev: 2,
+      skins: [
+        { id: "robi", name: null, states: [], errors: ["x"], warnings: [] },
+      ],
+    };
+    act(() => source?.emit("skins", skins));
+
+    expect(result.current.state?.skins).toEqual(skins);
+    expect(result.current.state?.pet.state).toBe("coding");
   });
 
   it("aplica update sin perder el resto (#148)", () => {

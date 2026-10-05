@@ -1,12 +1,9 @@
 import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { join, sep } from "node:path";
-import { skinPathProblem } from "@amnis/shared";
+import { isSkinId, skinPathProblem } from "@amnis/shared";
 import type { SkinFolder } from "../application/skins.ts";
 
-const SKIN_ID_RE = /^[A-Za-z0-9._-]+$/;
-
-export const isSkinId = (id: string): boolean =>
-  SKIN_ID_RE.test(id) && id !== "." && id !== "..";
+export { isSkinId };
 
 /** Carpetas de `root` con nombre admisible; sin `root`, ninguna. */
 export function skinIds(root: string): string[] {

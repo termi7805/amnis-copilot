@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchSkin } from "./skins.ts";
+import { fetchSkin, reloadSkins } from "./skins.ts";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -19,6 +19,14 @@ describe("fetchSkin", () => {
     expect(skin.imageUrl("a/b.png")).toBe("/api/skins/robi/a/b.png");
   });
 
+  it("con rev, las imágenes llevan ?v= para saltarse la caché", async () => {
+    stubFetch(200, {
+      manifest: { states: { coding: { layers: [{ src: "a/b.png" }] } } },
+    });
+    const skin = await fetchSkin("robi", 3);
+    expect(skin.imageUrl("a/b.png")).toBe("/api/skins/robi/a/b.png?v=3");
+  });
+
   it("rechaza un manifest que no valida, aunque venga del daemon", async () => {
     stubFetch(200, {
       manifest: { states: { coding: { layers: [{ src: "../fuera.png" }] } } },
@@ -29,5 +37,23 @@ describe("fetchSkin", () => {
   it("falla con el estado HTTP si el daemon no la sirve", async () => {
     stubFetch(422, { errors: ["x"] });
     await expect(fetchSkin("rota")).rejects.toThrow(/422/);
+  });
+});
+
+describe("reloadSkins", () => {
+  it("hace POST a /api/skins/reload y devuelve el snapshot", async () => {
+    const fetchMock = vi.fn(
+      async () => new Response(JSON.stringify({ rev: 4, skins: [] })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await reloadSkins()).toEqual({ rev: 4, skins: [] });
+    expect(fetchMock).toHaveBeenCalledWith("/api/skins/reload", {
+      method: "POST",
+    });
+  });
+
+  it("falla con el estado HTTP", async () => {
+    stubFetch(500, {});
+    await expect(reloadSkins()).rejects.toThrow(/500/);
   });
 });

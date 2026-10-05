@@ -86,6 +86,7 @@ import { exchangeCode } from "../providers/spotify/oauth.ts";
 import { readMedia } from "../providers/spotify/player.ts";
 import { createQuotaSampler } from "../quotaSampler.ts";
 import { startRefresher } from "../refresher.ts";
+import { startSkinCatalog } from "../skinCatalog.ts";
 import { createTrackVibes } from "../trackVibe.ts";
 import { createUpdateChecker } from "../updateChecker.ts";
 
@@ -114,6 +115,7 @@ function makeStateDeps(
   media: GetStateDeps["media"],
   listening: GetStateDeps["listening"],
   settings: GetStateDeps["settings"],
+  skins: GetStateDeps["skins"],
   latestQuotas: GetStateDeps["latestQuotas"],
   update: GetStateDeps["update"],
 ): GetStateDeps {
@@ -132,6 +134,7 @@ function makeStateDeps(
     media,
     listening,
     settings,
+    skins,
     plan,
     readCommitHash,
   };
@@ -152,6 +155,12 @@ export function runServeCli(args: readonly string[] = []): void {
   // Preferencias de la capa de música: en memoria, con `~/.amnis/settings.json`
   // como copia. Un fichero estropeado arranca con los valores por defecto.
   let settings = readSettings();
+  // La carpeta de skins se vigila: borrar o romper la elegida llega a la
+  // mascota abierta por SSE, sin que nadie pulse nada.
+  const skinCatalog = startSkinCatalog({
+    root: SKINS_DIR,
+    onChange: (data) => broadcaster.broadcast({ event: "skins", data }),
+  });
   // Sin clientes SSE no se consulta Spotify: el ciclo lo arranca el primer
   // cliente y se apaga solo al irse el último (mediaPoller.ts).
   const mediaPoller = startMediaPoller({
@@ -180,6 +189,7 @@ export function runServeCli(args: readonly string[] = []): void {
       return watcher.listening();
     },
     () => settings,
+    () => skinCatalog.snapshot(),
     // El poller se crea después (necesita el watcher): cierre perezoso.
     () => poller.current().then((snapshot) => [snapshot]),
     () => updateChecker.current(),
@@ -361,7 +371,7 @@ export function runServeCli(args: readonly string[] = []): void {
           mediaPoller.pollSoon(0);
         },
       }),
-      ...createSkinsRoutes(SKINS_DIR),
+      ...createSkinsRoutes(SKINS_DIR, skinCatalog.reload),
       ...createSettingsRoutes({
         get: () => settings,
         save: saveSettings,
@@ -385,6 +395,7 @@ export function runServeCli(args: readonly string[] = []): void {
     updateRefresher.stop();
     watcher.stop();
     mediaPoller.stop();
+    skinCatalog.stop();
     broadcaster.stop();
     server
       .close()

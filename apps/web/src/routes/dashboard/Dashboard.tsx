@@ -6,6 +6,7 @@ import { countWarnings, useHealth } from "../../api/health.ts";
 import { useAmnisStream } from "../../api/useAmnisStream.ts";
 import { useLocale } from "../../lib/locale.ts";
 import { Pet } from "../../lib/Pet/Pet.tsx";
+import { useSelectedSkin } from "../../lib/Pet/useSelectedSkin.ts";
 import { useTheme } from "../../lib/theme.ts";
 import { ActivityView } from "./activity/ActivityView.tsx";
 import styles from "./Dashboard.module.css";
@@ -72,6 +73,7 @@ export function Dashboard() {
   // instancias del hook harían dos migraciones.
   const [theme, setTheme] = useTheme(state?.settings);
   const [locale, setLocale] = useLocale(state?.settings);
+  const skin = useSelectedSkin(state?.settings.petSkin, state?.skins);
   const { t } = useTranslation();
   // Cada sondeo de cuota y cada cambio del estado de Spotify (conectar,
   // desconectar) pueden cambiar un chequeo: se vuelve a pedir la salud.
@@ -90,6 +92,7 @@ export function Dashboard() {
                 state={state.pet.state}
                 level={state.pet.level}
                 fatigue={state.pet.fatigue}
+                skin={skin}
               />
             )}
           </span>

@@ -4,6 +4,7 @@ import i18n from "../../../i18n/index.ts";
 import { formatElapsed } from "../../../lib/countdown.ts";
 import { FocusPicker } from "../../../lib/FocusPicker/FocusPicker.tsx";
 import { fatigueLevel, Pet, stateTitle } from "../../../lib/Pet/Pet.tsx";
+import { useSelectedSkin } from "../../../lib/Pet/useSelectedSkin.ts";
 import styles from "./PetHero.module.css";
 
 const META_ICON = {
@@ -29,6 +30,7 @@ export function fatigueLabel(fatigue: number): string {
 export function PetHero({ state, now }: { state: StateResponse; now: Date }) {
   const { t } = useTranslation();
   const { pet, quotas, settings } = state;
+  const skin = useSelectedSkin(settings.petSkin, state.skins);
   const listening = pet.listening;
   const percent = Math.round(pet.fatigue * 100);
 
@@ -44,6 +46,7 @@ export function PetHero({ state, now }: { state: StateResponse; now: Date }) {
           listening={listening}
           musicPrefs={settings}
           othersActive={pet.othersActive}
+          skin={skin}
         />
       </div>
       <div className={styles.stateLine}>

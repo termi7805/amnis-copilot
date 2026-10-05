@@ -5,6 +5,7 @@ import {
   type QuotaSnapshot,
   type RebuildEvent,
   resolvePlan,
+  type SkinsSnapshot,
   type StateResponse,
   type UpdateInfo,
 } from "@amnis/shared";
@@ -88,6 +89,12 @@ export function useAmnisStream(): AmnisStream {
             }
           : current,
       );
+    });
+
+    // El daemon vigila la carpeta de skins: una borrada o rota llega aquí.
+    source.addEventListener("skins", (e: MessageEvent<string>) => {
+      const skins = JSON.parse(e.data) as SkinsSnapshot;
+      setState((current) => (current ? { ...current, skins } : current));
     });
 
     // La reconstrucción de caché responde 202 y termina aquí (#90).

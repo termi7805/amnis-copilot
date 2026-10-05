@@ -140,6 +140,23 @@ El daemon lee el disco en cada petición, sin reiniciar:
 - `GET /api/skins/<id>/<ruta>` — una imagen de la skin. Solo sirve imágenes de dentro de su carpeta
   (rutas con `..`, codificadas o no, o enlaces que salen: 404).
 
+## Elegir una skin
+
+En **Ajustes → Skin de la mascota** hay una muestra por carpeta de `~/.amnis/skins/` más BIT. La elección es
+`petSkin` en `settings.json` (`null` = BIT), como `theme` y `locale`: el dashboard y la ventana de Tauri no
+comparten `localStorage`, así que el ajuste vive en el daemon y llega a la mascota abierta por SSE al momento.
+
+- Una skin con errores se lista con ellos y no se puede elegir.
+- `PUT /api/settings` valida solo la **forma** de `petSkin` (un nombre de carpeta), no que exista: así borrar la
+  carpeta no pierde la elección.
+- Si la elegida desaparece o se rompe, la mascota pinta BIT (nunca se queda en blanco), Ajustes lo dice y el ajuste
+  se conserva: al recuperar o arreglar la carpeta, la skin vuelve sola.
+- El daemon vigila `~/.amnis/skins/` y emite el evento SSE `skins` (`{rev, skins}`, la misma lista de
+  `GET /api/skins`) en cada cambio; `rev` también va en `StateResponse.skins`. Las imágenes se piden con `?v=<rev>`
+  para que una retocada no salga de la caché del navegador.
+- `POST /api/skins/reload` (el botón «Volver a leer la carpeta») relee ya y avisa. Cubre lo que el vigilante no
+  ve, p. ej. una carpeta `skins/` creada después de arrancar el daemon.
+
 ## Una animación
 
 ```json

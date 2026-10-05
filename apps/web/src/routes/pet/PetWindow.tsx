@@ -6,6 +6,7 @@ import { useAmnisStream } from "../../api/useAmnisStream.ts";
 import { useNow } from "../../lib/countdown.ts";
 import { useLocale } from "../../lib/locale.ts";
 import { Pet, PetOffline } from "../../lib/Pet/Pet.tsx";
+import { useSelectedSkin } from "../../lib/Pet/useSelectedSkin.ts";
 import { useTheme } from "../../lib/theme.ts";
 import { HooksAlert } from "./HooksAlert.tsx";
 import { MediaPanel } from "./MediaPanel.tsx";
@@ -77,6 +78,7 @@ export function PetWindow() {
   // Solo recibe: el tema se elige en el dashboard y llega por SSE (#121).
   useTheme(state?.settings);
   useLocale(state?.settings);
+  const skin = useSelectedSkin(state?.settings.petSkin, state?.skins);
   const { t } = useTranslation();
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
   const dragStarted = useRef(false);
@@ -243,6 +245,7 @@ export function PetWindow() {
               listening={state.pet.listening}
               musicPrefs={state.settings}
               othersActive={state.pet.othersActive}
+              skin={skin}
             />
           ) : (
             <span>{t(`common.connection.${status}`)}</span>

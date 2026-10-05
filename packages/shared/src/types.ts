@@ -1,4 +1,5 @@
 import type { DaemonMessage } from "./messages.ts";
+import type { SkinsSnapshot } from "./skin.ts";
 
 /**
  * Tipos compartidos entre el daemon y sus clientes (dashboard, mascota).
@@ -364,6 +365,9 @@ export interface AmnisSettings extends MusicPrefs {
   locale: LocaleId;
   /** Tamaño de la mascota plegada: va en el daemon porque el ajuste se hace en el navegador y se aplica en el webview. */
   petScale: PetScale;
+  /** Carpeta de `~/.amnis/skins/` elegida, o `null` para BIT. Solo se valida la forma, no que exista:
+   * si la carpeta desaparece la mascota pinta BIT y el ajuste se conserva para cuando vuelva. */
+  petSkin: string | null;
   /** Consultar a GitHub si hay una release más nueva (#148). */
   checkUpdates: boolean;
   /** Versión cuyo aviso se descartó (#149): en el daemon y no en `localStorage`
@@ -378,6 +382,7 @@ export const DEFAULT_SETTINGS: AmnisSettings = {
   theme: "system",
   locale: "system",
   petScale: 1,
+  petSkin: null,
   checkUpdates: true,
   dismissedUpdate: null,
 };
@@ -412,6 +417,7 @@ export interface StateResponse {
   quotas: QuotaSnapshot[];
   media: MediaSnapshot;
   settings: AmnisSettings;
+  skins: SkinsSnapshot;
   /** `null` si no se detecta ni hay uno manual. */
   plan: PlanInfo | null;
   /** `null` si no hay versión nueva o si la comprobación está apagada. */
@@ -468,6 +474,7 @@ export type AmnisEvent =
   | { event: "quota"; data: QuotaSnapshot[] }
   | { event: "media"; data: MediaSnapshot }
   | { event: "settings"; data: AmnisSettings }
+  | { event: "skins"; data: SkinsSnapshot }
   | { event: "rebuild"; data: RebuildEvent }
   | { event: "update"; data: UpdateInfo | null }
   /** «Cerrar Amnis»: la ventana de la mascota cierra la app de escritorio. */

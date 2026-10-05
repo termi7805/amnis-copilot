@@ -54,6 +54,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     media: () => Promise.resolve(emptyMedia("not-configured", STARTED_AT)),
     listening: () => null,
     settings: () => DEFAULT_SETTINGS,
+    skins: () => ({ rev: 1, skins: [] }),
     plan: () => null,
     update: () => null,
     readCommitHash: () => {

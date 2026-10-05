@@ -6,6 +6,7 @@ import type {
   PetState,
   PlanInfo,
   QuotaSnapshot,
+  SkinsSnapshot,
   StateResponse,
   UpdateInfo,
 } from "@amnis/shared";
@@ -69,6 +70,8 @@ export interface GetStateDeps {
   listening(): Listening | null;
   /** Ajustes del usuario (`~/.amnis/settings.json`). */
   settings(): AmnisSettings;
+  /** Las skins de `~/.amnis/skins/` tal como las dejó la última lectura. */
+  skins(): SkinsSnapshot;
   /** El plan ya resuelto: detectado de las credenciales, o el manual. */
   plan(): PlanInfo | null;
   /** `HEAD` corto del repo en `project` — solo se llama en `pushing`
@@ -249,6 +252,7 @@ export async function getState(
     quotas,
     media,
     settings: deps.settings(),
+    skins: deps.skins(),
     plan: deps.plan(),
     update: deps.update(),
     daemon: {

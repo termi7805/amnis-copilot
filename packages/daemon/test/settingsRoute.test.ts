@@ -236,3 +236,25 @@ test("PUT con una escala de mascota conocida: guarda y avisa por SSE", async () 
     assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
   });
 });
+
+test("PUT con un petSkin válido: guarda y avisa por SSE", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ petSkin: "robi" }));
+    assert.equal(res.status, 200);
+    const expected = { ...DEFAULT_SETTINGS, petSkin: "robi" };
+    assert.deepEqual(state.saves, [expected]);
+    assert.deepEqual(state.events, [{ event: "settings", data: expected }]);
+  });
+});
+
+test("PUT con un petSkin que no es un nombre de carpeta: 400, sin guardar", async () => {
+  await withSettings(async ({ base, state }) => {
+    const res = await put(base, JSON.stringify({ petSkin: "../x" }));
+    assert.equal(res.status, 400);
+    const body = (await res.json()) as ApiError;
+    assert.equal(body.field, "petSkin");
+    assert.equal(body.error.key, "settings.invalidPetSkin");
+    assert.deepEqual(state.saves, []);
+    assert.deepEqual(state.events, []);
+  });
+});

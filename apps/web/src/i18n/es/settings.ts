@@ -90,6 +90,18 @@ export const settings = {
     system: "Sistema",
     hint: "«Sistema» sigue el idioma del navegador o del escritorio.",
   },
+  skin: {
+    title: "Skin de la mascota",
+    label: "Skin de la mascota",
+    bit: "BIT",
+    reload: "Volver a leer la carpeta",
+    empty: "No hay skins instaladas todavía.",
+    missingChosen:
+      "La skin «{{id}}» ya no está en la carpeta, así que la mascota usa BIT. Si la recuperas, vuelve sola.",
+    brokenChosen:
+      "La skin «{{id}}» tiene errores, así que la mascota usa BIT. Cuando los arregles, vuelve sola.",
+    hint: "Cada skin es una carpeta de ~/.amnis/skins/. Se vigila: no hace falta reiniciar.",
+  },
   updates: {
     title: "Actualizaciones",
     label: "Buscar actualizaciones",

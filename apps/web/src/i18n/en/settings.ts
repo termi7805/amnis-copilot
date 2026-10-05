@@ -91,6 +91,18 @@ export const settings: Messages<typeof es> = {
     system: "System",
     hint: "“System” follows the browser or desktop language.",
   },
+  skin: {
+    title: "Pet skin",
+    label: "Pet skin",
+    bit: "BIT",
+    reload: "Re-read the folder",
+    empty: "No skins installed yet.",
+    missingChosen:
+      "The skin “{{id}}” is no longer in the folder, so the pet uses BIT. If it comes back, it is applied again on its own.",
+    brokenChosen:
+      "The skin “{{id}}” has errors, so the pet uses BIT. Once you fix them, it is applied again on its own.",
+    hint: "Each skin is a folder in ~/.amnis/skins/. It is watched: no restart needed.",
+  },
   updates: {
     title: "Updates",
     label: "Check for updates",

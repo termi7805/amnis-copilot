@@ -434,3 +434,39 @@
   font-weight: 500;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
 }
+
+/* ---------- Skin de la mascota ---------- */
+.skinOption {
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+}
+
+.skinThumb {
+  display: block;
+  aspect-ratio: 150 / 110;
+  border-radius: 6px;
+  background: var(--stage);
+  overflow: hidden;
+}
+
+.swatch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.skinErrors {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.75rem;
+  color: var(--crit);
+}
+
+.warn {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 0.8rem;
+}

@@ -18,6 +18,7 @@ function makeDeps(): GetStateDeps {
     readCommitHash: () => null,
     listening: () => null,
     settings: () => DEFAULT_SETTINGS,
+    skins: () => ({ rev: 1, skins: [] }),
     plan: () => null,
     update: () => null,
     media: () =>

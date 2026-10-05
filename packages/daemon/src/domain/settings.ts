@@ -4,6 +4,7 @@ import {
   DEFAULT_SETTINGS,
   isLocaleId,
   isPetScale,
+  isSkinId,
   isThemeId,
   LOCALES,
   msg,
@@ -59,7 +60,7 @@ function parsePetFocus(v: unknown): PetFocus | null {
 }
 
 /**
- * Valida un cambio de ajustes (`PUT /api/settings`): `plan`, `petFocus`, `theme`, `locale` y `checkUpdates` aquí,
+ * Valida un cambio de ajustes (`PUT /api/settings`): `plan`, `petFocus`, `theme`, `locale`, `petSkin` y `checkUpdates` aquí,
  * el resto (preferencias de música) en `validateMusicPrefs`. Acepta un
  * parcial.
  */
@@ -76,6 +77,7 @@ export function validateSettings(
     theme,
     locale,
     petScale,
+    petSkin,
     checkUpdates,
     dismissedUpdate,
     ...rest
@@ -148,6 +150,20 @@ export function validateSettings(
     nextPetScale = petScale;
   }
 
+  // Solo la forma: que la carpeta exista lo decide la mascota al pintar, para
+  // que borrarla no pierda la elección.
+  let nextPetSkin = current.petSkin;
+  if ("petSkin" in input) {
+    if (petSkin !== null && !isSkinId(petSkin)) {
+      return {
+        ok: false,
+        field: "petSkin",
+        message: msg("settings.invalidPetSkin"),
+      };
+    }
+    nextPetSkin = petSkin;
+  }
+
   let nextCheckUpdates = current.checkUpdates;
   if ("checkUpdates" in input) {
     if (typeof checkUpdates !== "boolean") {
@@ -184,6 +200,7 @@ export function validateSettings(
     theme: _theme,
     locale: _locale,
     petScale: _petScale,
+    petSkin: _petSkin,
     checkUpdates: _checkUpdates,
     dismissedUpdate: _dismissedUpdate,
     ...currentPrefs
@@ -199,6 +216,7 @@ export function validateSettings(
       theme: nextTheme,
       locale: nextLocale,
       petScale: nextPetScale,
+      petSkin: nextPetSkin,
       checkUpdates: nextCheckUpdates,
       dismissedUpdate: nextDismissed,
     },
@@ -222,6 +240,7 @@ export function sanitizeSettings(raw: unknown): AmnisSettings {
     theme: isThemeId(source.theme) ? source.theme : "system",
     locale: isLocaleId(source.locale) ? source.locale : "system",
     petScale: isPetScale(source.petScale) ? source.petScale : 1,
+    petSkin: isSkinId(source.petSkin) ? source.petSkin : null,
     checkUpdates:
       typeof source.checkUpdates === "boolean" ? source.checkUpdates : true,
     dismissedUpdate: isDismissedUpdate(source.dismissedUpdate)

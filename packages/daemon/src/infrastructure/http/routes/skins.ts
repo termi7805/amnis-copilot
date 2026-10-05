@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { extname, join } from "node:path";
-import { msg } from "@amnis/shared";
+import { msg, type SkinsSnapshot } from "@amnis/shared";
 import { checkSkin, listSkins } from "../../../application/skins.ts";
 import {
   isSkinId,
@@ -44,15 +44,24 @@ function sendManifest(
 /**
  * `GET /api/skins` lista las skins de `root` leyendo el disco en cada petición;
  * `GET /api/skins/<id>` devuelve su manifest validado y
- * `GET /api/skins/<id>/<ruta>` sirve una imagen de una skin.
+ * `GET /api/skins/<id>/<ruta>` sirve una imagen de una skin y
+ * `POST /api/skins/reload` relee la carpeta y avisa a los clientes.
  *
  * ⚠️ La ruta viene de la URL: `new URL` solo normaliza los `..` literales, no
  * `%2e%2e`, así que se decodifica aquí y `resolveInside` decide, con los
  * enlaces simbólicos ya resueltos. Un SVG abierto como documento correría
  * scripts con el origen del daemon: la CSP con `sandbox` lo impide.
  */
-export function createSkinsRoutes(root: string): Record<string, RouteHandler> {
+export function createSkinsRoutes(
+  root: string,
+  reload: () => SkinsSnapshot,
+): Record<string, RouteHandler> {
   return {
+    "POST /api/skins/reload": ({ res }) => {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(reload()));
+    },
+
     "GET /api/skins": ({ res }) => {
       const body = listSkins({
         skinIds: () => skinIds(root),
