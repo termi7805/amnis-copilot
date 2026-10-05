@@ -42,6 +42,8 @@ export const CLAUDE_DIR =
   process.env.CLAUDE_CONFIG_DIR ?? join(HOME, ".claude");
 export const CLAUDE_PROJECTS_DIR = join(CLAUDE_DIR, "projects");
 export const CLAUDE_SETTINGS = join(CLAUDE_DIR, "settings.json");
+/** Donde Claude Code busca la skill `amnis-skin` que el dashboard instala (#160). */
+export const CLAUDE_SKILL_DIR = join(CLAUDE_DIR, "skills", "amnis-skin");
 export const CLAUDE_CREDENTIALS = join(CLAUDE_DIR, ".credentials.json");
 
 /** Datos propios de Amnis. La BD de aquí es mixta: el uso es caché derivada, la serie de cuota y los hooks no. */
@@ -74,6 +76,8 @@ export interface Resources {
   webDist: string;
   dashboardHtml: string;
   hookScript: string;
+  /** La skill `amnis-skin` que el dashboard instala en Claude Code. */
+  skillDir: string;
 }
 
 /**
@@ -97,6 +101,7 @@ export function resolveResources(opts: {
       webDist: join(bundled, "web"),
       dashboardHtml: join(bundled, "public", "index.html"),
       hookScript: join(bundled, "hooks", "amnis-hook.sh"),
+      skillDir: join(bundled, "skill", "amnis-skin"),
     };
   }
   return {
@@ -115,6 +120,7 @@ export function resolveResources(opts: {
       "hooks",
       "amnis-hook.sh",
     ),
+    skillDir: join(opts.repoRoot, ".claude", "skills", "amnis-skin"),
   };
 }
 

@@ -19,6 +19,7 @@ test("AMNIS_RESOURCES_DIR explícito manda sobre todo lo demás", () => {
     webDist: join("/res", "web"),
     dashboardHtml: join("/res", "public", "index.html"),
     hookScript: join("/res", "hooks", "amnis-hook.sh"),
+    skillDir: join("/res", "skill", "amnis-skin"),
   });
 });
 
@@ -46,6 +47,7 @@ test("con node, apunta a las rutas del repo de siempre", () => {
 test("en este repo, las rutas resueltas existen de verdad", () => {
   assert.ok(existsSync(RESOURCES.dashboardHtml), RESOURCES.dashboardHtml);
   assert.ok(existsSync(RESOURCES.hookScript), RESOURCES.hookScript);
+  assert.ok(existsSync(join(RESOURCES.skillDir, "SKILL.md")));
   // apps/web/dist es un artefacto de build: basta con que cuelgue del repo.
   assert.ok(RESOURCES.webDist.endsWith(join("apps", "web", "dist")));
 });

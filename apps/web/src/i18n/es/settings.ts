@@ -101,6 +101,13 @@ export const settings = {
     brokenChosen:
       "La skin «{{id}}» tiene errores, así que la mascota usa BIT. Cuando los arregles, vuelve sola.",
     hint: "Cada skin es una carpeta de ~/.amnis/skins/. Se vigila: no hace falta reiniciar.",
+    skill: {
+      hint: "¿Quieres una propia? Instala la skill de Claude Code que te ayuda a crearla: dibuja contigo o por ti, la valida y la ves moverse en la mascota.",
+      install: "Instalar la skill",
+      update: "Actualizar la skill",
+      installing: "Instalando…",
+      done: "La skill está instalada en Claude Code. Escribe /amnis-skin en una sesión para crear tu skin.",
+    },
   },
   updates: {
     title: "Actualizaciones",

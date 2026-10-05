@@ -23,7 +23,8 @@ export const SKIN_LIMITS = {
   name: 40,
 } as const;
 
-const PET_STATES: readonly PetState[] = [
+/** Los estados que una skin puede pintar. */
+export const SKIN_STATES: readonly PetState[] = [
   "coding",
   "testing",
   "researching",
@@ -534,10 +535,10 @@ export function validateSkinManifest(raw: unknown): SkinManifestResult {
   } else {
     for (const [state, def] of Object.entries(raw.states)) {
       const spath = `states.${state}`;
-      if (!PET_STATES.includes(state as PetState)) {
+      if (!SKIN_STATES.includes(state as PetState)) {
         r.warn(
           spath,
-          `estado desconocido, se ignora (admitidos: ${PET_STATES.join(", ")})`,
+          `estado desconocido, se ignora (admitidos: ${SKIN_STATES.join(", ")})`,
         );
         continue;
       }

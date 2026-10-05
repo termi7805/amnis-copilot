@@ -102,6 +102,13 @@ export const settings: Messages<typeof es> = {
     brokenChosen:
       "The skin “{{id}}” has errors, so the pet uses BIT. Once you fix them, it is applied again on its own.",
     hint: "Each skin is a folder in ~/.amnis/skins/. It is watched: no restart needed.",
+    skill: {
+      hint: "Want your own? Install the Claude Code skill that helps you make one: it draws with you or for you, validates it, and you see it move on the pet.",
+      install: "Install the skill",
+      update: "Update the skill",
+      installing: "Installing…",
+      done: "The skill is installed in Claude Code. Type /amnis-skin in a session to create your skin.",
+    },
   },
   updates: {
     title: "Updates",

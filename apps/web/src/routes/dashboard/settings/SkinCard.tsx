@@ -6,6 +6,7 @@ import { reloadSkins } from "../../../api/skins.ts";
 import { Pet } from "../../../lib/Pet/Pet.tsx";
 import { useSelectedSkin } from "../../../lib/Pet/useSelectedSkin.ts";
 import styles from "./SettingsView.module.css";
+import { SkillInstall } from "./SkillInstall.tsx";
 
 export interface SkinCardProps {
   petSkin: string | null;
@@ -213,6 +214,7 @@ export function SkinCard({ petSkin, catalog, onPetSkin }: SkinCardProps) {
           {error}
         </p>
       )}
+      <SkillInstall />
     </section>
   );
 }

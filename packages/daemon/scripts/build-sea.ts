@@ -125,6 +125,11 @@ function copyResources(dest: string): void {
     recursive: true,
   });
   cpSync(join(DAEMON_DIR, "hooks"), join(dest, "hooks"), { recursive: true });
+  cpSync(
+    join(REPO_ROOT, ".claude", "skills", "amnis-skin"),
+    join(dest, "skill", "amnis-skin"),
+    { recursive: true },
+  );
 }
 
 const main = await bundle();

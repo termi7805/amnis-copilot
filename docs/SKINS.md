@@ -157,6 +157,31 @@ comparten `localStorage`, así que el ajuste vive en el daemon y llega a la masc
 - `POST /api/skins/reload` (el botón «Volver a leer la carpeta») relee ya y avisa. Cubre lo que el vigilante no
   ve, p. ej. una carpeta `skins/` creada después de arrancar el daemon.
 
+## Crear una skin con Claude Code
+
+La skill **`/amnis-skin`** (`.claude/skills/amnis-skin/`) lleva de una idea, un boceto o un diseño a una
+skin que funciona, dibuje Claude o la persona. Aplica las decisiones que no se ven leyendo el manifest
+(pivotes, `clip`, cuándo una tira de `frames`, dónde va el hash) y trabaja sobre la salida de
+`amnis skin check`, no sobre su propia lectura del formato. Este documento sigue siendo la fuente del
+formato: la skill lo enlaza, no lo copia.
+
+**Instalarla.** En **Ajustes → Skin de la mascota** hay un botón *Instalar la skill* que copia la
+carpeta a `~/.claude/skills/amnis-skin/` (y *Actualizar la skill* si la instalada no es la de esta
+versión). Es el único momento en que Amnis escribe en `~/.claude/` además de los hooks, y solo al
+pulsarlo: no se instala sola. Quien trabaja desde el repo ya la tiene en `.claude/skills/`, sin copiar nada.
+`GET /api/skill` informa del estado (`{installed, current}`) y `POST /api/skill/install` la instala.
+
+**Usarla.** `/amnis-skin` en una sesión de Claude Code. Pregunta de dónde partes (de cero o de algo ya
+diseñado) y quién dibuja; en los cuatro caminos termina validando con `check.sh`, que busca el
+validador por sí solo (el repo, `amnis` en el PATH, `$AMNIS_CLI` o el daemon en marcha) y revisa además
+que los SVG no lleven scripts, recursos externos ni filtros caros: lo que el validador del manifest no
+mira porque no abre las imágenes.
+
+Scripts de la skill (`node`, sin dependencias): `placeholders.mjs` (skin de marcadores animada, 12
+estados), `place.mjs` (coloca y escala una pieza en el lienzo 150×110), `strip.mjs` (tira de
+fotogramas), `lint-svg.mjs`. Los tests de `packages/daemon/test/skinSkill.test.ts` los ejecutan y pasan
+el resultado por el validador real, así que un cambio del formato que los rompa se nota en CI.
+
 ## Una animación
 
 ```json

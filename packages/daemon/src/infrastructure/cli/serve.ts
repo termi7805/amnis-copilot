@@ -18,6 +18,7 @@ import type { RecordHookDeps } from "../../application/recordHook.ts";
 import { refreshPrices } from "../../application/refreshPrices.ts";
 import {
   AMNIS_DEV_ORIGIN,
+  CLAUDE_SKILL_DIR,
   DB_PATH,
   PORT,
   PRICES_REFRESH_MS,
@@ -31,6 +32,7 @@ import {
 import { type FocusFacts, focusAfter } from "../../domain/petFocus.ts";
 import { derivePetState } from "../../domain/petState.ts";
 import { makeRepairHooksDeps } from "../claudeSettings.ts";
+import { installSkill, skillStatus } from "../claudeSkill.ts";
 import { currentPlan } from "../currentPlan.ts";
 import { gatherDiagnoseFacts } from "../doctorFacts.ts";
 import { readCommitHash, resolveCheckout } from "../git.ts";
@@ -48,6 +50,7 @@ import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
 import { createSessionsRoutes } from "../http/routes/sessions.ts";
 import { createSettingsRoutes } from "../http/routes/settings.ts";
 import { createShutdownRoute } from "../http/routes/shutdown.ts";
+import { createSkillRoutes } from "../http/routes/skill.ts";
 import { createSkinsRoutes } from "../http/routes/skins.ts";
 import { acceptLanguage, createSpotifyRoutes } from "../http/routes/spotify.ts";
 import { createStateRoute } from "../http/routes/state.ts";
@@ -370,6 +373,10 @@ export function runServeCli(args: readonly string[] = []): void {
           // `not-logged-in` y llega a la UI por SSE sin reiniciar.
           mediaPoller.pollSoon(0);
         },
+      }),
+      ...createSkillRoutes({
+        status: () => skillStatus(RESOURCES.skillDir, CLAUDE_SKILL_DIR),
+        install: () => installSkill(RESOURCES.skillDir, CLAUDE_SKILL_DIR),
       }),
       ...createSkinsRoutes(SKINS_DIR, skinCatalog.reload),
       ...createSettingsRoutes({

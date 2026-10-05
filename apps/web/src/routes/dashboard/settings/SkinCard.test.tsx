@@ -4,6 +4,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { reloadSkins } from "../../../api/skins.ts";
 import { SkinCard } from "./SkinCard.tsx";
 
+vi.mock("../../../api/skill.ts", () => ({
+  fetchSkillStatus: vi.fn(() => new Promise(() => {})),
+  installSkill: vi.fn(),
+}));
 vi.mock("../../../api/skins.ts", () => ({
   fetchSkin: vi.fn(() => new Promise(() => {})),
   reloadSkins: vi.fn(),

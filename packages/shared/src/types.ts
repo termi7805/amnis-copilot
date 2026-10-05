@@ -458,6 +458,14 @@ export interface RepairHooksResponse {
   backup: string | null;
 }
 
+/** `GET /api/skill`: la skill `amnis-skin` en `~/.claude/skills/`. */
+export interface ClaudeSkillStatus {
+  /** La carpeta de la skill existe en Claude Code. */
+  installed: boolean;
+  /** Es idéntica a la que trae esta versión de Amnis. */
+  current: boolean;
+}
+
 /** Evento SSE `rebuild`: fin de `POST /api/ingest/rebuild`. */
 export interface RebuildEvent {
   status: "done" | "error";
