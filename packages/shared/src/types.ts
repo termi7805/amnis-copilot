@@ -542,6 +542,8 @@ export interface ActivityHeatmapResponse {
 
 export * from "./messages.ts";
 export { PLANS, PLANS_DATE, resolvePlan } from "./plans.ts";
+export { SERIES_ANIMATIONS } from "./seriesAnimations.ts";
+export * from "./skin.ts";
 export * from "./skinAnimation.ts";
 
 /** Una sesión de agente vista por hooks (`GET /api/sessions`, #107). */

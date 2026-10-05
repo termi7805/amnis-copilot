@@ -1,4 +1,10 @@
-import type { Listening, PetState, ScreenMode, Vibe } from "@amnis/shared";
+import {
+  type Listening,
+  type PetState,
+  type ScreenMode,
+  SERIES_ANIMATIONS,
+  type Vibe,
+} from "@amnis/shared";
 import { type CSSProperties, useState } from "react";
 import petStyles from "../../lib/Pet/Pet.module.css";
 import { Pet } from "../../lib/Pet/Pet.tsx";
@@ -7,7 +13,6 @@ import {
   animationCss,
   catalogCss,
   pivotStyle,
-  SERIES_ANIMATIONS,
 } from "../../lib/Pet/skinAnimations.ts";
 import styles from "./PetLab.module.css";
 

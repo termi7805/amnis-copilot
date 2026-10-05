@@ -1,12 +1,10 @@
-import type { SkinAnimation } from "@amnis/shared";
-import { validateSkinAnimation } from "@amnis/shared";
-import { describe, expect, it } from "vitest";
 import {
-  animationCss,
-  catalogCss,
-  pivotStyle,
   SERIES_ANIMATIONS,
-} from "./skinAnimations.ts";
+  type SkinAnimation,
+  validateSkinAnimation,
+} from "@amnis/shared";
+import { describe, expect, it } from "vitest";
+import { animationCss, catalogCss, pivotStyle } from "./skinAnimations.ts";
 
 const handmade: SkinAnimation = {
   beats: 2,
