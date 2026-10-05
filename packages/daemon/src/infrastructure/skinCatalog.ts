@@ -1,4 +1,4 @@
-import { type FSWatcher, watch } from "node:fs";
+import { existsSync, type FSWatcher, watch } from "node:fs";
 import { join } from "node:path";
 import type { SkinsSnapshot } from "@amnis/shared";
 import { listSkins } from "../application/skins.ts";
@@ -52,7 +52,8 @@ export function startSkinCatalog({
   };
 
   const attach = (): void => {
-    if (watcher) return;
+    // En Linux `watch` sobre una ruta que no existe no lanza: avisa por 'error' después.
+    if (watcher || !existsSync(root)) return;
     try {
       watcher = watch(root, { recursive: true }, () => {
         if (timer) clearTimeout(timer);

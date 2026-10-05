@@ -29,22 +29,14 @@ function writeSkin(root: string, id: string): void {
 function waitFor(
   seen: SkinsSnapshot[],
   ok: (s: SkinsSnapshot) => boolean,
-  nudge?: () => void,
 ): Promise<SkinsSnapshot> {
   return new Promise((resolve, reject) => {
     const started = Date.now();
-    let lastNudge = started;
     const tick = () => {
       const hit = seen.find(ok);
       if (hit) resolve(hit);
       else if (Date.now() - started > 5000) reject(new Error("sin cambio"));
-      else {
-        if (nudge && Date.now() - lastNudge > 250) {
-          lastNudge = Date.now();
-          nudge();
-        }
-        setTimeout(tick, 25);
-      }
+      else setTimeout(tick, 25);
     };
     tick();
   });
@@ -112,14 +104,8 @@ test("reload sin carpeta al arrancar la encuentra después", async () => {
     assert.equal(seen.length, 1);
 
     // Ya vigilada: el siguiente cambio llega solo.
-    // En Linux el watcher recursivo tarda en engancharse a la carpeta nueva y
-    // puede perder el primer evento: se vuelve a escribir hasta que llegue.
     writeSkin(root, "dos");
-    await waitFor(
-      seen,
-      (s) => s.skins.length === 2,
-      () => writeSkin(root, "dos"),
-    );
+    await waitFor(seen, (s) => s.skins.length === 2);
   } finally {
     catalog.stop();
     rmSync(base, { recursive: true, force: true });
