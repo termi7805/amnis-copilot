@@ -45,3 +45,25 @@
 .lab[data-paused="true"] .cell * {
   animation-play-state: paused;
 }
+
+.animations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 1rem;
+}
+
+.anim {
+  margin: 0;
+  text-align: center;
+}
+
+.anim svg {
+  display: block;
+  overflow: hidden;
+  background: rgba(127, 127, 127, 0.12);
+}
+
+.lab[data-paused="true"] .anim svg * {
+  animation-play-state: paused;
+}
