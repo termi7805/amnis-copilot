@@ -386,6 +386,17 @@ en `auto`). Es un número aparte, no mezcla los estados de las demás, y no camb
 color de la mascota. Viva es lo mismo que en la lista de sesiones: sin `SessionEnd` y con hooks
 dentro de la ventana de inactividad.
 
+**Con el foco en «Todas» (E14)** el snapshot lleva además `sessions`: una entrada por sesión
+viva (`null` en cualquier otro foco), cada una con su `state`, `since`, `commitHash`, worktree y
+un **color de identidad**. El daemon deriva el estado de cada una igual que con un foco `session`
+y los clientes solo eligen cuál dibujar. Van por orden de llegada (`startedAt`), no de actividad,
+para que la flecha derecha lleve siempre al mismo sitio. El color es el primer hueco libre de una
+paleta fija entre las sesiones vivas, y la sesión lo conserva hasta que termina; un `/clear` crea
+otro `session_id` en el mismo worktree y hereda puesto y color (el puesto se reserva unos
+segundos, hasta que la conversación nueva da su primer hook). La cuota es de la cuenta: con la de
+5 h agotada todas las entradas están en `limited`. El color dice *quién es* la sesión, no *cómo
+está*: no contradice que la fatiga no toque forma ni color.
+
 ### Renderizado
 
 El componente `<Pet>` recibe `{ state, level, fatigue }` (y desde E8, `listening` y las

@@ -13,6 +13,7 @@ function makeDeps(): GetStateDeps {
     focus: () => ({ kind: "auto" }),
     lastKnownStateEvent: () => null,
     liveSessionCandidates: () => [],
+    sessionSlots: { get: () => [], set: () => {} },
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
     readCommitHash: () => null,

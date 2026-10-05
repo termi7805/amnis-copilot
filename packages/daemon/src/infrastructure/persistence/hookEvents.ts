@@ -306,6 +306,12 @@ export interface LiveSessionCandidate {
   /** `null` si ningún hook de la ventana traía `cwd`. */
   repoRoot: string | null;
   worktree: string | null;
+  /** Primer hook de toda la historia de la sesión, no solo de la ventana. */
+  startedAt: string;
+  /** Empezó con un `SessionStart` de `/clear`. */
+  startedByClear: boolean;
+  /** Su último `SessionEnd` fue un `/clear`. */
+  clearedEnd: boolean;
 }
 
 /**
@@ -324,7 +330,7 @@ export function liveSessionCandidates(
 ): LiveSessionCandidate[] {
   const rows = db
     .prepare(`
-      SELECT session_id, ts, hook, repo_root, worktree FROM hook_events
+      SELECT session_id, ts, hook, session_reason, repo_root, worktree FROM hook_events
       WHERE account_id = ? AND ts >= ? AND session_id IS NOT NULL
       ORDER BY ts ASC
     `)
@@ -332,13 +338,18 @@ export function liveSessionCandidates(
     session_id: string;
     ts: string;
     hook: string;
+    session_reason: string | null;
     repo_root: string | null;
     worktree: string | null;
   }>;
 
   const bySession = new Map<
     string,
-    LiveSessionCandidate & { endedAt: string | null; active: boolean }
+    Omit<LiveSessionCandidate, "startedAt" | "startedByClear"> & {
+      endedAt: string | null;
+      endedByClear: boolean;
+      active: boolean;
+    }
   >();
   for (const r of rows) {
     const s = bySession.get(r.session_id) ?? {
@@ -347,12 +358,17 @@ export function liveSessionCandidates(
       ended: false,
       repoRoot: null,
       worktree: null,
+      clearedEnd: false,
       endedAt: null,
+      endedByClear: false,
       active: false,
     };
     s.lastEventAt = r.ts;
     if (!SESSION_HOOKS.includes(r.hook)) s.active = true;
-    if (r.hook === "SessionEnd") s.endedAt = r.ts;
+    if (r.hook === "SessionEnd") {
+      s.endedAt = r.ts;
+      s.endedByClear = r.session_reason === "clear";
+    }
     if (r.repo_root && r.worktree) {
       s.repoRoot = r.repo_root;
       s.worktree = r.worktree;
@@ -364,10 +380,27 @@ export function liveSessionCandidates(
     WHERE account_id = ? AND session_id = ? AND hook NOT IN ${SESSION_HOOKS_SQL}
     LIMIT 1
   `);
+  const origin = db.prepare(`
+    SELECT MIN(ts) AS started_at,
+      MAX(hook = 'SessionStart' AND session_reason = 'clear') AS by_clear
+    FROM hook_events
+    WHERE account_id = ? AND session_id = ?
+  `);
   const out: LiveSessionCandidate[] = [];
-  for (const { endedAt, active, ...s } of bySession.values()) {
+  for (const { endedAt, endedByClear, active, ...s } of bySession.values()) {
     if (!active && !hadActivity.get(accountId, s.sessionId)) continue;
-    out.push({ ...s, ended: endedAt !== null && endedAt >= s.lastEventAt });
+    const o = origin.get(accountId, s.sessionId) as {
+      started_at: string;
+      by_clear: number;
+    };
+    const ended = endedAt !== null && endedAt >= s.lastEventAt;
+    out.push({
+      ...s,
+      ended,
+      startedAt: o.started_at,
+      startedByClear: o.by_clear === 1,
+      clearedEnd: ended && endedByClear,
+    });
   }
   return out;
 }

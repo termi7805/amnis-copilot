@@ -27,6 +27,7 @@ function insert(
     sessionId?: string | null;
     repoRoot?: string | null;
     worktree?: string | null;
+    sessionReason?: string | null;
   } = {},
 ): void {
   insertHookEvent(db, {
@@ -37,7 +38,7 @@ function insert(
     toolName: overrides.toolName ?? "Edit",
     sessionId: overrides.sessionId ?? null,
     project: overrides.project ?? null,
-    sessionReason: null,
+    sessionReason: overrides.sessionReason ?? null,
     notificationType: null,
     repoRoot: overrides.repoRoot ?? null,
     worktree: overrides.worktree ?? null,
@@ -477,6 +478,44 @@ test("liveSessionCandidates ignora las sesiones sin actividad en toda su histori
     new Date("2026-01-10T09:55:00.000Z"),
   );
   assert.deepEqual(rows.map((r) => r.sessionId).sort(), ["real", "resumed"]);
+  db.close();
+});
+
+test("liveSessionCandidates: startedAt mira toda la historia y el /clear se marca en origen y en fin", () => {
+  const db = openDb(":memory:");
+  const accountId = ensureAccount(db, "anthropic", "default");
+  const ev = (
+    sessionId: string,
+    ts: string,
+    hook: string,
+    sessionReason: string | null = null,
+  ) =>
+    insert(db, accountId, ts, "unknown", {
+      hook,
+      sessionId,
+      sessionReason,
+      repoRoot: "/r",
+      worktree: "/r-1",
+    });
+  ev("old", "2026-01-09T10:00:00.000Z", "SessionStart", "startup");
+  ev("old", "2026-01-10T10:00:00.000Z", "PreToolUse");
+  ev("old", "2026-01-10T10:01:00.000Z", "SessionEnd", "clear");
+  ev("new", "2026-01-10T10:01:00.100Z", "SessionStart", "clear");
+  ev("new", "2026-01-10T10:02:00.000Z", "PreToolUse");
+
+  const by = Object.fromEntries(
+    liveSessionCandidates(
+      db,
+      accountId,
+      new Date("2026-01-10T09:55:00.000Z"),
+    ).map((r) => [r.sessionId, r]),
+  );
+  assert.equal(by.old?.startedAt, "2026-01-09T10:00:00.000Z");
+  assert.equal(by.old?.startedByClear, false);
+  assert.equal(by.old?.clearedEnd, true);
+  assert.equal(by.new?.startedAt, "2026-01-10T10:01:00.100Z");
+  assert.equal(by.new?.startedByClear, true);
+  assert.equal(by.new?.clearedEnd, false);
   db.close();
 });
 

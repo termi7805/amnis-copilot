@@ -22,6 +22,21 @@ export type PetState =
 
 export type ProviderId = "anthropic";
 
+/** Una sesión viva con el foco en `all`: lo que el cliente necesita para dibujar su mascota. */
+export interface SessionPet {
+  sessionId: string;
+  /** Raíz del worktree de la sesión. */
+  worktree: string;
+  /** Nombre (no la ruta) del worktree. */
+  name: string;
+  state: PetState;
+  /** ISO8601: desde cuándo está en este estado. */
+  since: string;
+  commitHash: string | null;
+  /** Índice en la paleta de identidad: lo asigna el daemon y la sesión lo conserva mientras viva. */
+  identity: number;
+}
+
 /** Lo único que el componente `<Pet>` necesita saber. Nada de sprites aquí. */
 export interface PetSnapshot {
   state: PetState;
@@ -47,6 +62,8 @@ export interface PetSnapshot {
   /** Sesiones vivas fuera del foco (#112): lo que `state` ya no cuenta. Siempre
    * 0 con el foco en `auto` o `all`, que miran a todas. */
   othersActive: number;
+  /** Una entrada por sesión viva, en orden de llegada; `null` fuera del foco `all`. */
+  sessions: SessionPet[] | null;
 }
 
 export interface QuotaWindow {

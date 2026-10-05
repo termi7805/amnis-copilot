@@ -23,6 +23,7 @@ const basePet: PetSnapshot = {
   listening: null,
   focus: { kind: "auto" },
   othersActive: 0,
+  sessions: null,
 };
 
 const baseQuota: QuotaSnapshot = {

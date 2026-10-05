@@ -8,9 +8,11 @@ import type {
 import {
   commitHashFrom,
   countOthersActive,
+  type GetStateDeps,
   type LastKnownStateEvent,
   type LiveSessionCandidate,
   petPhaseFrom,
+  sessionPetsFrom,
 } from "../application/getState.ts";
 import {
   deriveListening,
@@ -35,6 +37,8 @@ export interface PetStateWatcherDeps {
   getCachedMedia(): MediaSnapshot | null;
   /** `HEAD` corto del repo — solo se llama en `pushing` (commitHashFrom). */
   readCommitHash(project: string): string | null;
+  /** La misma que `GetStateDeps.sessionSlots`. */
+  sessionSlots: GetStateDeps["sessionSlots"];
   broadcast(snapshot: PetSnapshot): void;
   /** Se llama solo desde el temporizador, no en cada `check()`: suelta un
    * foco cuya sesión se quedó inactiva o cuyo worktree ya no existe (#110). */
@@ -52,7 +56,8 @@ export interface PetStateWatcher {
 
 /**
  * Solo dispara `broadcast` cuando cambia el campo `state`, el eje
- * `listening` (#59), el foco o `othersActive` (#112), no el `PetSnapshot`
+ * `listening` (#59), el foco, `othersActive` (#112) o el estado, la entrada
+ * o la salida de cualquier sesión de `sessions`, no el `PetSnapshot`
  * entero — `since` avanza con cada
  * evento del mismo estado, y comparar el objeto completo emitiría un evento
  * por cada hook. `listening` nunca altera `state`: ni lo despierta de
@@ -70,6 +75,7 @@ export function startPetStateWatcher(
   let lastBroadcastProject: string | null = null;
   let lastBroadcastFocus: string | null = null;
   let lastBroadcastOthers: number | null = null;
+  let lastBroadcastSessions: string | null = null;
   let memory: ListeningMemory = NO_LISTENING;
   // El apagado de `listening` no lo dispara ningún evento: sin esto llegaría
   // con el intervalo de 30 s, no a los ~15 s de la pausa.
@@ -92,7 +98,19 @@ export function startPetStateWatcher(
     const focusKey = JSON.stringify(focus);
     // Otra sesión que arranca o termina no toca `state`, pero sí el aviso.
     const othersActive = countOthersActive(deps, focus, now);
+    // Con `all` cambia el estado de cualquier sesión, no solo el del foco:
+    // `since` queda fuera porque solo avanza con el estado.
+    const sessions = sessionPetsFrom(
+      deps,
+      focus,
+      now,
+      deps.getCachedExhausted(),
+    );
+    const sessionsKey = JSON.stringify(
+      sessions?.map((s) => [s.sessionId, s.state, s.identity, s.commitHash]),
+    );
     if (
+      sessionsKey === lastBroadcastSessions &&
       focusKey === lastBroadcastFocus &&
       othersActive === lastBroadcastOthers &&
       phase.state === lastBroadcastState &&
@@ -106,6 +124,7 @@ export function startPetStateWatcher(
     lastBroadcastProject = phase.project;
     lastBroadcastFocus = focusKey;
     lastBroadcastOthers = othersActive;
+    lastBroadcastSessions = sessionsKey;
     deps.broadcast({
       ...phase,
       fatigue: deps.getCachedFatigue(),
@@ -114,6 +133,7 @@ export function startPetStateWatcher(
       listening: memory.listening,
       focus,
       othersActive,
+      sessions,
     });
   }
 

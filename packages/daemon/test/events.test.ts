@@ -29,6 +29,7 @@ const EVENT: AmnisEvent = {
     listening: null,
     focus: { kind: "auto" },
     othersActive: 0,
+    sessions: null,
   },
 };
 

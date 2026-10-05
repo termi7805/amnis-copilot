@@ -58,6 +58,7 @@ const fakeState: StateResponse = {
     listening: null,
     focus: { kind: "auto" },
     othersActive: 0,
+    sessions: null,
   },
   media: {
     status: "not-configured",

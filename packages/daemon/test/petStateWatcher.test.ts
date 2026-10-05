@@ -7,6 +7,7 @@ import type {
 } from "../src/application/getState.ts";
 import { LISTENING_GRACE_MS } from "../src/domain/listening.ts";
 import { SLEEP_AFTER_MS } from "../src/domain/petState.ts";
+import type { SessionSlot } from "../src/domain/sessionSlots.ts";
 import { startPetStateWatcher } from "../src/infrastructure/petStateWatcher.ts";
 
 const STARTED_AT = "2026-01-01T00:00:00.000Z";
@@ -20,6 +21,13 @@ function makeWatcher(
   liveSessions: () => LiveSessionCandidate[] = () => [],
 ) {
   const broadcasts: PetSnapshot[] = [];
+  let slots: SessionSlot[] = [];
+  const sessionSlots = {
+    get: () => slots,
+    set: (next: SessionSlot[]) => {
+      slots = next;
+    },
+  };
   const watcher = startPetStateWatcher({
     focus,
     lastKnownStateEvent: lastEvent,
@@ -29,6 +37,7 @@ function makeWatcher(
     getCachedExhausted,
     getCachedMedia,
     readCommitHash,
+    sessionSlots,
     broadcast: (snapshot) => broadcasts.push(snapshot),
     intervalMs: 3_600_000,
   });
@@ -321,6 +330,7 @@ test("el temporizador reconcilia el foco; check() a mano no", async () => {
     focus: () => ({ kind: "auto" }),
     lastKnownStateEvent: () => null,
     liveSessionCandidates: () => [],
+    sessionSlots: { get: () => [], set: () => {} },
     startedAt: STARTED_AT,
     getCachedFatigue: () => 0,
     getCachedExhausted: () => false,
@@ -373,6 +383,9 @@ test("othersActive: broadcastea cuando solo cambia el número de otras sesiones,
       ended: false,
       repoRoot: "/r",
       worktree: "/r-2",
+      startedAt: at(1).toISOString(),
+      startedByClear: false,
+      clearedEnd: false,
     },
   ];
   watcher.check(at(3));
@@ -384,5 +397,62 @@ test("othersActive: broadcastea cuando solo cambia el número de otras sesiones,
   watcher.check(at(4));
   assert.equal(broadcasts.length, n + 2);
   assert.equal(broadcasts.at(-1)?.othersActive, 0);
+  watcher.stop();
+});
+
+test("con all emite cuando cambia el estado de cualquier sesión, entra o sale una, y no si nada cambia", () => {
+  const at = (s: number) => new Date(Date.UTC(2026, 0, 1, 0, 0, s));
+  const states: Record<string, string> = { A: "coding", B: "coding" };
+  let sessions = ["A", "B"];
+  const event = (sessionId: string): LastKnownStateEvent => ({
+    hook: "PreToolUse",
+    toolName: null,
+    derivedState: states[sessionId] as string,
+    ts: at(1).toISOString(),
+    project: null,
+    stateEnteredAt: at(1).toISOString(),
+  });
+  const { watcher, broadcasts } = makeWatcher(
+    (focus) => (focus.kind === "session" ? event(focus.sessionId) : null),
+    () => false,
+    () => null,
+    () => null,
+    () => ({ kind: "all" }),
+    () =>
+      sessions.map((sessionId) => ({
+        sessionId,
+        lastEventAt: at(1).toISOString(),
+        ended: false,
+        repoRoot: "/r",
+        worktree: `/r-${sessionId}`,
+        startedAt: at(0).toISOString(),
+        startedByClear: false,
+        clearedEnd: false,
+      })),
+  );
+  watcher.check(at(2));
+  const n = broadcasts.length;
+  watcher.check(at(3));
+  assert.equal(broadcasts.length, n, "sin cambios no emite");
+
+  states.A = "waiting";
+  watcher.check(at(4));
+  assert.equal(broadcasts.length, n + 1);
+  assert.deepEqual(
+    broadcasts.at(-1)?.sessions?.map((s) => [s.sessionId, s.state]),
+    [
+      ["A", "waiting"],
+      ["B", "coding"],
+    ],
+  );
+
+  sessions = ["A", "B", "C"];
+  states.C = "coding";
+  watcher.check(at(5));
+  assert.equal(broadcasts.length, n + 2);
+
+  sessions = ["A", "C"];
+  watcher.check(at(6));
+  assert.equal(broadcasts.length, n + 3);
   watcher.stop();
 });

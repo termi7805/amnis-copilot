@@ -31,6 +31,7 @@ import {
 } from "../../config.ts";
 import { type FocusFacts, focusAfter } from "../../domain/petFocus.ts";
 import { derivePetState } from "../../domain/petState.ts";
+import type { SessionSlot } from "../../domain/sessionSlots.ts";
 import { makeRepairHooksDeps } from "../claudeSettings.ts";
 import { installSkill, skillStatus } from "../claudeSkill.ts";
 import { currentPlan } from "../currentPlan.ts";
@@ -121,9 +122,11 @@ function makeStateDeps(
   skins: GetStateDeps["skins"],
   latestQuotas: GetStateDeps["latestQuotas"],
   update: GetStateDeps["update"],
+  sessionSlots: GetStateDeps["sessionSlots"],
 ): GetStateDeps {
   const plan = () => currentPlan(settings().plan);
   return {
+    sessionSlots,
     version: VERSION,
     update,
     startedAt,
@@ -182,6 +185,13 @@ export function runServeCli(args: readonly string[] = []): void {
   // Un solo proceso de ingesta a la vez (#98): la pasada automática de antes de
   // cada muestra de cuota y la reconstrucción comparten ejecutor.
   const ingest = createIngestRunner({ spawn: spawnIngest });
+  let slots: SessionSlot[] = [];
+  const sessionSlots: GetStateDeps["sessionSlots"] = {
+    get: () => slots,
+    set: (next) => {
+      slots = next;
+    },
+  };
   const stateDeps = makeStateDeps(
     db,
     accountId,
@@ -196,6 +206,7 @@ export function runServeCli(args: readonly string[] = []): void {
     // El poller se crea después (necesita el watcher): cierre perezoso.
     () => poller.current().then((snapshot) => [snapshot]),
     () => updateChecker.current(),
+    sessionSlots,
   );
 
   // Cacheadas del último poll de cuota: un `state` disparado por hooks no
@@ -243,6 +254,7 @@ export function runServeCli(args: readonly string[] = []): void {
     getCachedExhausted: () => cachedExhausted,
     getCachedMedia: () => mediaPoller.peek(),
     readCommitHash,
+    sessionSlots,
     broadcast: (snapshot) =>
       broadcaster.broadcast({ event: "state", data: snapshot }),
   });

@@ -48,6 +48,7 @@ function makeDeps(overrides: Partial<GetStateDeps> = {}): GetStateDeps {
     focus: () => ({ kind: "auto" }),
     lastKnownStateEvent: () => null,
     liveSessionCandidates: () => [],
+    sessionSlots: { get: () => [], set: () => {} },
     countHookEvents: () => 0,
     countUsageEvents: () => 0,
     latestQuotas: () => Promise.resolve([makeQuota()]),
@@ -390,6 +391,9 @@ function live(
     ended: false,
     repoRoot: "/r",
     worktree: "/r-1",
+    startedAt: new Date(NOW.getTime() - 3_600_000).toISOString(),
+    startedByClear: false,
+    clearedEnd: false,
     ...overrides,
   };
 }
@@ -443,4 +447,62 @@ test("getState rellena othersActive con las sesiones de la ventana de inactivida
   );
   assert.equal(state.pet.othersActive, 1);
   assert.equal(sinces[0]?.toISOString(), "2026-01-01T00:50:00.000Z");
+});
+
+test("sessions es null fuera del foco all", async () => {
+  const state = await getState(
+    makeDeps({ liveSessionCandidates: () => [live("A")] }),
+    NOW,
+  );
+  assert.equal(state.pet.sessions, null);
+});
+
+test("con el foco all hay una entrada por sesión viva con su estado, y limited para todas con la cuota agotada", async () => {
+  const states: Record<string, string> = { A: "coding", B: "waiting" };
+  const deps = (exhausted: boolean) =>
+    makeDeps({
+      focus: () => ({ kind: "all" }),
+      liveSessionCandidates: () => [
+        live("A", { worktree: "/r-a" }),
+        live("B", { worktree: "/r-b" }),
+      ],
+      lastKnownStateEvent: (focus) => {
+        if (focus.kind !== "session") return null;
+        const ts = new Date(NOW.getTime() - 30_000).toISOString();
+        return {
+          hook: "PreToolUse",
+          toolName: null,
+          derivedState: states[focus.sessionId] as string,
+          ts,
+          project: null,
+          stateEnteredAt: ts,
+        };
+      },
+      latestQuotas: () =>
+        Promise.resolve([
+          makeQuota({
+            authoritative: {
+              fiveHour: { utilization: exhausted ? 100 : 10, resetsAt: null },
+              sevenDay: { utilization: 0, resetsAt: null },
+              limits: [],
+              weeklyBreakdown: null,
+            },
+          }),
+        ]),
+    });
+
+  const normal = (await getState(deps(false), NOW)).pet.sessions;
+  assert.deepEqual(
+    normal?.map((s) => [s.sessionId, s.name, s.state, s.identity]),
+    [
+      ["A", "r-a", "coding", 0],
+      ["B", "r-b", "waiting", 1],
+    ],
+  );
+
+  const limited = (await getState(deps(true), NOW)).pet.sessions;
+  assert.deepEqual(
+    limited?.map((s) => s.state),
+    ["limited", "limited"],
+  );
 });

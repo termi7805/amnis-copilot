@@ -6,6 +6,7 @@ import type {
   PetState,
   PlanInfo,
   QuotaSnapshot,
+  SessionPet,
   SkinsSnapshot,
   StateResponse,
   UpdateInfo,
@@ -15,6 +16,7 @@ import {
   sessionAlive,
   sleepAfter,
 } from "../domain/petState.ts";
+import { assignSlots, type SessionSlot } from "../domain/sessionSlots.ts";
 
 /** Una sesión con hooks recientes, tal como la entrega la persistencia. */
 export interface LiveSessionCandidate {
@@ -23,6 +25,9 @@ export interface LiveSessionCandidate {
   ended: boolean;
   repoRoot: string | null;
   worktree: string | null;
+  startedAt: string;
+  startedByClear: boolean;
+  clearedEnd: boolean;
 }
 
 export interface LastKnownStateEvent {
@@ -77,6 +82,12 @@ export interface GetStateDeps {
   /** `HEAD` corto del repo en `project` — solo se llama en `pushing`
    * (infrastructure/git.ts). */
   readCommitHash(project: string): string | null;
+  /** Puestos y colores del instante anterior, en memoria: `getState` y el
+   * watcher comparten el mismo, o cada uno repartiría colores por su cuenta. */
+  sessionSlots: {
+    get(): SessionSlot[];
+    set(slots: SessionSlot[]): void;
+  };
 }
 
 export interface PetPhase {
@@ -147,8 +158,7 @@ export function petPhaseFrom(
 
 /**
  * Sesiones vivas que el foco deja fuera (#112). En `auto` el foco ya las mira
- * a todas (`all` se comporta como `auto` hasta que exista el snapshot por
- * sesión), así que no hay "otras". Una sesión sin repo no casa con un foco de
+ * a todas (`all` las enseña todas en `sessions`), así que no hay "otras". Una sesión sin repo no casa con un foco de
  * repo o worktree: igual que en `focusFilter`, queda fuera de él.
  */
 export function othersActiveFrom(
@@ -222,6 +232,52 @@ export function commitHashFrom(
   return readCommitHash(lastEvent.project);
 }
 
+/**
+ * Una entrada por sesión viva con el foco en `all`; `null` en cualquier otro.
+ * La única función que construye la lista: `getState` y el watcher la llaman
+ * con lo mismo, así que `/api/state` y el SSE no pueden contradecirse. El
+ * estado de cada una se deriva como el de un foco `session`.
+ */
+export function sessionPetsFrom(
+  deps: Pick<
+    GetStateDeps,
+    | "liveSessionCandidates"
+    | "lastKnownStateEvent"
+    | "startedAt"
+    | "readCommitHash"
+    | "sessionSlots"
+  >,
+  focus: PetFocus,
+  now: Date,
+  exhausted: boolean,
+): SessionPet[] | null {
+  if (focus.kind !== "all") return null;
+  const since = new Date(now.getTime() - SLEEP_AFTER_MS);
+  const slots = assignSlots(
+    deps.liveSessionCandidates(since),
+    deps.sessionSlots.get(),
+    now,
+  );
+  deps.sessionSlots.set(slots);
+  return slots.map((slot) => {
+    const lastEvent = deps.lastKnownStateEvent({
+      kind: "session",
+      sessionId: slot.sessionId,
+      worktree: slot.worktree,
+    });
+    const phase = petPhaseFrom(lastEvent, deps.startedAt, now, exhausted);
+    return {
+      sessionId: slot.sessionId,
+      worktree: slot.worktree,
+      name: projectName(slot.worktree) ?? slot.worktree,
+      state: phase.state,
+      since: phase.since,
+      commitHash: commitHashFrom(phase, lastEvent, deps.readCommitHash),
+      identity: slot.identity,
+    };
+  });
+}
+
 /** `GET /api/state` (#26): rebanada vertical del proyecto. */
 export async function getState(
   deps: GetStateDeps,
@@ -233,12 +289,8 @@ export async function getState(
   ]);
   const focus = deps.focus();
   const lastEvent = deps.lastKnownStateEvent(focus);
-  const phase = petPhaseFrom(
-    lastEvent,
-    deps.startedAt,
-    now,
-    quotaExhausted(quotas),
-  );
+  const exhausted = quotaExhausted(quotas);
+  const phase = petPhaseFrom(lastEvent, deps.startedAt, now, exhausted);
 
   return {
     pet: {
@@ -249,6 +301,7 @@ export async function getState(
       listening: deps.listening(),
       focus,
       othersActive: countOthersActive(deps, focus, now),
+      sessions: sessionPetsFrom(deps, focus, now, exhausted),
     },
     quotas,
     media,
