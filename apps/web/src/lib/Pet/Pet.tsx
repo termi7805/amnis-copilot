@@ -2567,6 +2567,8 @@ export function Pet({
           layers={skinLayers}
           commitHash={commitHash}
           resetsAt={resetsAt}
+          music={music && { ...music, visible }}
+          screen={screen}
         />
       ) : (
         <Scene

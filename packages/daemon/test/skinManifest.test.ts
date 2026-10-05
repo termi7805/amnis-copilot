@@ -61,13 +61,14 @@ test("una ruta con .., absoluta o URL se rechaza nombrando el campo", () => {
   mention(errorsOf(skin({ coding: { layers: [{ src: "../x.png" }] } })), "..");
 });
 
+const head = (extra: object = {}) =>
+  layer({ role: "head", anchor: [55, 46], ...extra });
+
 test("dos capas head en el mismo estado se rechazan", () => {
   const e = errorsOf(
     skin({
       music: { layers: [] },
-      coding: {
-        layers: [layer({ role: "head" }), layer(), layer({ role: "head" })],
-      },
+      coding: { layers: [head(), layer(), head()] },
     }),
   );
   mention(e, "states.coding", "head");
@@ -76,11 +77,51 @@ test("dos capas head en el mismo estado se rechazan", () => {
 test("head en estados distintos está bien", () => {
   const r = validateSkinManifest(
     skin({
-      coding: { layers: [layer({ role: "head" })] },
-      testing: { layers: [layer({ role: "head" })] },
+      coding: { layers: [head()] },
+      testing: { layers: [head()] },
     }),
   );
   assert.ok("manifest" in r);
+});
+
+test("una capa head sin anchor se rechaza", () => {
+  const e = errorsOf(skin({ coding: { layers: [layer({ role: "head" })] } }));
+  mention(e, "states.coding.layers[0].anchor", "anchor");
+});
+
+test("anchor fuera de la escena o mal formado se rechaza", () => {
+  for (const anchor of [[200, 46], [55, -1], [55], "55,46"]) {
+    const e = errorsOf(skin({ coding: { layers: [head({ anchor })] } }));
+    mention(e, "states.coding.layers[0].anchor");
+  }
+});
+
+test("scale de la capa head: entre 0 (excluido) y 4", () => {
+  for (const scale of [0, -1, 5, "2", Number.NaN]) {
+    const e = errorsOf(skin({ coding: { layers: [head({ scale })] } }));
+    mention(e, "states.coding.layers[0].scale");
+  }
+  const r = validateSkinManifest(
+    skin({ coding: { layers: [head({ scale: 1.5 })] } }),
+  );
+  assert.ok("manifest" in r);
+  const l = r.manifest.states.coding?.layers[0];
+  assert.ok(l && "src" in l);
+  assert.deepEqual(l.anchor, [55, 46]);
+  assert.equal(l.scale, 1.5);
+});
+
+test("anchor y scale sin role head avisan y no pasan al manifest", () => {
+  const r = validateSkinManifest(
+    skin({ coding: { layers: [layer({ anchor: [10, 10], scale: 2 })] } }),
+  );
+  assert.ok("manifest" in r);
+  assert.equal(r.warnings.length, 2);
+  assert.ok(r.warnings.every((w) => w.includes('role "head"')));
+  const l = r.manifest.states.coding?.layers[0];
+  assert.ok(l && "src" in l);
+  assert.equal(l.anchor, undefined);
+  assert.equal(l.scale, undefined);
 });
 
 test("un color que no es hex se rechaza", () => {

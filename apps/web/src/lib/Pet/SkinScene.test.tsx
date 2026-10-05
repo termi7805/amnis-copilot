@@ -1,4 +1,8 @@
-import { type SkinManifest, validateSkinManifest } from "@amnis/shared";
+import {
+  type Listening,
+  type SkinManifest,
+  validateSkinManifest,
+} from "@amnis/shared";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { Pet } from "./Pet.tsx";
@@ -165,6 +169,140 @@ describe("<Pet skin>", () => {
       />,
     );
     expect(container.querySelector("text")?.textContent).toMatch(/^2h 0[45]m$/);
+  });
+
+  describe("música", () => {
+    const LISTENING: Listening = {
+      vibe: "fiesta",
+      bpm: 124,
+      track: { id: "t1", title: "Canción", artist: "A", imageUrl: null },
+    };
+    const headSkin = skinOf({
+      animations: {},
+      states: {
+        coding: {
+          layers: [
+            { src: "body.png", anim: "breathe" },
+            {
+              src: "head.png",
+              role: "head",
+              anchor: [75, 40],
+              scale: 1.5,
+              pivot: [75, 60],
+              anim: "nod",
+            },
+          ],
+        },
+        waiting: {
+          layers: [
+            { src: "body.png" },
+            { src: "head.png", role: "head", anchor: [75, 40] },
+          ],
+        },
+        testing: { layers: [{ src: "body.png" }] },
+      },
+    });
+    const headGroup = (c: HTMLElement) =>
+      c.querySelector<SVGGElement>("[data-skin-head]");
+
+    it("la capa head cabecea y lleva cascos y pantalla encima, colocados por anchor y scale", () => {
+      const view = render(
+        <Pet
+          state="coding"
+          level={1}
+          fatigue={0}
+          listening={LISTENING}
+          skin={headSkin}
+        />,
+      );
+      // La pantalla «sonando» sale al cambiar de pista, no en el primer render.
+      view.rerender(
+        <Pet
+          state="coding"
+          level={1}
+          fatigue={0}
+          listening={{ ...LISTENING, track: { ...LISTENING.track, id: "t2" } }}
+          skin={headSkin}
+        />,
+      );
+      const { container } = view;
+      const head = headGroup(container);
+      expect(head?.getAttribute("class")).toMatch(/head/);
+      expect(head?.getAttribute("style")).toContain(
+        "transform-origin: 75px 60px",
+      );
+      const phones = head?.querySelector("[data-testid='headphones']");
+      expect(phones).not.toBeNull();
+      expect(head?.querySelector("[data-testid='now-playing']")).not.toBeNull();
+      expect(phones?.parentElement?.getAttribute("transform")).toBe(
+        "translate(75 40) scale(1.5) translate(-55 -46)",
+      );
+      expect(phones?.parentElement?.parentElement?.getAttribute("class")).toBe(
+        "amnis-anim-nod",
+      );
+      const pet = screen.getByTestId("pet");
+      expect(pet.dataset.vibe).toBe("fiesta");
+      expect(pet.dataset.motion).toBe("head");
+    });
+
+    it("el cuerpo no cabecea: solo la capa head lleva la clase", () => {
+      const { container } = render(
+        <Pet
+          state="coding"
+          level={1}
+          fatigue={0}
+          listening={LISTENING}
+          skin={headSkin}
+        />,
+      );
+      const heads = [...container.querySelectorAll("g")].filter((g) =>
+        /head/.test(g.getAttribute("class") ?? ""),
+      );
+      expect(heads).toHaveLength(1);
+      expect(heads[0]?.querySelector("image")?.getAttribute("href")).toContain(
+        "head.png",
+      );
+    });
+
+    it("sin música el grupo de anclaje sigue ahí, vacío", () => {
+      const { container } = render(
+        <Pet state="coding" level={1} fatigue={0} skin={headSkin} />,
+      );
+      const anchor = headGroup(container)?.querySelector("g[transform]");
+      expect(anchor).not.toBeNull();
+      expect(anchor?.children).toHaveLength(0);
+    });
+
+    it("una skin sin capa head no lleva cascos ni pantalla, pero sí notas", () => {
+      const { container } = render(
+        <Pet
+          state="testing"
+          level={1}
+          fatigue={0}
+          listening={LISTENING}
+          skin={headSkin}
+        />,
+      );
+      expect(container.querySelector("[data-skin]")).not.toBeNull();
+      expect(screen.queryByTestId("headphones")).toBeNull();
+      expect(screen.queryByTestId("now-playing")).toBeNull();
+      expect(container.querySelector('[class*="note"]')).not.toBeNull();
+    });
+
+    it("waiting no lleva capa de música aunque la skin tenga head", () => {
+      const { container } = render(
+        <Pet
+          state="waiting"
+          level={1}
+          fatigue={0}
+          listening={LISTENING}
+          skin={headSkin}
+        />,
+      );
+      expect(headGroup(container)).not.toBeNull();
+      expect(screen.queryByTestId("headphones")).toBeNull();
+      expect(screen.queryByTestId("now-playing")).toBeNull();
+    });
   });
 
   it("nunca incrusta el contenido de la skin: ni <script> ni <foreignObject>", () => {

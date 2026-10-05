@@ -67,7 +67,13 @@ export interface SkinImageLayer extends SkinLayerBase {
   beats?: number;
   /** La capa que cabecea con la música y lleva los cascos. */
   role?: "head";
+  /** Solo con `role: "head"`: dónde cae, en la escena, el centro de la pantalla de BIT, que es donde se centran cascos y pantalla «sonando». */
+  anchor?: [number, number];
+  /** Solo con `role: "head"`: tamaño de cascos y pantalla respecto a la cabeza de BIT (1 = igual). */
+  scale?: number;
 }
+
+export const SKIN_HEAD_SCALE_MAX = 4;
 
 export interface SkinTextLayer extends SkinLayerBase {
   text: SkinTextDatum;
@@ -186,7 +192,17 @@ function warnUnknown(
   }
 }
 
-const IMAGE_KEYS = ["src", "anim", "pivot", "clip", "frames", "beats", "role"];
+const IMAGE_KEYS = [
+  "src",
+  "anim",
+  "pivot",
+  "clip",
+  "frames",
+  "beats",
+  "role",
+  "anchor",
+  "scale",
+];
 const TEXT_KEYS = ["text", "anim", "pivot", "at", "size", "color"];
 
 function checkLayer(
@@ -343,6 +359,42 @@ function checkLayer(
     }
   }
 
+  let anchor: [number, number] | undefined;
+  let scale: number | undefined;
+  if (role === "head") {
+    if (raw.anchor === undefined) {
+      r.error(
+        `${path}.anchor`,
+        'la capa con role "head" necesita `anchor` [x, y]: dónde caen los cascos y la pantalla; sin él saldrían donde la cabeza de BIT',
+      );
+    } else {
+      anchor = pair(raw.anchor, `${path}.anchor`, r, scene) ?? undefined;
+    }
+    if (raw.scale !== undefined) {
+      if (
+        !isFiniteNumber(raw.scale) ||
+        raw.scale <= 0 ||
+        raw.scale > SKIN_HEAD_SCALE_MAX
+      ) {
+        r.error(
+          `${path}.scale`,
+          `debe ser un número mayor que 0 y como mucho ${SKIN_HEAD_SCALE_MAX}`,
+        );
+      } else {
+        scale = raw.scale;
+      }
+    }
+  } else {
+    for (const key of ["anchor", "scale"]) {
+      if (raw[key] !== undefined) {
+        r.warn(
+          `${path}.${key}`,
+          'solo tiene efecto con role "head", se ignora',
+        );
+      }
+    }
+  }
+
   if (r.errors.length > before) return null;
   return {
     ...base,
@@ -351,6 +403,8 @@ function checkLayer(
     ...(frames !== undefined && { frames }),
     ...(beats !== undefined && { beats }),
     ...(role && { role }),
+    ...(anchor && { anchor }),
+    ...(scale !== undefined && { scale }),
   };
 }
 

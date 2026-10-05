@@ -47,7 +47,7 @@ Solo `coding`; el resto de estados se ven como BIT.
     "coding": {
       "layers": [
         { "src": "body.png", "anim": "breathe", "pivot": [75, 100] },
-        { "src": "head.png", "role": "head", "anim": "nod", "pivot": [75, 60] },
+        { "src": "head.png", "role": "head", "anchor": [75, 40], "scale": 1.2, "anim": "nod", "pivot": [75, 60] },
         { "src": "code.png", "clip": [40, 50, 70, 40], "anim": "scroll" }
       ]
     },
@@ -91,7 +91,9 @@ Una capa es una **imagen** (`src`) o un **texto** (`text`), nunca las dos cosas.
 | `clip` | imagen | `[x, y, ancho, alto]`: solo se ve esa zona (el código que se ve solo dentro de la pantalla) | ancho y alto > 0 y dentro de la escena |
 | `frames` | imagen | La imagen es una tira horizontal de N fotogramas, reproducida con `steps()` al tempo de la fatiga | entero 2–64 |
 | `beats` | imagen | Duración de la tira entera, en beats (por defecto 1) | solo con `frames` |
-| `role` | imagen | `"head"`: la capa que cabecea con la música | como mucho una por estado |
+| `role` | imagen | `"head"`: la capa que cabecea con la música y lleva los cascos y la pantalla «sonando» | como mucho una por estado |
+| `anchor` | imagen `head` | `[x, y]` donde se centran cascos y pantalla (el centro de la cara) | **obligatorio con `head`**; dentro de la escena |
+| `scale` | imagen `head` | Tamaño de cascos y pantalla respecto a la cabeza de BIT (1 = igual) | > 0 y ≤ 4; por defecto 1 |
 | `text` | texto | El dato de Amnis que se muestra | `commitHash` o `resetsCountdown` |
 | `at` | texto | `[x, y]` de la línea base del texto | dentro de la escena |
 | `size` | texto | Tamaño de letra en px del viewBox | > 0 y ≤ 110 |
@@ -108,6 +110,7 @@ que BIT enseña dentro de su escena (el hash de `committing`, la cuenta atrás d
 | ruta con `..`, absoluta, con `\` o con `:` | campo desconocido en cualquier nivel |
 | `color` que no es hex | `role` distinto de `"head"` |
 | dos capas `head` en un estado | `text` con un dato desconocido (la capa se descarta) |
+| `head` sin `anchor`, o `anchor`/`scale` inválidos | `anchor` o `scale` en una capa sin `role: "head"` |
 | `size` con otra proporción | |
 | animación propia inválida o con nombre del catálogo | |
 
@@ -226,6 +229,12 @@ Cada capa es un `<image href>` (nunca SVG incrustado: una imagen no ejecuta scri
 150×110. Por capa: `clip` fija el recorte y la animación se mueve dentro de él; `frames` desplaza la tira con `steps()` al
 tempo de la fatiga. Las capas de texto reciben `commitHash` (el marcador `······` si no hay dato) y `resetsCountdown`.
 Las imágenes de todos los estados se precargan al elegir la skin.
+
+**Música.** La capa `head` cabecea al BPM con la amplitud de la fatiga (las mismas reglas que la cabeza de BIT) mientras el
+resto de capas siguen a su tempo; los cascos y la pantalla «sonando» se pintan encima de ella, centrados en `anchor` y a
+`scale`, y se mueven con su `anim`. Con `pivot` el cabeceo gira en torno a él (el cuello); sin él, en torno a `anchor`. Un
+estado sin capa `head` no lleva cascos ni pantalla, pero conserva el resto de efectos de música (notas, color). `waiting` y
+`limited` no llevan capa de música, como en BIT.
 
 El daemon solo manda `commitHash` en `pushing` (en `committing`, `HEAD` aún es el commit anterior): una capa `commitHash`
 de `committing` enseñará el marcador salvo que el dato exista.

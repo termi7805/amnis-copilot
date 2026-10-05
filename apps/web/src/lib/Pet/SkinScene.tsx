@@ -6,8 +6,18 @@ import {
   type SkinManifest,
   type SkinTextLayer,
 } from "@amnis/shared";
-import { type CSSProperties, useEffect, useId, useMemo, useRef } from "react";
+import {
+  type ComponentProps,
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+} from "react";
 import { countdownText } from "./countdown.ts";
+import { Headphones } from "./Headphones.tsx";
+import styles from "./Pet.module.css";
 import {
   animationClass,
   animationCss,
@@ -27,6 +37,9 @@ export interface PetSkin {
 
 const PLACEHOLDER = "······";
 const { width: W, height: H } = SKIN_SCENE;
+
+/** Centro de la pantalla de BIT: el punto de la geometría de cascos y pantalla que `anchor` coloca. */
+const HEAD_CENTER = { x: 55, y: 46 } as const;
 
 /** Todas las imágenes de la skin, para que un cambio de estado no parpadee en blanco. */
 export function useSkinPreload(skin: PetSkin | null | undefined): void {
@@ -141,11 +154,16 @@ export function SkinScene({
   layers,
   commitHash,
   resetsAt,
+  music,
+  screen,
 }: {
   skin: PetSkin;
   layers: SkinLayer[];
   commitHash?: string | null;
   resetsAt?: string | null;
+  /** `undefined` = sin capa de música. */
+  music?: ComponentProps<typeof Headphones>;
+  screen?: ReactNode;
 }) {
   // `useId` lleva `:`, que no vale dentro de `url(#…)`.
   const uid = useId().replace(/[^A-Za-z0-9_-]/g, "");
@@ -170,9 +188,12 @@ export function SkinScene({
       {layers.map((layer, i) => {
         // Las capas son un orden fijo del manifest: el índice es la identidad.
         const key = `${uid}-${i}`;
-        return isSkinTextLayer(layer) ? (
-          <TextLayer key={key} layer={layer} value={values[layer.text]} />
-        ) : (
+        if (isSkinTextLayer(layer)) {
+          return (
+            <TextLayer key={key} layer={layer} value={values[layer.text]} />
+          );
+        }
+        const image = (
           <ImageLayer
             key={key}
             layer={layer}
@@ -180,6 +201,27 @@ export function SkinScene({
             clipId={`skin-clip-${key}`}
             windowId={`skin-win-${key}`}
           />
+        );
+        if (layer.role !== "head" || !layer.anchor) return image;
+        const [ax, ay] = layer.anchor;
+        const origin = layer.pivot ?? layer.anchor;
+        return (
+          <g
+            key={key}
+            className={styles.head}
+            style={pivotStyle(origin)}
+            data-skin-head
+          >
+            {image}
+            <g {...motion(layer)}>
+              <g
+                transform={`translate(${ax} ${ay}) scale(${layer.scale ?? 1}) translate(${-HEAD_CENTER.x} ${-HEAD_CENTER.y})`}
+              >
+                {music && <Headphones {...music} />}
+                {screen}
+              </g>
+            </g>
+          </g>
         );
       })}
     </g>
