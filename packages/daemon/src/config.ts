@@ -59,6 +59,9 @@ export const SETTINGS_PATH = join(AMNIS_DIR, "settings.json");
  */
 const LEGACY_TOKEN_CACHE_PATH = join(AMNIS_DIR, "token.json");
 
+/** Skins del usuario: una carpeta por skin, con su `skin.json` (#155). */
+export const SKINS_DIR = join(AMNIS_DIR, "skins");
+
 /** Client ID de Spotify, del usuario (cada uno registra su app). */
 export const SPOTIFY_CONFIG_PATH = join(AMNIS_DIR, "spotify.json");
 /** Token de Spotify, de Amnis. Permisos 0600. */

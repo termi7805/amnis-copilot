@@ -114,6 +114,27 @@ que BIT enseña dentro de su escena (el hash de `committing`, la cuenta atrás d
 El manifest que devuelve el validador se construye campo a campo: nada desconocido llega al DOM ni
 al CSS.
 
+## Instalar y comprobar una skin
+
+Cada skin es una carpeta en `~/.amnis/skins/<id>/` con su `skin.json` y las imágenes que referencia.
+El `id` es el nombre de la carpeta (letras, números, `.`, `_` y `-`).
+
+```bash
+amnis skin check ~/.amnis/skins/robi
+```
+
+Valida el manifest con el mismo validador que usa la mascota y comprueba que **cada imagen
+existe**: un error por imagen que falta, con estado, capa y ruta. Un enlace simbólico que apunta
+fuera de la carpeta cuenta como imagen ausente. Sale con código ≠ 0 si hay errores; los avisos no
+lo cambian.
+
+El daemon lee el disco en cada petición, sin reiniciar:
+
+- `GET /api/skins` — todas las carpetas: `{id, name, states, errors, warnings}`. Una skin rota se
+  lista con sus errores; no impide el arranque ni al resto.
+- `GET /api/skins/<id>/<ruta>` — una imagen de la skin. Solo sirve imágenes de dentro de su carpeta
+  (rutas con `..`, codificadas o no, o enlaces que salen: 404).
+
 ## Una animación
 
 ```json

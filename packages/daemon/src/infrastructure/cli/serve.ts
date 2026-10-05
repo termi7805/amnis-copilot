@@ -23,6 +23,7 @@ import {
   PRICES_REFRESH_MS,
   QUOTA_POLL_MS,
   RESOURCES,
+  SKINS_DIR,
   SPOTIFY_REDIRECT_URI,
   UPDATE_CHECK_MS,
   VERSION,
@@ -47,6 +48,7 @@ import { createQuotaRefreshRoute } from "../http/routes/quotaRefresh.ts";
 import { createSessionsRoutes } from "../http/routes/sessions.ts";
 import { createSettingsRoutes } from "../http/routes/settings.ts";
 import { createShutdownRoute } from "../http/routes/shutdown.ts";
+import { createSkinsRoutes } from "../http/routes/skins.ts";
 import { acceptLanguage, createSpotifyRoutes } from "../http/routes/spotify.ts";
 import { createStateRoute } from "../http/routes/state.ts";
 import { createUsageRoute } from "../http/routes/usage.ts";
@@ -359,6 +361,7 @@ export function runServeCli(args: readonly string[] = []): void {
           mediaPoller.pollSoon(0);
         },
       }),
+      ...createSkinsRoutes(SKINS_DIR),
       ...createSettingsRoutes({
         get: () => settings,
         save: saveSettings,

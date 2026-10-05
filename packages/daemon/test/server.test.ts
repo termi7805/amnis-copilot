@@ -369,3 +369,28 @@ test("allowedOrigins deriva hosts y orígenes del puerto", () => {
     "http://localhost:5173",
   ]);
 });
+
+test("una ruta con `/*` cubre su prefijo y la exacta gana", async () => {
+  const reply =
+    (text: string): HttpServerDeps["routes"][string] =>
+    ({ res }) => {
+      res.writeHead(200);
+      res.end(text);
+    };
+  await withServer(
+    {
+      routes: {
+        "GET /api/cosas/*": reply("prefijo"),
+        "GET /api/cosas/fija": reply("exacta"),
+      },
+    },
+    async (baseUrl) => {
+      const text = async (path: string) => (await fetch(baseUrl + path)).text();
+      assert.equal(await text("/api/cosas/a/b"), "prefijo");
+      assert.equal(await text("/api/cosas/fija"), "exacta");
+      assert.equal((await fetch(`${baseUrl}/api/otra`)).status, 404);
+      const post = await fetch(`${baseUrl}/api/cosas/a`, { method: "POST" });
+      assert.equal(post.status, 405);
+    },
+  );
+});

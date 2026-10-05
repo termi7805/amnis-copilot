@@ -4,6 +4,7 @@ import { runDoctorCli } from "./infrastructure/cli/doctor.ts";
 import { runIngestCli } from "./infrastructure/cli/ingest.ts";
 import { runInstallHooksCli } from "./infrastructure/cli/installHooks.ts";
 import { runServeCli } from "./infrastructure/cli/serve.ts";
+import { runSkinCli } from "./infrastructure/cli/skin.ts";
 import { runSpotifyCli } from "./infrastructure/cli/spotify.ts";
 import { runUninstallHooksCli } from "./infrastructure/cli/uninstallHooks.ts";
 
@@ -28,6 +29,8 @@ Comandos:
                         Conecta Spotify (OAuth PKCE); el daemon abre el navegador.
                         El primer --client-id se guarda en ~/.amnis/spotify.json.
   spotify logout         Borra el token de Spotify (conserva el Client ID).
+  skin check <carpeta>   Valida una skin de la mascota (manifest e imágenes);
+                        sale con error si algo falla.
   --help                Muestra esta ayuda.
   --version             Muestra la versión.
 `;
@@ -50,6 +53,9 @@ async function main(argv: readonly string[]): Promise<void> {
       return;
     case "spotify":
       await runSpotifyCli(rest);
+      return;
+    case "skin":
+      runSkinCli(rest);
       return;
     case "doctor":
       await runDoctorCli();

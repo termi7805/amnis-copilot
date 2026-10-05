@@ -38,7 +38,14 @@ const PET_STATES: readonly PetState[] = [
   "limited",
 ];
 
-const IMAGE_EXTENSIONS = ["png", "webp", "jpg", "jpeg", "gif", "svg"];
+export const SKIN_IMAGE_EXTENSIONS = [
+  "png",
+  "webp",
+  "jpg",
+  "jpeg",
+  "gif",
+  "svg",
+];
 const SEGMENT_RE = /^[A-Za-z0-9._-]+$/;
 const HEX_COLOR_RE = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 
@@ -84,6 +91,19 @@ export type SkinManifestResult =
   | { manifest: SkinManifest; warnings: string[] }
   | { errors: string[] };
 
+/** Una skin instalada tal como la lista el daemon. */
+export interface SkinSummary {
+  /** Nombre de la carpeta en `~/.amnis/skins/`. */
+  id: string;
+  /** `name` del manifest, si la skin carga y lo declara. */
+  name: string | null;
+  /** Estados que la skin pinta; vacío si no carga. */
+  states: PetState[];
+  /** Vacío si la skin carga. */
+  errors: string[];
+  warnings: string[];
+}
+
 export const isSkinTextLayer = (layer: SkinLayer): layer is SkinTextLayer =>
   "text" in layer;
 
@@ -112,8 +132,8 @@ export function skinPathProblem(src: string): string | null {
     return "solo admite letras, números, `.`, `_` y `-` en cada segmento";
   }
   const ext = src.split(".").pop()?.toLowerCase() ?? "";
-  if (!src.includes(".") || !IMAGE_EXTENSIONS.includes(ext)) {
-    return `debe ser una imagen (${IMAGE_EXTENSIONS.join(", ")})`;
+  if (!src.includes(".") || !SKIN_IMAGE_EXTENSIONS.includes(ext)) {
+    return `debe ser una imagen (${SKIN_IMAGE_EXTENSIONS.join(", ")})`;
   }
   return null;
 }

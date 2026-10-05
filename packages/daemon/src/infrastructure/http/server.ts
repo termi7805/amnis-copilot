@@ -70,6 +70,32 @@ export function checkOrigin(
   return null;
 }
 
+/** Una clave de ruta que acaba en `/*` cubre todo lo que cuelga de ese prefijo. */
+function matchesPath(pattern: string, pathname: string): boolean {
+  return pattern.endsWith("/*")
+    ? pathname.startsWith(pattern.slice(0, -1))
+    : pattern === pathname;
+}
+
+/** Solo se prueba si no hay ruta exacta: la exacta siempre gana. */
+function prefixHandler(
+  routes: Record<string, RouteHandler>,
+  method: string,
+  pathname: string,
+): RouteHandler | undefined {
+  for (const [key, handler] of Object.entries(routes)) {
+    const space = key.indexOf(" ");
+    if (
+      key.slice(0, space) === method &&
+      key.endsWith("/*") &&
+      matchesPath(key.slice(space + 1), pathname)
+    ) {
+      return handler;
+    }
+  }
+  return undefined;
+}
+
 function dispatch(handler: RouteHandler, ctx: RouteContext): void {
   // El executor de `new Promise` corre síncronamente y convierte un
   // `throw` en rechazo: con `Promise.resolve(handler(ctx))` el throw
@@ -108,7 +134,9 @@ export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
     }
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     const ctx: RouteContext = { req, res, url };
-    const handler = deps.routes[`${method} ${url.pathname}`];
+    const handler =
+      deps.routes[`${method} ${url.pathname}`] ??
+      prefixHandler(deps.routes, method, url.pathname);
 
     if (handler) {
       dispatch(handler, ctx);
@@ -120,8 +148,8 @@ export function createHttpServer(deps: HttpServerDeps): AmnisHttpServer {
       return;
     }
 
-    const knownPath = Object.keys(deps.routes).some(
-      (key) => key.slice(key.indexOf(" ") + 1) === url.pathname,
+    const knownPath = Object.keys(deps.routes).some((key) =>
+      matchesPath(key.slice(key.indexOf(" ") + 1), url.pathname),
     );
     if (knownPath) {
       sendJson(res, 405, { error: msg("http.methodNotAllowed") });
