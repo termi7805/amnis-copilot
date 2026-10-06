@@ -57,6 +57,8 @@ interface SkinLayerBase {
   pivot?: [number, number];
 }
 
+export type SkinLayerRole = "head" | "player";
+
 export interface SkinImageLayer extends SkinLayerBase {
   /** Ruta relativa a la carpeta de la skin, siempre con `/`. */
   src: string;
@@ -66,12 +68,20 @@ export interface SkinImageLayer extends SkinLayerBase {
   frames?: number;
   /** Duración de la tira entera, en beats; solo con `frames`. */
   beats?: number;
-  /** La capa que cabecea con la música y lleva los cascos. */
-  role?: "head";
-  /** Solo con `role: "head"`: dónde cae, en la escena, el centro de la pantalla de BIT, que es donde se centran cascos y pantalla «sonando». */
+  /**
+   * `head`: la capa que cabecea con la música y lleva los cascos (y la pantalla
+   * «sonando», salvo que el estado tenga capa `player`). `player`: la capa que
+   * lleva la pantalla «sonando» en vez de la cabeza (un portátil, un cartel).
+   */
+  role?: SkinLayerRole;
+  /** Con `role`: dónde cae, en la escena, el centro de la pantalla de BIT, que es donde se centran cascos y pantalla «sonando». */
   anchor?: [number, number];
-  /** Solo con `role: "head"`: tamaño de cascos y pantalla respecto a la cabeza de BIT (1 = igual). */
+  /** Con `role`: tamaño de cascos y pantalla respecto a la cabeza de BIT (1 = igual). */
   scale?: number;
+  /** Solo con `role: "head"`: `false` = cabecea sin cascos. Por defecto los lleva. */
+  headphones?: false;
+  /** Solo con `role: "head"`: `false` = sin pantalla «sonando» en la cabeza. Por defecto la lleva si el estado no tiene capa `player`. */
+  player?: false;
 }
 
 export const SKIN_HEAD_SCALE_MAX = 4;
@@ -219,6 +229,8 @@ const IMAGE_KEYS = [
   "role",
   "anchor",
   "scale",
+  "headphones",
+  "player",
 ];
 const TEXT_KEYS = ["text", "anim", "pivot", "at", "size", "color"];
 
@@ -365,24 +377,26 @@ function checkLayer(
     }
   }
 
-  let role: "head" | undefined;
+  let role: SkinLayerRole | undefined;
   if (raw.role !== undefined) {
-    if (raw.role === "head") role = "head";
+    if (raw.role === "head" || raw.role === "player") role = raw.role;
     else {
       r.warn(
         `${path}.role`,
-        `rol ${JSON.stringify(raw.role)} desconocido, se ignora (el único es "head")`,
+        `rol ${JSON.stringify(raw.role)} desconocido, se ignora (admitidos: "head", "player")`,
       );
     }
   }
 
   let anchor: [number, number] | undefined;
   let scale: number | undefined;
-  if (role === "head") {
+  if (role) {
     if (raw.anchor === undefined) {
       r.error(
         `${path}.anchor`,
-        'la capa con role "head" necesita `anchor` [x, y]: dónde caen los cascos y la pantalla; sin él saldrían donde la cabeza de BIT',
+        role === "head"
+          ? 'la capa con role "head" necesita `anchor` [x, y]: dónde caen los cascos y la pantalla; sin él saldrían donde la cabeza de BIT'
+          : 'la capa con role "player" necesita `anchor` [x, y]: dónde se centra la pantalla «sonando»',
       );
     } else {
       anchor = pair(raw.anchor, `${path}.anchor`, r, scene) ?? undefined;
@@ -406,9 +420,22 @@ function checkLayer(
       if (raw[key] !== undefined) {
         r.warn(
           `${path}.${key}`,
-          'solo tiene efecto con role "head", se ignora',
+          'solo tiene efecto con role "head" o "player", se ignora',
         );
       }
+    }
+  }
+
+  // Solo se guardan apagados: un manifest que no los usa queda igual que antes.
+  const off: { headphones?: false; player?: false } = {};
+  for (const key of ["headphones", "player"] as const) {
+    if (raw[key] === undefined) continue;
+    if (role !== "head") {
+      r.warn(`${path}.${key}`, 'solo tiene efecto con role "head", se ignora');
+    } else if (typeof raw[key] !== "boolean") {
+      r.error(`${path}.${key}`, "debe ser `true` o `false`");
+    } else if (raw[key] === false) {
+      off[key] = false;
     }
   }
 
@@ -422,6 +449,7 @@ function checkLayer(
     ...(role && { role }),
     ...(anchor && { anchor }),
     ...(scale !== undefined && { scale }),
+    ...off,
   };
 }
 
@@ -556,17 +584,30 @@ export function validateSkinManifest(raw: unknown): SkinManifestResult {
         continue;
       }
       const layers: SkinLayer[] = [];
-      const heads: number[] = [];
+      const roles: Record<SkinLayerRole, number[]> = { head: [], player: [] };
       def.layers.forEach((l, i) => {
         const layer = checkLayer(l, `${spath}.layers[${i}]`, scene, known, r);
         if (!layer) return;
-        if (!isSkinTextLayer(layer) && layer.role === "head") heads.push(i);
+        if (!isSkinTextLayer(layer) && layer.role) roles[layer.role].push(i);
         layers.push(layer);
       });
-      if (heads.length > 1) {
-        r.error(
-          spath,
-          `como mucho una capa con role "head" por estado (capas ${heads.join(" y ")})`,
+      for (const role of ["head", "player"] as const) {
+        if (roles[role].length > 1) {
+          r.error(
+            spath,
+            `como mucho una capa con role "${role}" por estado (capas ${roles[role].join(" y ")})`,
+          );
+        }
+      }
+      const head = roles.head[0];
+      if (
+        head !== undefined &&
+        roles.player.length > 0 &&
+        def.layers[head]?.player === false
+      ) {
+        r.warn(
+          `${spath}.layers[${head}].player`,
+          'el estado tiene capa con role "player": la pantalla «sonando» va en ella, se ignora',
         );
       }
       states[state as PetState] = { layers };

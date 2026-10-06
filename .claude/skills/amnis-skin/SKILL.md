@@ -165,8 +165,17 @@ ellas; la pantalla «sonando» mide 54×40·`scale` y tapa la cara mientras se v
 estado el personaje se dibuja a otra escala o en otra posición, `anchor`, `pivot` y `scale` de ese
 estado se recalculan con la misma transformación. Con `pivot` la cabeza cabecea girando en torno a
 él (el cuello); sin él, en torno a `anchor`. Como mucho **una** capa `head` por estado. Sin capa
-`head` un estado funciona igual, pero sin cascos ni pantalla (conserva notas y color de la música).
-`waiting` y `limited` no llevan capa de música, como en BIT.
+`head` un estado funciona igual, pero sin cabeceo, sin cascos y, si no hay capa `player`, sin pantalla
+(conserva notas y color de la música). `waiting` y `limited` no llevan capa de música, como en BIT.
+
+Cascos y pantalla se deciden por separado (la pantalla le tapa la cara a casi cualquier personaje que
+no sea BIT):
+- `"headphones": false` en la `head`: cabecea sin cascos (un personaje sin orejas, con sombrero…).
+- **Pantalla en otro sitio**: una capa con `role: "player"` (el portátil, un cartel, un bocadillo) y
+  su propio `anchor` (centro de la zona donde se ve la canción) y `scale`. Se mueve con la `anim`
+  de esa capa, no cabecea, y la tapan las capas que vengan después en la lista. Como mucho una por
+  estado; vale también sin `head`.
+- **Sin pantalla**: `"player": false` en la `head` y ninguna capa `player`.
 
 **Datos de Amnis (capas `text`).** `commitHash` (solo llega en `pushing`; en `committing` se ve
 `······`) y `resetsCountdown` (para `limited`). Eres tú quien decide `at` (línea base, esquina
@@ -226,7 +235,10 @@ La salida de `check.sh` nombra estado, capa y campo (`states.coding.layers[1].an
 | `no existe la imagen "…"` | el fichero no está o la ruta no coincide (mayúsculas, subcarpeta) |
 | `ruta inválida` | `/` como separador, sin `..`, sin ruta absoluta, solo letras, números, `.`, `_`, `-` |
 | `la capa con role "head" necesita anchor` | añade `anchor: [x, y]` (el centro de la cara) |
-| `como mucho una capa con role "head"` | solo una cabeza por estado |
+| `la capa con role "player" necesita anchor` | añade `anchor: [x, y]` (el centro de donde se ve la canción) |
+| `como mucho una capa con role "head"` / `"player"` | solo una cabeza y un reproductor por estado |
+| `headphones` / `player` `debe ser true o false` | booleano sin comillas |
+| aviso `headphones`/`player` `solo tiene efecto con role "head"` | van en la capa `head`; para mover la pantalla usa `role: "player"` |
 | `el recorte … debe caber en la escena` | `clip: [x, y, ancho, alto]` dentro de 150×110 |
 | `size … no tiene la proporción` | `size` debe ser 15:11 (300×220, 450×330…) |
 | `animations.<x>: ya es una animación de serie` | cambia el nombre de la tuya |

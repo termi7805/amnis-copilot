@@ -124,6 +124,97 @@ test("anchor y scale sin role head avisan y no pasan al manifest", () => {
   assert.equal(l.scale, undefined);
 });
 
+const player = (extra: object = {}) =>
+  layer({ role: "player", anchor: [110, 70], ...extra });
+
+test("una capa player sin anchor se rechaza", () => {
+  const e = errorsOf(skin({ coding: { layers: [layer({ role: "player" })] } }));
+  mention(e, "states.coding.layers[0].anchor", "player");
+});
+
+test("dos capas player en el mismo estado se rechazan", () => {
+  const e = errorsOf(skin({ coding: { layers: [player(), player()] } }));
+  mention(e, "states.coding", 'role "player"');
+});
+
+test("player con anchor y scale pasa al manifest, con head o sin ella", () => {
+  const r = validateSkinManifest(
+    skin({
+      coding: { layers: [head(), player({ scale: 0.8 })] },
+      testing: { layers: [player()] },
+    }),
+  );
+  assert.ok("manifest" in r);
+  assert.deepEqual(r.warnings, []);
+  const l = r.manifest.states.coding?.layers[1];
+  assert.ok(l && "src" in l);
+  assert.equal(l.role, "player");
+  assert.deepEqual(l.anchor, [110, 70]);
+  assert.equal(l.scale, 0.8);
+});
+
+test("headphones y player de la head: solo booleanos, y solo se guardan apagados", () => {
+  for (const key of ["headphones", "player"]) {
+    const e = errorsOf(skin({ coding: { layers: [head({ [key]: "no" })] } }));
+    mention(e, `states.coding.layers[0].${key}`);
+  }
+  const r = validateSkinManifest(
+    skin({
+      coding: { layers: [head({ headphones: false, player: false })] },
+      testing: { layers: [head({ headphones: true, player: true })] },
+    }),
+  );
+  assert.ok("manifest" in r);
+  const off = r.manifest.states.coding?.layers[0];
+  const on = r.manifest.states.testing?.layers[0];
+  assert.ok(off && "src" in off && on && "src" in on);
+  assert.equal(off.headphones, false);
+  assert.equal(off.player, false);
+  assert.ok(!("headphones" in on) && !("player" in on));
+});
+
+test("headphones y player fuera de la head avisan y no pasan", () => {
+  const r = validateSkinManifest(
+    skin({
+      coding: {
+        layers: [
+          layer({ headphones: false }),
+          player({ player: false, headphones: false }),
+        ],
+      },
+    }),
+  );
+  assert.ok("manifest" in r);
+  assert.equal(r.warnings.length, 3);
+  for (const l of r.manifest.states.coding?.layers ?? []) {
+    assert.ok("src" in l);
+    assert.ok(!("headphones" in l) && !("player" in l));
+  }
+});
+
+test("player: false en la head avisa si el estado ya tiene capa player", () => {
+  const r = validateSkinManifest(
+    skin({ coding: { layers: [head({ player: false }), player()] } }),
+  );
+  assert.ok("manifest" in r);
+  assert.equal(r.warnings.length, 1);
+  assert.ok(r.warnings[0]?.includes("states.coding.layers[0].player"));
+});
+
+test("un manifest con head de antes queda igual: sin campos de cascos ni reproductor", () => {
+  const r = validateSkinManifest(
+    skin({ coding: { layers: [head({ scale: 1.2, pivot: [55, 60] })] } }),
+  );
+  assert.ok("manifest" in r);
+  assert.deepEqual(r.manifest.states.coding?.layers[0], {
+    src: "coding/body.png",
+    pivot: [55, 60],
+    role: "head",
+    anchor: [55, 46],
+    scale: 1.2,
+  });
+});
+
 test("un color que no es hex se rechaza", () => {
   for (const color of ["red", "#12", "url(x)", "#ggg", "#12345", 5]) {
     const e = errorsOf(

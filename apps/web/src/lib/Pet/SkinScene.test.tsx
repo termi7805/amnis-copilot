@@ -289,6 +289,111 @@ describe("<Pet skin>", () => {
       expect(container.querySelector('[class*="note"]')).not.toBeNull();
     });
 
+    describe("cascos opcionales y reproductor en otra capa", () => {
+      const playerSkin = skinOf({
+        animations: {},
+        states: {
+          coding: {
+            layers: [
+              { src: "body.png" },
+              {
+                src: "head.png",
+                role: "head",
+                anchor: [75, 40],
+                headphones: false,
+              },
+              {
+                src: "laptop.png",
+                role: "player",
+                anchor: [110, 70],
+                scale: 0.8,
+                anim: "bob",
+                pivot: [110, 90],
+              },
+            ],
+          },
+          testing: {
+            layers: [
+              { src: "body.png" },
+              {
+                src: "head.png",
+                role: "head",
+                anchor: [75, 40],
+                player: false,
+              },
+            ],
+          },
+          researching: {
+            layers: [
+              { src: "body.png" },
+              { src: "laptop.png", role: "player", anchor: [110, 70] },
+            ],
+          },
+        },
+      });
+      // La pantalla «sonando» sale al cambiar de pista, no en el primer render.
+      const withTrackChange = (state: "coding" | "testing" | "researching") => {
+        const view = render(
+          <Pet
+            state={state}
+            level={1}
+            fatigue={0}
+            listening={LISTENING}
+            skin={playerSkin}
+          />,
+        );
+        view.rerender(
+          <Pet
+            state={state}
+            level={1}
+            fatigue={0}
+            listening={{
+              ...LISTENING,
+              track: { ...LISTENING.track, id: "t2" },
+            }}
+            skin={playerSkin}
+          />,
+        );
+        return view.container;
+      };
+      const playerGroup = (c: HTMLElement) =>
+        c.querySelector<SVGGElement>("[data-skin-player]");
+
+      it("headphones: false cabecea sin cascos, y el reproductor va en la capa player con su anchor y su anim", () => {
+        const container = withTrackChange("coding");
+        const head = headGroup(container);
+        expect(head?.getAttribute("class")).toMatch(/head/);
+        expect(screen.queryByTestId("headphones")).toBeNull();
+        expect(head?.querySelector("[data-testid='now-playing']")).toBeNull();
+
+        const player = playerGroup(container);
+        expect(player?.getAttribute("class") ?? "").not.toMatch(/head/);
+        const np = player?.querySelector("[data-testid='now-playing']");
+        expect(np).not.toBeNull();
+        expect(np?.parentElement?.getAttribute("transform")).toBe(
+          "translate(110 70) scale(0.8) translate(-55 -46)",
+        );
+        expect(np?.parentElement?.parentElement?.getAttribute("class")).toBe(
+          "amnis-anim-bob",
+        );
+      });
+
+      it("player: false deja la cabeza con cascos y sin pantalla", () => {
+        withTrackChange("testing");
+        expect(screen.queryByTestId("headphones")).not.toBeNull();
+        expect(screen.queryByTestId("now-playing")).toBeNull();
+      });
+
+      it("una capa player sin head lleva la pantalla, pero no cascos", () => {
+        const container = withTrackChange("researching");
+        expect(headGroup(container)).toBeNull();
+        expect(screen.queryByTestId("headphones")).toBeNull();
+        expect(
+          playerGroup(container)?.querySelector("[data-testid='now-playing']"),
+        ).not.toBeNull();
+      });
+    });
+
     it("waiting no lleva capa de música aunque la skin tenga head", () => {
       const { container } = render(
         <Pet

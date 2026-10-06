@@ -91,9 +91,11 @@ Una capa es una **imagen** (`src`) o un **texto** (`text`), nunca las dos cosas.
 | `clip` | imagen | `[x, y, ancho, alto]`: solo se ve esa zona (el código que se ve solo dentro de la pantalla) | ancho y alto > 0 y dentro de la escena |
 | `frames` | imagen | La imagen es una tira horizontal de N fotogramas, reproducida con `steps()` al tempo de la fatiga | entero 2–64 |
 | `beats` | imagen | Duración de la tira entera, en beats (por defecto 1) | solo con `frames` |
-| `role` | imagen | `"head"`: la capa que cabecea con la música y lleva los cascos y la pantalla «sonando» | como mucho una por estado |
-| `anchor` | imagen `head` | `[x, y]` donde se centran cascos y pantalla (el centro de la cara) | **obligatorio con `head`**; dentro de la escena |
-| `scale` | imagen `head` | Tamaño de cascos y pantalla respecto a la cabeza de BIT (1 = igual) | > 0 y ≤ 4; por defecto 1 |
+| `role` | imagen | `"head"`: la capa que cabecea con la música y lleva los cascos (y la pantalla «sonando» si no hay `player`). `"player"`: la capa que lleva la pantalla «sonando» en lugar de la cabeza (un portátil, un cartel) | como mucho una de cada por estado |
+| `anchor` | imagen `head` o `player` | `[x, y]` donde se centran cascos y pantalla (en `head`, el centro de la cara; en `player`, el centro de la zona donde se ve la canción) | **obligatorio con `role`**; dentro de la escena |
+| `scale` | imagen `head` o `player` | Tamaño de cascos y pantalla respecto a la cabeza de BIT (1 = igual) | > 0 y ≤ 4; por defecto 1 |
+| `headphones` | imagen `head` | `false`: cabecea sin cascos | booleano; por defecto `true` |
+| `player` | imagen `head` | `false`: sin pantalla «sonando» en la cabeza | booleano; por defecto `true`; se ignora (con aviso) si el estado tiene capa `player` |
 | `text` | texto | El dato de Amnis que se muestra | `commitHash` o `resetsCountdown` |
 | `at` | texto | `[x, y]` de la línea base del texto | dentro de la escena |
 | `size` | texto | Tamaño de letra en px del viewBox | > 0 y ≤ 110 |
@@ -108,10 +110,11 @@ que BIT enseña dentro de su escena (el hash de `committing`, la cuenta atrás d
 |---|---|
 | `anim` que no está en el catálogo ni en `animations` | estado desconocido |
 | ruta con `..`, absoluta, con `\` o con `:` | campo desconocido en cualquier nivel |
-| `color` que no es hex | `role` distinto de `"head"` |
-| dos capas `head` en un estado | `text` con un dato desconocido (la capa se descarta) |
-| `head` sin `anchor`, o `anchor`/`scale` inválidos | `anchor` o `scale` en una capa sin `role: "head"` |
-| `size` con otra proporción | |
+| `color` que no es hex | `role` distinto de `"head"` y `"player"` |
+| dos capas `head`, o dos `player`, en un estado | `text` con un dato desconocido (la capa se descarta) |
+| `head` o `player` sin `anchor`, o `anchor`/`scale` inválidos | `anchor` o `scale` en una capa sin `role` |
+| `headphones` o `player` que no son booleanos | `headphones` o `player` en una capa que no es `head` |
+| `size` con otra proporción | `player: false` en la `head` de un estado con capa `player` |
 | animación propia inválida o con nombre del catálogo | |
 
 El manifest que devuelve el validador se construye campo a campo: nada desconocido llega al DOM ni
@@ -277,6 +280,28 @@ resto de capas siguen a su tempo; los cascos y la pantalla «sonando» se pintan
 `scale`, y se mueven con su `anim`. Con `pivot` el cabeceo gira en torno a él (el cuello); sin él, en torno a `anchor`. Un
 estado sin capa `head` no lleva cascos ni pantalla, pero conserva el resto de efectos de música (notas, color). `waiting` y
 `limited` no llevan capa de música, como en BIT.
+
+Cascos y pantalla son dos decisiones aparte, porque en un personaje con cara la pantalla se la tapa:
+
+- `"headphones": false` en la `head`: cabecea al ritmo sin cascos.
+- Una capa con `role: "player"` lleva la pantalla en lugar de la cabeza, centrada en su `anchor` y a su `scale`. Se
+  mueve con la `anim` y el `pivot` de esa capa (no cabecea) y se pinta justo encima de ella: las capas que vengan
+  después en la lista la tapan, como un brazo delante del portátil. Funciona también sin capa `head`.
+- `"player": false` en la `head` y ninguna capa `player`: no hay pantalla. Se conservan las notas, el color y, si los
+  hay, los cascos.
+
+```json
+"coding": {
+  "layers": [
+    { "src": "body.png" },
+    { "src": "head.png", "role": "head", "anchor": [60, 38], "headphones": false, "anim": "nod", "pivot": [60, 55] },
+    { "src": "laptop.png", "role": "player", "anchor": [112, 72], "scale": 0.6, "anim": "tap", "pivot": [112, 90] }
+  ]
+}
+```
+
+La preferencia de Ajustes → Música → pantalla sigue mandando: la skin decide *dónde* va la pantalla y quien mira la
+mascota decide *si* la ve.
 
 El daemon solo manda `commitHash` en `pushing` (en `committing`, `HEAD` aún es el commit anterior): una capa `commitHash`
 de `committing` enseñará el marcador salvo que el dato exista.

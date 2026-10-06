@@ -124,6 +124,29 @@ function ImageLayer({
   );
 }
 
+/**
+ * Coloca la geometría de cascos y pantalla «sonando» (dibujada sobre la cara
+ * de BIT) en `anchor` y a `scale`. La misma fórmula para la cabeza y para la
+ * capa `player`: una skin sin `player` sale en el mismo píxel que antes.
+ */
+function MusicOverlay({
+  anchor: [ax, ay],
+  scale = 1,
+  children,
+}: {
+  anchor: [number, number];
+  scale?: number;
+  children: ReactNode;
+}) {
+  return (
+    <g
+      transform={`translate(${ax} ${ay}) scale(${scale}) translate(${-HEAD_CENTER.x} ${-HEAD_CENTER.y})`}
+    >
+      {children}
+    </g>
+  );
+}
+
 function TextLayer({ layer, value }: { layer: SkinTextLayer; value: string }) {
   return (
     <g {...motion(layer)}>
@@ -163,6 +186,7 @@ export function SkinScene({
   resetsAt?: string | null;
   /** `undefined` = sin capa de música. */
   music?: ComponentProps<typeof Headphones>;
+  /** Pantalla «sonando»: en la capa `player` si la hay; si no, en la `head`. */
   screen?: ReactNode;
 }) {
   // `useId` lleva `:`, que no vale dentro de `url(#…)`.
@@ -173,6 +197,9 @@ export function SkinScene({
         .map(([name, anim]) => animationCss(name, anim))
         .join("\n"),
     [skin.manifest],
+  );
+  const hasPlayer = layers.some(
+    (l) => !isSkinTextLayer(l) && l.role === "player",
   );
   const values = {
     commitHash: commitHash ?? PLACEHOLDER,
@@ -202,8 +229,19 @@ export function SkinScene({
             windowId={`skin-win-${key}`}
           />
         );
-        if (layer.role !== "head" || !layer.anchor) return image;
-        const [ax, ay] = layer.anchor;
+        if (!layer.role || !layer.anchor) return image;
+        if (layer.role === "player") {
+          return (
+            <g key={key} data-skin-player>
+              {image}
+              <g {...motion(layer)}>
+                <MusicOverlay anchor={layer.anchor} scale={layer.scale}>
+                  {screen}
+                </MusicOverlay>
+              </g>
+            </g>
+          );
+        }
         const origin = layer.pivot ?? layer.anchor;
         return (
           <g
@@ -214,12 +252,12 @@ export function SkinScene({
           >
             {image}
             <g {...motion(layer)}>
-              <g
-                transform={`translate(${ax} ${ay}) scale(${layer.scale ?? 1}) translate(${-HEAD_CENTER.x} ${-HEAD_CENTER.y})`}
-              >
-                {music && <Headphones {...music} />}
-                {screen}
-              </g>
+              <MusicOverlay anchor={layer.anchor} scale={layer.scale}>
+                {music && layer.headphones !== false && (
+                  <Headphones {...music} />
+                )}
+                {!hasPlayer && layer.player !== false && screen}
+              </MusicOverlay>
             </g>
           </g>
         );
