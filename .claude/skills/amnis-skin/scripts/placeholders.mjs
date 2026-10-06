@@ -3,7 +3,13 @@
 // capa y sus animaciones y pivotes ya puestos. Se ve moverse desde el primer
 // momento; dibujar es sustituir cada .svg por la pieza real, sin tocar skin.json.
 //
-// Uso: node placeholders.mjs <carpeta> [--name "Mi skin"] [--force]
+// La música se coloca según lo que se haya decidido con la persona (SKILL.md §6):
+// `--player head` (por defecto) pone la pantalla «sonando» sobre la cara, como
+// BIT; `object`, en un marcador propio sobre el objeto del estado; `none`, en
+// ninguna parte. `--no-headphones` quita los cascos (la cabeza sigue cabeceando).
+//
+// Uso: node placeholders.mjs <carpeta> [--name "Mi skin"] [--player head|object|none]
+//                            [--no-headphones] [--force]
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 
@@ -11,11 +17,25 @@ const args = process.argv.slice(2);
 const force = args.includes("--force");
 const nameAt = args.indexOf("--name");
 const name = nameAt >= 0 ? args[nameAt + 1] : undefined;
+const playerAt = args.indexOf("--player");
+const player = playerAt >= 0 ? args[playerAt + 1] : "head";
+const headphones = !args.includes("--no-headphones");
 const target = args.find(
-  (a, i) => !a.startsWith("--") && args[i - 1] !== "--name",
+  (a, i) =>
+    !a.startsWith("--") &&
+    args[i - 1] !== "--name" &&
+    args[i - 1] !== "--player",
 );
+const USAGE =
+  'Uso: placeholders.mjs <carpeta> [--name "Mi skin"] [--player head|object|none] [--no-headphones] [--force]';
 if (!target) {
-  console.error('Uso: placeholders.mjs <carpeta> [--name "Mi skin"] [--force]');
+  console.error(USAGE);
+  process.exit(1);
+}
+if (!["head", "object", "none"].includes(player)) {
+  console.error(
+    `✗ --player ${JSON.stringify(player)}: tiene que ser head, object o none.\n${USAGE}`,
+  );
   process.exit(1);
 }
 const dir = resolve(target);
@@ -49,6 +69,13 @@ const pieces = {
       rect(97, 66 + i * 6, 34 - (i % 3) * 8, 3, "#1B2A41", 1),
     ).join("\n"),
   ),
+  // Hueco donde se ve la canción con `--player object`: el reproductor
+  // (54×40·scale) se centra en él. Solo un marco, para ver dónde cae.
+  ...(player === "object" && {
+    "player.svg": svg(
+      `  <rect x="95" y="65" width="38" height="28" rx="3" fill="none" stroke="#E5484D" stroke-width="2" stroke-dasharray="4 3"/>`,
+    ),
+  }),
   // Tira de 4 fotogramas: cada uno ocupa 150 de ancho (lienzo × N).
   "strip.svg": svg(
     Array.from({ length: 4 }, (_, i) =>
@@ -64,6 +91,8 @@ const head = {
   anchor: [55, 46],
   pivot: [55, 70],
   anim: "nod",
+  ...(!headphones && { headphones: false }),
+  ...(player === "none" && { player: false }),
 };
 const layer = (src, anim, pivot) => ({
   src,
@@ -77,6 +106,27 @@ const screen = (anim) => ({
   clip: [97, 66, 34, 26],
   anim,
 });
+
+// Con `--player object` el reproductor va encima de todo lo del objeto (también
+// de su pantalla) y se mueve con él: misma `anim` y mismo `pivot`.
+const OBJECT_CENTER = [114, 79];
+const withPlayer = (layers) => {
+  if (player !== "object") return layers;
+  const object = layers.find((l) => l.src === "object.svg");
+  return [
+    ...layers,
+    {
+      src: "player.svg",
+      role: "player",
+      anchor: OBJECT_CENTER,
+      scale: 0.7,
+      ...(object?.anim && { anim: object.anim }),
+      ...(object?.pivot && { pivot: object.pivot }),
+    },
+  ];
+};
+// Estados sin música (como en BIT): ni reproductor ni cascos.
+const NO_MUSIC = new Set(["waiting", "limited"]);
 
 const states = {
   coding: [
@@ -122,7 +172,10 @@ const states = {
 const manifest = {
   name: name ?? basename(dir),
   states: Object.fromEntries(
-    Object.entries(states).map(([s, layers]) => [s, { layers }]),
+    Object.entries(states).map(([s, layers]) => [
+      s,
+      { layers: NO_MUSIC.has(s) ? layers : withPlayer(layers) },
+    ]),
   ),
 };
 
@@ -142,4 +195,17 @@ Qué es cada marcador (sustitúyelo por tu pieza, mismo nombre, lienzo 150×110)
   arm.svg     naranja        el brazo, con su pivote en el hombro
   object.svg  verde agua     el objeto del estado (portátil, lupa, taza…)
   screen.svg  azul oscuro    lo que se ve dentro de una pantalla (recortado con clip)
-  strip.svg   violeta        tira de 4 fotogramas (frames), p. ej. las "z" de sleeping`);
+  strip.svg   violeta        tira de 4 fotogramas (frames), p. ej. las "z" de sleeping${
+    player === "object"
+      ? `
+  player.svg  marco rojo     dónde se ve la canción (capa "player"; el marco es solo de guía)`
+      : ""
+  }
+
+Música: ${
+  {
+    head: "pantalla «sonando» sobre la cabeza",
+    object: "pantalla «sonando» sobre el objeto",
+    none: "sin pantalla «sonando»",
+  }[player]
+}, ${headphones ? "con cascos" : "sin cascos"}.`);

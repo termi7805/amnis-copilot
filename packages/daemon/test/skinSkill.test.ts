@@ -74,6 +74,45 @@ test("placeholders.mjs no pisa una skin existente sin --force", () => {
   }
 });
 
+test("placeholders.mjs coloca la música según lo elegido (#167): reproductor en el objeto o en ninguna parte, sin cascos", () => {
+  const root = temp();
+  const silent = new Set(["waiting", "limited"]);
+  try {
+    const objeto = join(root, "objeto");
+    run("placeholders.mjs", objeto, "--player", "object", "--no-headphones");
+    const a = checkSkin(skinFolder(objeto));
+    assert.deepEqual(a.errors, []);
+    assert.deepEqual(a.warnings, []);
+    for (const [state, def] of Object.entries(a.manifest?.states ?? {})) {
+      const players = def.layers.filter(
+        (l) => "role" in l && l.role === "player",
+      );
+      assert.equal(players.length, silent.has(state) ? 0 : 1, state);
+      const head = def.layers.find((l) => "role" in l && l.role === "head");
+      assert.equal(head && "headphones" in head && head.headphones, false);
+      // El reproductor va el último: nada del objeto lo tapa.
+      if (players[0]) assert.equal(def.layers.at(-1), players[0], state);
+    }
+
+    const nada = join(root, "nada");
+    run("placeholders.mjs", nada, "--player", "none");
+    const b = checkSkin(skinFolder(nada));
+    assert.deepEqual(b.errors, []);
+    assert.deepEqual(b.warnings, []);
+    for (const def of Object.values(b.manifest?.states ?? {})) {
+      const head = def.layers.find((l) => "role" in l && l.role === "head");
+      assert.ok(head && "player" in head && head.player === false);
+      assert.ok(head && !("headphones" in head));
+    }
+
+    assert.throws(() =>
+      run("placeholders.mjs", join(root, "mal"), "--player", "cara"),
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("place.mjs coloca un PNG en el lienzo 150×110 deduciendo la proporción", () => {
   const root = temp();
   try {
