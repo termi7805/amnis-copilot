@@ -1,58 +1,14 @@
-/* El carrusel no decide tamaños: llena lo que le da su envoltura. En la
-   ventana flotante esa envoltura es `.petArea`, del tamaño exacto de la
-   ventana plegada (#151): la franja se come la parte baja y la escena se
-   encoge, nada se ensancha ni tapa a la mascota. */
+/* Solo los controles: la mascota la pinta quien usa el carrusel. Plegada, la
+   ventana flotante no los lleva (ni ensancha ni tapa a la mascota); van en el
+   panel desplegado con su estética, y en el dashboard bajo el escenario. */
 .root {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
-}
-
-.root[data-layout="pet"] {
-  width: 100%;
-  height: 100%;
-}
-
-.root[data-layout="hero"] {
-  gap: 0.6rem;
-}
-
-.stage {
-  min-width: 0;
-}
-
-.root[data-layout="pet"] .stage {
-  flex: 1;
-  min-height: 0;
-}
-
-.strip {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-width: 0;
   color: var(--ink);
-  font-family: var(--f-body, system-ui, sans-serif);
-}
-
-/* Sobre el escritorio no hay fondo: una pastilla del tema para que el
-   texto se lea encima de cualquier cosa. */
-.root[data-layout="pet"] .strip {
-  flex: none;
-  height: 14px;
-  padding: 0 2px;
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--surface) 82%, transparent);
-  font-size: 9px;
-  line-height: 1;
-}
-
-.root[data-layout="hero"] .strip {
-  gap: 0.6rem;
-  font-size: 0.82rem;
 }
 
 .arrow {
@@ -63,28 +19,7 @@
   border: 0;
   background: none;
   color: inherit;
-  font:
-    700 12px / 1 system-ui,
-    sans-serif;
   cursor: pointer;
-}
-
-.root[data-layout="pet"] .arrow {
-  width: 12px;
-  height: 12px;
-}
-
-.root[data-layout="hero"] .arrow {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  color: var(--ink-2);
-  font-size: 18px;
-}
-
-.root[data-layout="hero"] .arrow:hover {
-  background: var(--raised);
-  color: var(--ink);
 }
 
 .arrow:focus-visible,
@@ -99,36 +34,16 @@
   align-items: center;
 }
 
-.root[data-layout="pet"] .dots {
-  gap: 3px;
-}
-
-.root[data-layout="hero"] .dots {
-  gap: 6px;
-}
-
 .dot {
   flex: none;
   padding: 0;
   border: 0;
-  border-radius: 50%;
   cursor: pointer;
   opacity: 0.55;
 }
 
-.root[data-layout="pet"] .dot {
-  width: 6px;
-  height: 6px;
-}
-
-.root[data-layout="hero"] .dot {
-  width: 10px;
-  height: 10px;
-}
-
 .dot[aria-current="true"] {
   opacity: 1;
-  box-shadow: 0 0 0 1px var(--ink);
 }
 
 /* Pide permiso: un anillo de aviso que se ve desde cualquier otra sesión. */
@@ -153,20 +68,12 @@
 .label {
   flex: 1;
   display: flex;
-  justify-content: center;
-  gap: 4px;
+  align-items: baseline;
   min-width: 0;
-}
-
-.root[data-layout="hero"] .label {
-  justify-content: flex-start;
-  gap: 0.5rem;
-  color: var(--ink-2);
 }
 
 .position {
   flex: none;
-  font-family: var(--f-mono, ui-monospace, monospace);
   font-variant-numeric: tabular-nums;
 }
 
@@ -175,4 +82,112 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Panel desplegado de la mascota: la misma fila que el selector de foco
+   (PanelHeader), botones cuadrados de 2 px como las pestañas y texto mono. */
+.root[data-layout="panel"] {
+  gap: 7px;
+  padding: 6px 10px;
+  border-bottom: 2px solid var(--ink);
+  font:
+    600 9px / 1 ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.08em;
+}
+
+.root[data-layout="panel"] .arrow {
+  width: 20px;
+  height: 18px;
+  border: 2px solid var(--ink);
+  font:
+    700 12px / 1 ui-monospace,
+    Menlo,
+    monospace;
+}
+
+.root[data-layout="panel"] .arrow:hover {
+  background: var(--raised);
+}
+
+.root[data-layout="panel"] .dots {
+  gap: 5px;
+}
+
+/* Cuadrados como el punto de estado de la cabecera. */
+.root[data-layout="panel"] .dot {
+  width: 7px;
+  height: 7px;
+}
+
+.root[data-layout="panel"] .dot[aria-current="true"] {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.root[data-layout="panel"] .dot[data-waiting] {
+  box-shadow: 0 0 0 2px var(--warn-mark);
+}
+
+.root[data-layout="panel"] .label {
+  gap: 6px;
+}
+
+.root[data-layout="panel"] .position {
+  color: var(--ink-3);
+}
+
+.root[data-layout="panel"] .name {
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+
+/* Dashboard: bajo el escenario, con los tokens y redondeos del tema. */
+.root[data-layout="hero"] {
+  gap: 0.6rem;
+  font: 0.82rem / 1.2 var(--f-body);
+}
+
+.root[data-layout="hero"] .arrow {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--ink-2);
+  font:
+    700 18px / 1 system-ui,
+    sans-serif;
+}
+
+.root[data-layout="hero"] .arrow:hover {
+  background: var(--raised);
+  color: var(--ink);
+}
+
+.root[data-layout="hero"] .dots {
+  gap: 6px;
+}
+
+.root[data-layout="hero"] .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.root[data-layout="hero"] .dot[aria-current="true"] {
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.root[data-layout="hero"] .dot[data-waiting] {
+  box-shadow: 0 0 0 2px var(--warn-mark);
+}
+
+.root[data-layout="hero"] .label {
+  gap: 0.5rem;
+  color: var(--ink-2);
+}
+
+.root[data-layout="hero"] .position {
+  font-family: var(--f-mono);
 }

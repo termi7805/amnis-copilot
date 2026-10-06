@@ -168,7 +168,7 @@ describe("PetWindow", () => {
     expect(screen.queryByTestId("quota-value")).not.toBeInTheDocument();
   });
 
-  it("con el foco en Todas, carrusel: → cambia de sesión sin desplegar el panel", () => {
+  it("con el foco en Todas: plegada solo la mascota, los controles en el panel", () => {
     render(<PetWindow />);
     const [source] = FakeEventSource.instances;
     act(() => source?.open());
@@ -191,17 +191,29 @@ describe("PetWindow", () => {
         },
       }),
     );
+    // Plegada: la mascota de la primera, sin controles.
     expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "0");
-    expect(screen.getByText("wt-a")).toBeInTheDocument();
+    expect(screen.queryByTestId("carousel")).toBeNull();
+    // ←/→ siguen valiendo con la ventana enfocada.
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "3");
 
+    // Desplegada: la fila del carrusel, en la misma sesión.
+    const window_ = screen.getByTestId("pet").closest("div")?.parentElement;
+    if (!window_) throw new Error("petWindow no encontrado");
+    fireEvent.pointerDown(window_, { clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(window_, { clientX: 10, clientY: 10 });
+    expect(screen.getByTestId("carousel")).toHaveTextContent("2/2");
+    expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "3");
+
+    // Pulsar una flecha cambia de sesión y no pliega el panel.
     const next = screen.getByRole("button", { name: "Sesión siguiente" });
     fireEvent.pointerDown(next, { clientX: 10, clientY: 10 });
     fireEvent.pointerUp(next, { clientX: 10, clientY: 10 });
     fireEvent.click(next);
-
-    expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "3");
-    expect(screen.getByText("wt-b")).toBeInTheDocument();
-    expect(localStorage.getItem(PANEL_KEY)).toBe("none");
+    expect(screen.getByTestId("carousel")).toHaveTextContent("1/2wt-a");
+    expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "0");
+    expect(localStorage.getItem(PANEL_KEY)).toBe("quota");
   });
 
   it("fuera del foco Todas no hay carrusel", () => {
@@ -209,7 +221,7 @@ describe("PetWindow", () => {
     const [source] = FakeEventSource.instances;
     act(() => source?.open());
     act(() => source?.emit("hello", fakeState));
-    expect(screen.queryByTestId("carousel-strip")).toBeNull();
+    expect(screen.queryByTestId("carousel")).toBeNull();
   });
 
   it("un click (sin arrastre) despliega el panel", () => {

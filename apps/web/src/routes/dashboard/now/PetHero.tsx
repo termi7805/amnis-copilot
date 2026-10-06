@@ -47,32 +47,23 @@ export function PetHero({ state, now }: { state: StateResponse; now: Date }) {
   const since = shown?.since ?? pet.since;
   const project = shown?.name ?? pet.project;
 
-  const stage = (
-    <div className={styles.stage} data-testid="pet-stage">
-      <Pet
-        state={petState}
-        level={pet.level}
-        fatigue={pet.fatigue}
-        resetsAt={quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
-        commitHash={shown ? shown.commitHash : pet.commitHash}
-        listening={listening}
-        musicPrefs={settings}
-        othersActive={pet.othersActive}
-        identity={shown?.identity}
-        skin={skin}
-      />
-    </div>
-  );
-
   return (
     <article className={styles.hero}>
-      {shown ? (
-        <SessionCarousel carousel={carousel} layout="hero" keys="local">
-          {stage}
-        </SessionCarousel>
-      ) : (
-        stage
-      )}
+      <div className={styles.stage} data-testid="pet-stage">
+        <Pet
+          state={petState}
+          level={pet.level}
+          fatigue={pet.fatigue}
+          resetsAt={quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
+          commitHash={shown ? shown.commitHash : pet.commitHash}
+          listening={listening}
+          musicPrefs={settings}
+          othersActive={pet.othersActive}
+          identity={shown?.identity}
+          skin={skin}
+        />
+      </div>
+      {shown && <SessionCarousel carousel={carousel} layout="hero" localKeys />}
       <div className={styles.stateLine}>
         <p className={styles.stateName}>{stateTitle(petState)}</p>
         {listening && (

@@ -1,6 +1,7 @@
 import {
   isPetScale,
   type PetScale,
+  type PetSnapshot,
   pendingUpdate,
   type SessionPet,
 } from "@amnis/shared";
@@ -13,7 +14,7 @@ import { useLocale } from "../../lib/locale.ts";
 import { Pet, PetOffline } from "../../lib/Pet/Pet.tsx";
 import { useSelectedSkin } from "../../lib/Pet/useSelectedSkin.ts";
 import {
-  SessionCarousel,
+  useCarouselKeys,
   useSessionCarousel,
 } from "../../lib/SessionCarousel/SessionCarousel.tsx";
 import { useTheme } from "../../lib/theme.ts";
@@ -93,6 +94,24 @@ export function PetWindow() {
   // `sessions` solo trae lista con el foco en «Todas»: fuera de él, o sin
   // sesiones vivas, `current` es `null` y se ve la mascota de siempre.
   const carousel = useSessionCarousel(state?.pet.sessions ?? NO_SESSIONS);
+  const shown = carousel.current?.session ?? null;
+  // Plegada solo se ve la mascota de la sesión elegida; los controles van en
+  // el panel desplegado. ←/→ valen en las dos con la ventana enfocada.
+  useCarouselKeys(carousel.step, shown !== null);
+  const sessionsCarousel = shown ? carousel : undefined;
+  const identity = shown?.identity;
+  // El snapshot visto desde la sesión elegida: la fatiga, la música y el foco
+  // siguen siendo de la cuenta; el estado, desde cuándo y el proyecto, suyos.
+  const viewed: PetSnapshot | null =
+    state && shown
+      ? {
+          ...state.pet,
+          state: shown.state,
+          since: shown.since,
+          commitHash: shown.commitHash,
+          project: shown.name,
+        }
+      : (state?.pet ?? null);
   const { t } = useTranslation();
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
   const dragStarted = useRef(false);
@@ -247,34 +266,19 @@ export function PetWindow() {
         >
           {status === "offline" ? (
             <PetOffline />
-          ) : state && carousel.current ? (
-            <SessionCarousel carousel={carousel} layout="pet" keys="window">
-              <Pet
-                state={carousel.current.session.state}
-                level={state.pet.level}
-                fatigue={state.pet.fatigue}
-                resetsAt={
-                  state.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null
-                }
-                commitHash={carousel.current.session.commitHash}
-                listening={state.pet.listening}
-                musicPrefs={state.settings}
-                identity={carousel.current.session.identity}
-                skin={skin}
-              />
-            </SessionCarousel>
           ) : state ? (
             <Pet
-              state={state.pet.state}
+              state={viewed?.state ?? state.pet.state}
               level={state.pet.level}
               fatigue={state.pet.fatigue}
               resetsAt={
                 state.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null
               }
-              commitHash={state.pet.commitHash}
+              commitHash={viewed?.commitHash ?? null}
               listening={state.pet.listening}
               musicPrefs={state.settings}
               othersActive={state.pet.othersActive}
+              identity={identity}
               skin={skin}
             />
           ) : (
@@ -287,7 +291,8 @@ export function PetWindow() {
           {hooksMissing && <HooksAlert onRepaired={health.refresh} />}
           {panel === "quota" && state && (
             <QuotaPanel
-              pet={state.pet}
+              pet={viewed ?? state.pet}
+              carousel={sessionsCarousel}
               status={status}
               quotas={state.quotas}
               now={now}
@@ -297,7 +302,8 @@ export function PetWindow() {
           )}
           {panel === "media" && (
             <MediaPanel
-              pet={state?.pet ?? null}
+              pet={viewed ?? state?.pet ?? null}
+              carousel={sessionsCarousel}
               resetsAt={
                 state?.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null
               }

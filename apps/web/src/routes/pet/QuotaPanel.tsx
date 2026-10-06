@@ -15,6 +15,7 @@ import { formatElapsed, formatUntil } from "../../lib/countdown.ts";
 import { fiveHourExhaustion, fiveHourWindow } from "../../lib/fiveHour.ts";
 import { scopeTitle } from "../../lib/nowCards.ts";
 import { extraLimits } from "../../lib/quotaLimits.ts";
+import type { SessionCarouselState } from "../../lib/SessionCarousel/SessionCarousel.tsx";
 import { QuotaRing } from "../dashboard/QuotaRing.tsx";
 import { ActivityRow } from "./ActivityRow.tsx";
 import { PanelHeader, type PanelId } from "./PanelHeader.tsx";
@@ -53,6 +54,8 @@ export interface QuotaPanelProps {
   now: Date;
   musicPrefs?: MusicPrefs;
   onSelectPanel?: (panel: PanelId) => void;
+  /** Con el foco en «Todas»: la fila para pasar de sesión, bajo el foco. */
+  carousel?: SessionCarouselState;
 }
 
 /**
@@ -68,6 +71,7 @@ export function QuotaPanel({
   now,
   musicPrefs,
   onSelectPanel,
+  carousel,
 }: QuotaPanelProps) {
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
@@ -120,6 +124,7 @@ export function QuotaPanel({
         onSelect={onSelectPanel}
         focus={pet.focus}
         now={now}
+        carousel={carousel}
       />
 
       <ActivityRow
@@ -128,6 +133,7 @@ export function QuotaPanel({
         resetsAt={quotas[0]?.authoritative?.fiveHour.resetsAt ?? null}
         now={now}
         musicPrefs={musicPrefs}
+        identity={carousel?.current?.session.identity}
       />
 
       {quotas.map((quota, i) => {

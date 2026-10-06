@@ -406,8 +406,9 @@ carrusel), un contador `2/4`, el worktree de la que se ve y un punto por sesión
 marcado cuando esa sesión está en `waiting` para ver que pide permiso sin pasar por todas (pulsarlo
 lleva a ella). La posición es estado local de cada cliente y se guarda por `sessionId`: si termina
 una sesión por delante no te mueve; si termina la que ves, pasas a la que ocupa ahora su puesto (o
-a la última), nunca a la primera; una nueva entra al final. En la ventana flotante la franja de
-controles sale del área plegada y la escena se encoge: no la ensancha ni tapa a la mascota.
+a la última), nunca a la primera; una nueva entra al final. Plegada, la ventana flotante solo
+enseña la mascota de la sesión elegida (sin controles: ni la ensanchan ni tapan a la mascota); los
+controles van en el panel desplegado, en una fila bajo el selector de foco con su misma estética.
 
 ### Renderizado
 

@@ -1,11 +1,5 @@
 import { IDENTITY_COLORS, type SessionPet } from "@amnis/shared";
-import {
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { stateTitle } from "../Pet/Pet.tsx";
 import {
@@ -75,37 +69,16 @@ function arrowDir(e: {
   return null;
 }
 
-export interface SessionCarouselProps {
-  carousel: SessionCarouselState;
-  /** `pet`: la franja se come la parte baja del área fija de la ventana
-   * flotante, sin ensancharla ni tapar a la mascota. `hero`: va bajo el escenario. */
-  layout: "pet" | "hero";
-  /** `window`: ←/→ en toda la ventana (la flotante, que solo los recibe
-   * enfocada: nada de atajos globales). `local`: solo con el foco dentro del
-   * carrusel, para no robárselos al resto del dashboard. */
-  keys: "window" | "local";
-  /** El escenario con la `<Pet>` de `carousel.current`. */
-  children: ReactNode;
-}
-
 /**
- * Flechas, contador, worktree y un punto por sesión con su color de identidad.
- * El punto de una sesión en `waiting` se marca: así se ve que pide permiso sin
- * pasar por todas, y pulsarlo lleva directo a ella.
+ * ←/→ en toda la ventana mientras `enabled`: es la ventana flotante, que solo
+ * los recibe enfocada (nada de atajos globales). Va aparte de los controles
+ * porque plegada la mascota no los pinta y las teclas siguen valiendo.
  */
-export function SessionCarousel({
-  carousel,
-  layout,
-  keys,
-  children,
-}: SessionCarouselProps) {
-  const { t } = useTranslation();
-  const { sessions, current, step, select } = carousel;
+export function useCarouselKeys(step: (dir: 1 | -1) => void, enabled: boolean) {
   const stepRef = useRef(step);
   stepRef.current = step;
-
   useEffect(() => {
-    if (keys !== "window") return;
+    if (!enabled) return;
     const onKey = (e: globalThis.KeyboardEvent) => {
       const dir = arrowDir(e);
       if (dir === null) return;
@@ -114,10 +87,35 @@ export function SessionCarousel({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [keys]);
+  }, [enabled]);
+}
+
+export interface SessionCarouselProps {
+  carousel: SessionCarouselState;
+  /** `panel`: con la estética del panel desplegado de la mascota (bordes de
+   * 2 px, mayúsculas mono). `hero`: la del dashboard, bajo el escenario. */
+  layout: "panel" | "hero";
+  /** Con `true`, ←/→ con el foco dentro de los controles (dashboard: no se
+   * los roba al resto de la página). La mascota usa `useCarouselKeys`. */
+  localKeys?: boolean;
+}
+
+/**
+ * Flechas, contador, worktree y un punto por sesión con su color de identidad.
+ * El punto de una sesión en `waiting` se marca: así se ve que pide permiso sin
+ * pasar por todas, y pulsarlo lleva directo a ella. Solo los controles: la
+ * mascota de `carousel.current` la pinta quien lo usa.
+ */
+export function SessionCarousel({
+  carousel,
+  layout,
+  localKeys = false,
+}: SessionCarouselProps) {
+  const { t } = useTranslation();
+  const { sessions, current, step, select } = carousel;
 
   function onKeyDown(e: KeyboardEvent<HTMLFieldSetElement>) {
-    if (keys !== "local") return;
+    if (!localKeys) return;
     const dir = arrowDir(e);
     if (dir === null) return;
     e.preventDefault();
@@ -128,77 +126,71 @@ export function SessionCarousel({
   const name = current?.session.name ?? "";
 
   return (
+    // Corta el puntero: en la mascota, pulsar un control no pliega ni arrastra la ventana.
     <fieldset
       className={styles.root}
       data-layout={layout}
+      data-testid="carousel"
       aria-label={t("pet.carousel.label")}
       onKeyDown={onKeyDown}
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
     >
-      <div className={styles.stage}>{children}</div>
-      {/* Corta el pointerdown: pulsar un control no pliega ni arrastra la ventana. */}
-      <div
-        className={styles.strip}
-        data-testid="carousel-strip"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
+      {many && (
+        <button
+          type="button"
+          className={styles.arrow}
+          aria-label={t("pet.carousel.prev")}
+          onClick={() => step(-1)}
+        >
+          ‹
+        </button>
+      )}
+      {many && (
+        <span className={styles.dots}>
+          {sessions.map((s) => (
+            <button
+              key={s.sessionId}
+              type="button"
+              className={styles.dot}
+              style={{
+                background: `var(--id-${s.identity % IDENTITY_COLORS})`,
+              }}
+              aria-label={t("pet.carousel.dot", {
+                name: s.name,
+                state: stateTitle(s.state),
+              })}
+              aria-current={
+                s.sessionId === current?.session.sessionId ? "true" : undefined
+              }
+              data-waiting={s.state === "waiting" || undefined}
+              data-testid="carousel-dot"
+              onClick={() => select(s.sessionId)}
+            />
+          ))}
+        </span>
+      )}
+      <span className={styles.label} title={current?.session.worktree}>
         {many && (
-          <button
-            type="button"
-            className={styles.arrow}
-            aria-label={t("pet.carousel.prev")}
-            onClick={() => step(-1)}
-          >
-            ‹
-          </button>
-        )}
-        {many && (
-          <span className={styles.dots}>
-            {sessions.map((s) => (
-              <button
-                key={s.sessionId}
-                type="button"
-                className={styles.dot}
-                style={{
-                  background: `var(--id-${s.identity % IDENTITY_COLORS})`,
-                }}
-                aria-label={t("pet.carousel.dot", {
-                  name: s.name,
-                  state: stateTitle(s.state),
-                })}
-                aria-current={
-                  s.sessionId === current?.session.sessionId
-                    ? "true"
-                    : undefined
-                }
-                data-waiting={s.state === "waiting" || undefined}
-                data-testid="carousel-dot"
-                onClick={() => select(s.sessionId)}
-              />
-            ))}
+          <span className={styles.position}>
+            {t("pet.carousel.position", {
+              index: (current?.index ?? 0) + 1,
+              total: sessions.length,
+            })}
           </span>
         )}
-        <span className={styles.label} title={current?.session.worktree}>
-          {many && (
-            <span className={styles.position}>
-              {t("pet.carousel.position", {
-                index: (current?.index ?? 0) + 1,
-                total: sessions.length,
-              })}
-            </span>
-          )}
-          <span className={styles.name}>{name}</span>
-        </span>
-        {many && (
-          <button
-            type="button"
-            className={styles.arrow}
-            aria-label={t("pet.carousel.next")}
-            onClick={() => step(1)}
-          >
-            ›
-          </button>
-        )}
-      </div>
+        <span className={styles.name}>{name}</span>
+      </span>
+      {many && (
+        <button
+          type="button"
+          className={styles.arrow}
+          aria-label={t("pet.carousel.next")}
+          onClick={() => step(1)}
+        >
+          ›
+        </button>
+      )}
     </fieldset>
   );
 }

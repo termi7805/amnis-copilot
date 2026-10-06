@@ -11,6 +11,8 @@ export interface ActivityRowProps {
   resetsAt: string | null;
   now: Date;
   musicPrefs?: MusicPrefs;
+  /** Color de identidad de la sesión que se ve (foco «Todas»). */
+  identity?: number;
 }
 
 export function ActivityRow({
@@ -19,6 +21,7 @@ export function ActivityRow({
   resetsAt,
   now,
   musicPrefs,
+  identity,
 }: ActivityRowProps) {
   const { t } = useTranslation();
   return (
@@ -36,6 +39,7 @@ export function ActivityRow({
             listening={pet.listening}
             musicPrefs={musicPrefs}
             othersActive={pet.othersActive}
+            identity={identity}
           />
         )}
       </div>

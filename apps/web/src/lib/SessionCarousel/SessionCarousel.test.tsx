@@ -1,7 +1,11 @@
 import type { PetState, SessionPet } from "@amnis/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { SessionCarousel, useSessionCarousel } from "./SessionCarousel.tsx";
+import {
+  SessionCarousel,
+  useCarouselKeys,
+  useSessionCarousel,
+} from "./SessionCarousel.tsx";
 
 afterEach(cleanup);
 
@@ -24,10 +28,16 @@ function Harness({
   keys?: "window" | "local";
 }) {
   const carousel = useSessionCarousel(sessions);
+  useCarouselKeys(carousel.step, keys === "window");
   return (
-    <SessionCarousel carousel={carousel} layout="pet" keys={keys}>
+    <>
       <span data-testid="shown">{carousel.current?.session.sessionId}</span>
-    </SessionCarousel>
+      <SessionCarousel
+        carousel={carousel}
+        layout="panel"
+        localKeys={keys === "local"}
+      />
+    </>
   );
 }
 
@@ -102,7 +112,7 @@ describe("SessionCarousel", () => {
       screen.queryByRole("button", { name: "Sesión siguiente" }),
     ).toBeNull();
     expect(screen.queryByTestId("carousel-dot")).toBeNull();
-    expect(screen.getByTestId("carousel-strip")).toHaveTextContent(/^a$/);
+    expect(screen.getByTestId("carousel")).toHaveTextContent(/^a$/);
   });
 
   it("con keys=local las flechas de la ventana no son suyas", () => {

@@ -2,6 +2,10 @@ import type { PetFocus } from "@amnis/shared";
 import { useTranslation } from "react-i18next";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { FocusPicker } from "../../lib/FocusPicker/FocusPicker.tsx";
+import {
+  SessionCarousel,
+  type SessionCarouselState,
+} from "../../lib/SessionCarousel/SessionCarousel.tsx";
 import styles from "./PanelHeader.module.css";
 import { openDashboard } from "./useTauriWindow.ts";
 
@@ -25,6 +29,8 @@ export interface PanelHeaderProps {
   /** Con foco, una fila bajo la cabecera para cambiarlo (#111). */
   focus?: PetFocus;
   now?: Date;
+  /** Con el foco en «Todas», una fila más para pasar de una sesión a otra. */
+  carousel?: SessionCarouselState;
 }
 
 /** Abrir una pestaña cierra el otro panel: nunca hay dos a la vez. */
@@ -34,6 +40,7 @@ export function PanelHeader({
   onSelect,
   focus,
   now,
+  carousel,
 }: PanelHeaderProps) {
   const { t } = useTranslation();
   return (
@@ -104,6 +111,7 @@ export function PanelHeader({
           <FocusPicker focus={focus} now={now} showEnded="never" />
         </div>
       )}
+      {carousel && <SessionCarousel carousel={carousel} layout="panel" />}
     </>
   );
 }
