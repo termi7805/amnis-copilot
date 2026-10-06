@@ -193,14 +193,16 @@ describe("QuotaPanel", () => {
         ...authoritative,
         limits: [
           {
-            kind: "weekly_fable",
+            // Lo que entrega el daemon con la forma de octubre de 2026: el
+            // nombre ya sale del display_name del scope objeto.
+            kind: "weekly_scoped",
             group: "weekly",
-            scope: "fable",
+            scope: "Fable",
             utilization: 7,
             resetsAt: null,
             severity: "normal",
             isActive: true,
-            label: "weekly_fable · fable",
+            label: "7d · Fable",
             ...limit,
           },
         ],

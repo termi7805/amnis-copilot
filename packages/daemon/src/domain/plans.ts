@@ -6,10 +6,12 @@
 export { PLANS, PLANS_DATE, resolvePlan } from "@amnis/shared";
 
 /**
- * Id de plan a partir de lo que trae `.credentials.json`. `rateLimitTier` solo
- * distingue Max 5x de Max 20x; si no es concluyente (o el `subscriptionType`
- * es otro: Team, Enterprise, uno nuevo) devuelve `null` en vez de adivinar, y
- * es el ajuste manual quien cubre el hueco.
+ * Id de plan a partir de lo que trae `.credentials.json`. `rateLimitTier`
+ * distingue Max 5x de Max 20x y, en Team, el asiento: un Premium trae
+ * `default_claude_max_5x` (visto en una cuenta real, octubre de 2026). El tier
+ * de un asiento Standard no se ha visto, así que no se supone. Si no es
+ * concluyente (o el `subscriptionType` es otro: Enterprise, uno nuevo) devuelve
+ * `null` en vez de adivinar, y es el ajuste manual quien cubre el hueco.
  */
 export function detectPlanId(
   subscriptionType: string | null,
@@ -20,6 +22,9 @@ export function detectPlanId(
     const tier = rateLimitTier ?? "";
     if (tier.includes("20x")) return "max_20x";
     if (tier.includes("5x")) return "max_5x";
+  }
+  if (subscriptionType === "team") {
+    if ((rateLimitTier ?? "").includes("max_5x")) return "team_premium";
   }
   return null;
 }

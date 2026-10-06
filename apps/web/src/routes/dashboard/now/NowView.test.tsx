@@ -26,10 +26,10 @@ const FIXED = [
   limit({}),
 ];
 const FABLE = limit({
-  kind: "weekly_fable",
-  scope: "fable",
+  kind: "weekly_scoped",
+  scope: "Fable",
   utilization: 58,
-  label: "7d · fable",
+  label: "7d · Fable",
 });
 
 function stateWith(limits: QuotaLimit[]): StateResponse {

@@ -29,12 +29,52 @@ const KNOWN_KIND_LABELS: Record<string, string> = {
 };
 
 /**
+ * Lo mismo por `group`: un `kind` nuevo de un grupo conocido (p. ej.
+ * `weekly_scoped`) se etiqueta por su ventana en vez de por su nombre en crudo.
+ */
+const KNOWN_GROUP_LABELS: Record<string, string> = {
+  session: "5h",
+  weekly: "7d",
+};
+
+/**
  * Etiqueta genérica: nunca depende de conocer el `kind` ni el `scope`. Lo
  * desconocido se muestra tal cual en vez de descartarse.
  */
-export function limitLabel(kind: string, scope: string | null): string {
-  const base = KNOWN_KIND_LABELS[kind] ?? kind;
+export function limitLabel(
+  kind: string,
+  group: string,
+  scope: string | null,
+): string {
+  const base = KNOWN_KIND_LABELS[kind] ?? KNOWN_GROUP_LABELS[group] ?? kind;
   return scope ? `${base} · ${scope}` : base;
+}
+
+/** `display_name` o, en su defecto, `id` de una parte del `scope`. */
+function partName(raw: unknown): string | null {
+  if (typeof raw === "string") return raw || null;
+  if (typeof raw !== "object" || raw === null) return null;
+  const p = raw as Record<string, unknown>;
+  if (typeof p.display_name === "string" && p.display_name) {
+    return p.display_name;
+  }
+  return typeof p.id === "string" && p.id ? p.id : null;
+}
+
+/**
+ * Nombre legible del `scope`. La API lo mandaba como texto (`"fable"`) y ahora
+ * como objeto (`{ model: { display_name: "Fable" }, surface: null }`); se
+ * aceptan las dos. `surface` va detrás del modelo si algún día llega rellena,
+ * en vez de descartarse.
+ */
+function scopeName(raw: unknown): string | null {
+  if (typeof raw === "string") return raw || null;
+  if (typeof raw !== "object" || raw === null) return null;
+  const s = raw as Record<string, unknown>;
+  const parts = [partName(s.model), partName(s.surface)].filter(
+    (p): p is string => p !== null,
+  );
+  return parts.length > 0 ? parts.join(" · ") : null;
 }
 
 function parseLimitEntry(raw: unknown): QuotaLimit | null {
@@ -42,16 +82,17 @@ function parseLimitEntry(raw: unknown): QuotaLimit | null {
   const l = raw as Record<string, unknown>;
   if (typeof l.percent !== "number") return null;
   const kind = typeof l.kind === "string" ? l.kind : "unknown";
-  const scope = typeof l.scope === "string" ? l.scope : null;
+  const group = typeof l.group === "string" ? l.group : kind;
+  const scope = scopeName(l.scope);
   return {
     kind,
-    group: typeof l.group === "string" ? l.group : kind,
+    group,
     scope,
     utilization: l.percent,
     resetsAt: typeof l.resets_at === "string" ? l.resets_at : null,
     severity: typeof l.severity === "string" ? l.severity : "normal",
     isActive: l.is_active === true,
-    label: limitLabel(kind, scope),
+    label: limitLabel(kind, group, scope),
   };
 }
 
@@ -74,7 +115,6 @@ export function parseLimits(body: Record<string, unknown>): QuotaLimit[] {
     group: string,
     scope: string | null,
     w: QuotaWindow,
-    labelKind = kind,
   ) =>
     limits.push({
       kind,
@@ -84,7 +124,7 @@ export function parseLimits(body: Record<string, unknown>): QuotaLimit[] {
       resetsAt: w.resetsAt,
       severity: "normal",
       isActive: true,
-      label: limitLabel(labelKind, scope),
+      label: limitLabel(kind, group, scope),
     });
 
   const fiveHour = parseWindow(body.five_hour);
@@ -96,7 +136,7 @@ export function parseLimits(body: Record<string, unknown>): QuotaLimit[] {
     const w = parseWindow(value);
     if (w) {
       const scope = key.slice("seven_day_".length);
-      push(key, "weekly", scope, w, "weekly_all");
+      push(key, "weekly", scope, w);
     }
   }
   return limits;

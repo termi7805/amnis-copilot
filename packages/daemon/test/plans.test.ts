@@ -19,6 +19,12 @@ test("detectPlanId: lo no concluyente o desconocido es null, nunca una apuesta",
   assert.equal(detectPlanId(null, null), null);
 });
 
+test("detectPlanId: Team Premium por su tier; otro tier de Team no se adivina", () => {
+  assert.equal(detectPlanId("team", "default_claude_max_5x"), "team_premium");
+  assert.equal(detectPlanId("team", "default_claude_ai"), null);
+  assert.equal(detectPlanId("team", null), null);
+});
+
 test("resolvePlan: lo detectado gana a lo manual", () => {
   const plan = resolvePlan("pro", "max_5x");
   assert.equal(plan?.id, "pro");

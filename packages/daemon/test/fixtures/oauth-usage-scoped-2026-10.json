@@ -1,0 +1,47 @@
+{
+  "limits": [
+    {
+      "kind": "session",
+      "group": "session",
+      "percent": 1,
+      "severity": "normal",
+      "resets_at": "2026-10-06T08:29:59.761996+00:00",
+      "scope": null,
+      "is_active": false
+    },
+    {
+      "kind": "weekly_all",
+      "group": "weekly",
+      "percent": 5,
+      "severity": "normal",
+      "resets_at": "2026-10-08T22:59:59.762020+00:00",
+      "scope": null,
+      "is_active": true
+    },
+    {
+      "kind": "weekly_scoped",
+      "group": "weekly",
+      "percent": 0,
+      "severity": "normal",
+      "resets_at": "2026-10-08T23:00:00+00:00",
+      "scope": {
+        "model": {
+          "id": null,
+          "display_name": "Fable"
+        },
+        "surface": null
+      },
+      "is_active": false
+    }
+  ],
+  "five_hour": {
+    "utilization": 1.0,
+    "resets_at": "2026-10-06T08:29:59.761996+00:00"
+  },
+  "seven_day": {
+    "utilization": 5.0,
+    "resets_at": "2026-10-08T22:59:59.762020+00:00"
+  },
+  "seven_day_opus": null,
+  "seven_day_sonnet": null
+}

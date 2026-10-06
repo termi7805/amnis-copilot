@@ -78,7 +78,7 @@ test("un límite con kind y scope desconocidos no se pierde", () => {
       ...fixture.limits,
       {
         kind: "kind_inventado",
-        group: "weekly",
+        group: "grupo_inventado",
         percent: 7,
         severity: "raro",
         resets_at: null,
@@ -92,6 +92,58 @@ test("un límite con kind y scope desconocidos no se pierde", () => {
   const extra = result?.limits[2];
   assert.equal(extra?.label, "kind_inventado · scope_inventado");
   assert.equal(extra?.severity, "raro");
+});
+
+const scopedFixture = JSON.parse(
+  readFileSync(
+    new URL("./fixtures/oauth-usage-scoped-2026-10.json", import.meta.url),
+    "utf8",
+  ),
+);
+
+test("el scope objeto de la API sale con su display_name: Fable, no «Otro límite»", () => {
+  const result = parseQuotaResponse(scopedFixture);
+
+  assert.deepEqual(
+    result?.limits.map((l) => [l.kind, l.scope, l.label]),
+    [
+      ["session", null, "5h"],
+      ["weekly_all", null, "7d"],
+      ["weekly_scoped", "Fable", "7d · Fable"],
+    ],
+  );
+});
+
+test("el nombre del scope sale de la respuesta, no de una lista de modelos", () => {
+  const scoped = (scope: unknown) =>
+    parseQuotaResponse({
+      ...scopedFixture,
+      limits: [
+        {
+          kind: "weekly_scoped",
+          group: "weekly",
+          percent: 3,
+          resets_at: null,
+          scope,
+        },
+      ],
+    })?.limits[0];
+
+  assert.equal(
+    scoped({ model: { id: null, display_name: "Nuevo modelo" } })?.label,
+    "7d · Nuevo modelo",
+  );
+  assert.equal(
+    scoped({ model: { id: "modelo-x", display_name: null } })?.scope,
+    "modelo-x",
+  );
+  assert.equal(
+    scoped({ model: { display_name: "Fable" }, surface: "cowork" })?.scope,
+    "Fable · cowork",
+  );
+  // La forma anterior, scope como texto, sigue valiendo.
+  assert.equal(scoped("fable")?.scope, "fable");
+  assert.equal(scoped({ model: null, surface: null })?.scope, null);
 });
 
 test("sin limits[], respalda con seven_day_<x> válidos e ignora el resto", () => {

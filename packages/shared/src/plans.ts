@@ -6,12 +6,15 @@ import type { PlanInfo } from "./types.ts";
  * escribió a mano por última vez. Vive en `shared` porque el dashboard lista
  * los planes en el selector manual y el daemon los valida.
  */
-export const PLANS_DATE = "2026-10-03";
+export const PLANS_DATE = "2026-10-06";
 
 export const PLANS: Record<string, { label: string; monthlyUsd: number }> = {
   pro: { label: "Pro", monthlyUsd: 20 },
   max_5x: { label: "Max 5x", monthlyUsd: 100 },
   max_20x: { label: "Max 20x", monthlyUsd: 200 },
+  // Team, por asiento y con pago mensual, como el resto de la tabla.
+  team_standard: { label: "Team Standard", monthlyUsd: 25 },
+  team_premium: { label: "Team Premium", monthlyUsd: 125 },
 };
 
 /**
