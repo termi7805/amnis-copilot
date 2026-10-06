@@ -82,6 +82,12 @@ export interface SkinImageLayer extends SkinLayerBase {
   headphones?: false;
   /** Solo con `role: "head"`: `false` = sin pantalla «sonando» en la cabeza. Por defecto la lleva si el estado no tiene capa `player`. */
   player?: false;
+  /**
+   * `true`: la capa lleva el color de identidad de la sesión (foco «Todas»): su
+   * silueta (el alfa) se rellena con ese color y no se pinta sin identidad. Una
+   * skin sin capas `identity` no muestra color de sesión.
+   */
+  identity?: true;
 }
 
 export const SKIN_HEAD_SCALE_MAX = 4;
@@ -231,6 +237,7 @@ const IMAGE_KEYS = [
   "scale",
   "headphones",
   "player",
+  "identity",
 ];
 const TEXT_KEYS = ["text", "anim", "pivot", "at", "size", "color"];
 
@@ -439,6 +446,16 @@ function checkLayer(
     }
   }
 
+  // Como los de arriba, solo se guarda encendido.
+  let identity = false;
+  if (raw.identity !== undefined) {
+    if (typeof raw.identity !== "boolean") {
+      r.error(`${path}.identity`, "debe ser `true` o `false`");
+    } else {
+      identity = raw.identity;
+    }
+  }
+
   if (r.errors.length > before) return null;
   return {
     ...base,
@@ -450,6 +467,7 @@ function checkLayer(
     ...(anchor && { anchor }),
     ...(scale !== undefined && { scale }),
     ...off,
+    ...(identity && { identity: true as const }),
   };
 }
 

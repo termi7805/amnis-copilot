@@ -8,6 +8,11 @@
  * con el escritorio en oscuro pisaría a cualquier paleta clara. theme.test.ts
  * comprueba que ningún tema olvida un token y que las tintas pasan contraste
  * sobre --surface.
+ *
+ * --id-0… es la paleta de identidad de la mascota (#164): un color por sesión con
+ * el foco en «Todas», pintado sobre el marco de BIT (#4A5563, fijo en todos los
+ * temas). theme.test.ts comprueba que se distinguen entre sí y de lo que ya
+ * significa algo en la escena (el rojo de `limited`, la luz de la antena).
  */
 :root,
 [data-theme="light"] {
@@ -47,6 +52,12 @@
   --heat-2: #8fd8cb;
   --heat-3: #3fb9a4;
   --heat-4: #0e8f7d;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #ffffff 0%,
@@ -95,6 +106,12 @@
     --heat-2: #1b6158;
     --heat-3: #22927f;
     --heat-4: #39e0c8;
+    --id-0: #4f8cff;
+    --id-1: #ff5fb8;
+    --id-2: #b5e853;
+    --id-3: #b97dff;
+    --id-4: #a8ddff;
+    --id-5: #f4ebd0;
     --stage: radial-gradient(
       ellipse 70% 80% at 50% 62%,
       #8b9bac 0%,
@@ -142,6 +159,12 @@
   --heat-2: #1b6158;
   --heat-3: #22927f;
   --heat-4: #39e0c8;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #8b9bac 0%,
@@ -188,6 +211,12 @@
   --heat-2: #456a80;
   --heat-3: #6593ab;
   --heat-4: #88c0d0;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #a3aec1 0%,
@@ -234,6 +263,12 @@
   --heat-2: #574688;
   --heat-3: #7c5fc4;
   --heat-4: #bd93f9;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #a29bba 0%,
@@ -280,6 +315,12 @@
   --heat-2: #9cc4e2;
   --heat-3: #5aa3d8;
   --heat-4: #268bd2;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #fffbf0 0%,
@@ -326,6 +367,12 @@
   --heat-2: #355a5c;
   --heat-3: #4f7e7f;
   --heat-4: #83a598;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #b0a18c 0%,
@@ -372,6 +419,12 @@
   --heat-2: #a9c4b4;
   --heat-3: #6e9c9b;
   --heat-4: #458588;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #fffbe6 0%,
@@ -418,6 +471,12 @@
   --heat-2: #4b3f6e;
   --heat-3: #7d64a8;
   --heat-4: #cba6f7;
+  --id-0: #4f8cff;
+  --id-1: #f067e6; /* su --crit ya es rosa */
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #9d9cb8 0%,
@@ -464,6 +523,12 @@
   --heat-2: #c7a9f4;
   --heat-3: #a46cf2;
   --heat-4: #8839ef;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #ffffff 0%,
@@ -510,6 +575,12 @@
   --heat-2: #2f4778;
   --heat-3: #4d6fbf;
   --heat-4: #7aa2f7;
+  --id-0: #4f8cff;
+  --id-1: #f067e6; /* su --crit ya es rosa */
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #8f97be 0%,
@@ -556,6 +627,12 @@
   --heat-2: #6b4a5a;
   --heat-3: #b37f86;
   --heat-4: #ebbcba;
+  --id-0: #4f8cff;
+  --id-1: #f067e6; /* su --crit ya es rosa */
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #a49fbd 0%,
@@ -602,6 +679,12 @@
   --heat-2: #cfc0e0;
   --heat-3: #ab95c6;
   --heat-4: #907aa9;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #fffdf9 0%,
@@ -648,6 +731,12 @@
   --heat-2: #a8d8bb;
   --heat-3: #67bd97;
   --heat-4: #35a77c;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #fffdf2 0%,
@@ -694,6 +783,12 @@
   --heat-2: #146560;
   --heat-3: #1d9585;
   --heat-4: #39e0c8;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #8396ba 0%,
@@ -740,6 +835,12 @@
   --heat-2: #a6d4c4;
   --heat-3: #5bb29f;
   --heat-4: #13917f;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #fffdf8 0%,
@@ -786,6 +887,12 @@
   --heat-2: #b8c0f3;
   --heat-3: #8593ec;
   --heat-4: #4a5bd4;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #ffffff 0%,
@@ -832,6 +939,12 @@
   --heat-2: #178a7a;
   --heat-3: #2bc4ad;
   --heat-4: #5ff5df;
+  --id-0: #4f8cff;
+  --id-1: #ff5fb8;
+  --id-2: #b5e853;
+  --id-3: #b97dff;
+  --id-4: #a8ddff;
+  --id-5: #f4ebd0;
   --stage: radial-gradient(
     ellipse 70% 80% at 50% 62%,
     #b8c2cc 0%,

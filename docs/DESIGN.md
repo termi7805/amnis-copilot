@@ -395,7 +395,10 @@ paleta fija entre las sesiones vivas, y la sesión lo conserva hasta que termina
 otro `session_id` en el mismo worktree y hereda puesto y color (el puesto se reserva unos
 segundos, hasta que la conversación nueva da su primer hook). La cuota es de la cuenta: con la de
 5 h agotada todas las entradas están en `limited`. El color dice *quién es* la sesión, no *cómo
-está*: no contradice que la fatiga no toque forma ni color.
+está*: no contradice que la fatiga no toque forma ni color. BIT lo lleva en la franja de lo alto
+del marco de la cabeza (no en el cuerpo ni en la antena, que ya dicen estado y fatiga), con una
+paleta por tema (`--id-N` en `theme.css`); una skin, en sus capas `identity`, y sin ellas no hay
+color de sesión.
 
 ### Renderizado
 

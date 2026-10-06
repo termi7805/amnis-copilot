@@ -173,6 +173,25 @@ test("headphones y player de la head: solo booleanos, y solo se guardan apagados
   assert.ok(!("headphones" in on) && !("player" in on));
 });
 
+test("identity: solo booleano, en cualquier capa de imagen, y solo se guarda encendido", () => {
+  const e = errorsOf(skin({ coding: { layers: [layer({ identity: "sí" })] } }));
+  mention(e, "states.coding.layers[0].identity");
+  const r = validateSkinManifest(
+    skin({
+      coding: { layers: [layer({ identity: true }), head({ identity: true })] },
+      testing: { layers: [layer({ identity: false })] },
+    }),
+  );
+  assert.ok("manifest" in r);
+  assert.deepEqual(r.warnings, []);
+  const [plain, withHead] = r.manifest.states.coding?.layers ?? [];
+  const off = r.manifest.states.testing?.layers[0];
+  assert.ok(plain && "src" in plain && withHead && "src" in withHead);
+  assert.equal(plain.identity, true);
+  assert.equal(withHead.identity, true);
+  assert.ok(off && !("identity" in off));
+});
+
 test("headphones y player fuera de la head avisan y no pasan", () => {
   const r = validateSkinManifest(
     skin({

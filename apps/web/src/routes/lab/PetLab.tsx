@@ -1,9 +1,12 @@
 import {
+  IDENTITY_COLORS,
   type Listening,
   type PetState,
   type ScreenMode,
   SERIES_ANIMATIONS,
   type SkinSummary,
+  THEMES,
+  type ThemeId,
   type Vibe,
 } from "@amnis/shared";
 import { type CSSProperties, useEffect, useState } from "react";
@@ -96,12 +99,19 @@ const PIVOTS: [number, number][] = [
 const ANIMATIONS_CSS = `${catalogCss()}
 ${animationCss("lab-hecha-a-mano", HANDMADE)}`;
 
+/** «Sistema» no tiene bloque propio en theme.css: el banco usa los temas con paleta. */
+const LAB_THEMES = THEMES.filter((t) => t.id !== "system");
+
+const IDENTITIES = Array.from({ length: IDENTITY_COLORS }, (_, i) => i);
+
 /** Dato fijo para las capas de texto: dentro de 2 h al abrir el banco. */
 const RESETS_AT = new Date(Date.now() + 2 * 3_600_000).toISOString();
 
 /**
  * Banco de pruebas de la capa de música (#60): el `<Pet>` real en cada estado
- * y vibe, a los dos tamaños reales de la ventana de la mascota. Solo existe en
+ * y vibe, a los dos tamaños reales de la ventana de la mascota. Con un tema
+ * elegido se pinta con su paleta, y la sección de identidades enseña los
+ * colores de sesión lado a lado en cada estado (#164). Solo existe en
  * desarrollo (`main.tsx`).
  */
 export function PetLab() {
@@ -115,6 +125,8 @@ export function PetLab() {
   const [skinId, setSkinId] = useState("");
   const [skin, setSkin] = useState<PetSkin | null>(null);
   const [skinError, setSkinError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<ThemeId | "">("");
+  const [identity, setIdentity] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     fetchSkins().then(setSkins, () => setSkins([]));
@@ -138,6 +150,7 @@ export function PetLab() {
       className={styles.lab}
       data-paused={paused}
       data-dark={dark}
+      data-theme={theme || undefined}
       data-testid="pet-lab"
     >
       <div className={styles.controls}>
@@ -185,6 +198,40 @@ export function PetLab() {
             ))}
           </select>
           {skinError && <span role="alert"> {skinError}</span>}
+        </label>
+        <label>
+          Tema{" "}
+          <select
+            value={theme}
+            onChange={(e) => setTheme(e.target.value as ThemeId | "")}
+            data-testid="theme-select"
+          >
+            <option value="">Banco</option>
+            {LAB_THEMES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Identidad{" "}
+          <select
+            value={identity ?? ""}
+            onChange={(e) =>
+              setIdentity(
+                e.target.value === "" ? undefined : Number(e.target.value),
+              )
+            }
+            data-testid="identity-select"
+          >
+            <option value="">Ninguna</option>
+            {IDENTITIES.map((i) => (
+              <option key={i} value={i}>
+                {i}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Pantalla{" "}
@@ -258,6 +305,46 @@ export function PetLab() {
         </div>
       </section>
 
+      <section data-testid="identities">
+        <h3>Identidades ({IDENTITY_COLORS} colores, sin música)</h3>
+        <table className={styles.grid}>
+          <thead>
+            <tr>
+              <th />
+              {IDENTITIES.map((i) => (
+                <th key={i}>--id-{i}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {STATES.map((state) => (
+              <tr key={state}>
+                <th scope="row">{state}</th>
+                {IDENTITIES.map((i) => (
+                  <td key={i}>
+                    <div
+                      className={styles.cell}
+                      style={SIZES[size]}
+                      data-testid={`identity-${state}-${i}`}
+                    >
+                      <Pet
+                        state={state}
+                        level={1}
+                        fatigue={fatigue}
+                        skin={skin}
+                        commitHash="a1b2c3d"
+                        resetsAt={RESETS_AT}
+                        identity={i}
+                      />
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
       <table className={styles.grid}>
         <thead>
           <tr>
@@ -287,6 +374,7 @@ export function PetLab() {
                       skin={skin}
                       commitHash="a1b2c3d"
                       resetsAt={RESETS_AT}
+                      identity={identity}
                     />
                   </div>
                 </td>

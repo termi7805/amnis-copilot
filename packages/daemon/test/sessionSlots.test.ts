@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { IDENTITY_COLORS } from "@amnis/shared";
 import {
   assignSlots,
-  IDENTITY_COLORS,
   type SessionSlot,
   type SlotCandidate,
 } from "../src/domain/sessionSlots.ts";

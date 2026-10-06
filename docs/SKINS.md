@@ -96,10 +96,17 @@ Una capa es una **imagen** (`src`) o un **texto** (`text`), nunca las dos cosas.
 | `scale` | imagen `head` o `player` | Tamaño de cascos y pantalla respecto a la cabeza de BIT (1 = igual) | > 0 y ≤ 4; por defecto 1 |
 | `headphones` | imagen `head` | `false`: cabecea sin cascos | booleano; por defecto `true` |
 | `player` | imagen `head` | `false`: sin pantalla «sonando» en la cabeza | booleano; por defecto `true`; se ignora (con aviso) si el estado tiene capa `player` |
+| `identity` | imagen | `true`: la capa lleva el color de identidad de la sesión (foco «Todas»). Solo cuenta la silueta (el alfa) de la imagen: se rellena con el color de la sesión, y sin color de sesión la capa no se pinta | booleano; por defecto `false`; en cualquier capa de imagen |
 | `text` | texto | El dato de Amnis que se muestra | `commitHash` o `resetsCountdown` |
 | `at` | texto | `[x, y]` de la línea base del texto | dentro de la escena |
 | `size` | texto | Tamaño de letra en px del viewBox | > 0 y ≤ 110 |
 | `color` | texto | Color | solo hex: `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa` |
+
+**Color de sesión (`identity`).** Con el foco en «Todas» cada sesión tiene su color, que BIT lleva en
+la franja de lo alto de la cabeza. Una skin elige dónde va con capas `identity: true` (un pañuelo,
+una gorra, un borde): pinta esa forma en cualquier color opaco y Amnis la rellena con el de la
+sesión. Si la skin no declara ninguna, no hay color de sesión: tampoco la franja de BIT en los
+estados que la skin no trae. Fuera de «Todas» esas capas no se pintan.
 
 La skin decide dónde y cómo se ve el texto; Amnis pone el valor. Es como una skin muestra los datos
 que BIT enseña dentro de su escena (el hash de `committing`, la cuenta atrás de `limited`).
@@ -113,7 +120,7 @@ que BIT enseña dentro de su escena (el hash de `committing`, la cuenta atrás d
 | `color` que no es hex | `role` distinto de `"head"` y `"player"` |
 | dos capas `head`, o dos `player`, en un estado | `text` con un dato desconocido (la capa se descarta) |
 | `head` o `player` sin `anchor`, o `anchor`/`scale` inválidos | `anchor` o `scale` en una capa sin `role` |
-| `headphones` o `player` que no son booleanos | `headphones` o `player` en una capa que no es `head` |
+| `headphones`, `player` o `identity` que no son booleanos | `headphones` o `player` en una capa que no es `head` |
 | `size` con otra proporción | `player: false` en la `head` de un estado con capa `player` |
 | animación propia inválida o con nombre del catálogo | |
 

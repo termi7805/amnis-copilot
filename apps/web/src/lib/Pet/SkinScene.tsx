@@ -125,6 +125,42 @@ function ImageLayer({
 }
 
 /**
+ * Capa `identity`: la imagen solo pone la silueta (su alfa, como máscara) y el
+ * color es el de la sesión (`--pet-identity`, que fija `<Pet>`).
+ */
+function IdentityLayer({
+  maskId,
+  children,
+}: {
+  maskId: string;
+  children: ReactNode;
+}) {
+  return (
+    <g data-skin-identity>
+      <mask
+        id={maskId}
+        maskUnits="userSpaceOnUse"
+        x="0"
+        y="0"
+        width={W}
+        height={H}
+        style={{ maskType: "alpha" }}
+      >
+        {children}
+      </mask>
+      <rect
+        x="0"
+        y="0"
+        width={W}
+        height={H}
+        fill="var(--pet-identity)"
+        mask={`url(#${maskId})`}
+      />
+    </g>
+  );
+}
+
+/**
  * Coloca la geometría de cascos y pantalla «sonando» (dibujada sobre la cara
  * de BIT) en `anchor` y a `scale`. La misma fórmula para la cabeza y para la
  * capa `player`: una skin sin `player` sale en el mismo píxel que antes.
@@ -179,6 +215,7 @@ export function SkinScene({
   resetsAt,
   music,
   screen,
+  identity = false,
 }: {
   skin: PetSkin;
   layers: SkinLayer[];
@@ -188,6 +225,8 @@ export function SkinScene({
   music?: ComponentProps<typeof Headphones>;
   /** Pantalla «sonando»: en la capa `player` si la hay; si no, en la `head`. */
   screen?: ReactNode;
+  /** Hay color de identidad: las capas `identity` se pintan con él; sin él, no salen. */
+  identity?: boolean;
 }) {
   // `useId` lleva `:`, que no vale dentro de `url(#…)`.
   const uid = useId().replace(/[^A-Za-z0-9_-]/g, "");
@@ -220,7 +259,7 @@ export function SkinScene({
             <TextLayer key={key} layer={layer} value={values[layer.text]} />
           );
         }
-        const image = (
+        const picture = (
           <ImageLayer
             key={key}
             layer={layer}
@@ -229,6 +268,13 @@ export function SkinScene({
             windowId={`skin-win-${key}`}
           />
         );
+        const image = !layer.identity ? (
+          picture
+        ) : identity ? (
+          <IdentityLayer key={key} maskId={`skin-id-${key}`}>
+            {picture}
+          </IdentityLayer>
+        ) : null;
         if (!layer.role || !layer.anchor) return image;
         if (layer.role === "player") {
           return (

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { THEMES } from "@amnis/shared";
+import { IDENTITY_COLORS, THEMES } from "@amnis/shared";
 import { describe, expect, it } from "vitest";
 
 type Block = { selector: string; tokens: Map<string, string>; scheme: string };
@@ -78,6 +78,29 @@ function luminance(hex: string): number {
     0.7152 * lin((n >> 8) & 255) +
     0.0722 * lin(n & 255)
   );
+}
+
+/** OKLab (Ottosson): una distancia euclídea aquí se parece a cuánto se distinguen dos colores. */
+function oklab(hex: string): [number, number, number] {
+  const n = Number.parseInt(hex.slice(1), 16);
+  const lin = (c: number) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  const [r, g, b] = [lin((n >> 16) & 255), lin((n >> 8) & 255), lin(n & 255)];
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+  ];
+}
+
+function distance(a: string, b: string): number {
+  const [p, q] = [oklab(a), oklab(b)];
+  return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
 }
 
 function contrast(a: string, b: string): number {
@@ -176,6 +199,48 @@ describe("theme.css", () => {
           ratio,
           `${token} ${fg} sobre ${bg} = ${ratio.toFixed(2)}`,
         ).toBeGreaterThanOrEqual(7);
+      });
+    }
+  });
+
+  describe("paleta de identidad", () => {
+    // Lo que la escena ya usa para decir algo: la franja no puede parecerse.
+    const reservados: [string, string][] = [
+      ["rojo de limited", "#ec3013"],
+      ["antena fresca", "#39e0c8"],
+      ["antena cansada", "#d88f6a"],
+      ["antena de waiting", "#ffb020"],
+    ];
+    const MARCO = "#4a5563";
+    const ids = Array.from({ length: IDENTITY_COLORS }, (_, i) => `--id-${i}`);
+    for (const { name, block } of toCheck) {
+      it(`${name}: ${IDENTITY_COLORS} colores distintos entre sí, de lo reservado y legibles sobre el marco`, () => {
+        const colors = ids.map((id) => block.tokens.get(id) as string);
+        expect(colors.every(Boolean), "falta algún --id-N").toBe(true);
+        expect(block.tokens.has(`--id-${IDENTITY_COLORS}`)).toBe(false);
+        for (let i = 0; i < colors.length; i++) {
+          const c = colors[i] as string;
+          for (let j = i + 1; j < colors.length; j++) {
+            const d = distance(c, colors[j] as string);
+            expect(
+              d,
+              `--id-${i} ${c} y --id-${j} ${colors[j]}`,
+            ).toBeGreaterThanOrEqual(0.1);
+          }
+          for (const [what, hex] of [
+            ...reservados,
+            ["--crit", block.tokens.get("--crit") as string],
+          ] as [string, string][]) {
+            expect(
+              distance(c, hex),
+              `--id-${i} ${c} frente a ${what}`,
+            ).toBeGreaterThanOrEqual(0.1);
+          }
+          expect(
+            contrast(c, MARCO),
+            `--id-${i} ${c} sobre el marco`,
+          ).toBeGreaterThanOrEqual(2);
+        }
       });
     }
   });

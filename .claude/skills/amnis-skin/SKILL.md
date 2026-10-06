@@ -220,6 +220,12 @@ Quien use la skin puede quitar la pantalla en Ajustes → Música (pantalla «Na
 preferencia de quien mira, no de la skin: por defecto sale, así que la skin tiene que quedar bien
 con ella.
 
+**Color de sesión.** Con el foco en «Todas» cada sesión tiene un color propio. La capa que lo lleva
+se marca con `"identity": true` (en cualquier capa de imagen): de su imagen solo cuenta la silueta,
+así que se dibuja en un color opaco cualquiera y Amnis la rellena con el de la sesión; sin color de
+sesión no se pinta. Elegir un accesorio (pañuelo, gorra, borde), nunca el cuerpo entero ni lo que
+ya dice el estado. Sin ninguna capa `identity`, la skin no muestra color de sesión.
+
 **Datos de Amnis (capas `text`).** `commitHash` (solo llega en `pushing`; en `committing` se ve
 `······`) y `resetsCountdown` (para `limited`). Eres tú quien decide `at` (línea base, esquina
 inferior izquierda del texto), `size` (px del viewBox; el hash son 7 caracteres ≈ 4·`size` px de
@@ -280,7 +286,7 @@ La salida de `check.sh` nombra estado, capa y campo (`states.coding.layers[1].an
 | `la capa con role "head" necesita anchor` | añade `anchor: [x, y]` (el centro de la cara) |
 | `la capa con role "player" necesita anchor` | añade `anchor: [x, y]` (el centro de donde se ve la canción) |
 | `como mucho una capa con role "head"` / `"player"` | solo una cabeza y un reproductor por estado |
-| `headphones` / `player` `debe ser true o false` | booleano sin comillas |
+| `headphones` / `player` / `identity` `debe ser true o false` | booleano sin comillas |
 | aviso `headphones`/`player` `solo tiene efecto con role "head"` | van en la capa `head`; para mover la pantalla usa `role: "player"` |
 | `el recorte … debe caber en la escena` | `clip: [x, y, ancho, alto]` dentro de 150×110 |
 | `size … no tiene la proporción` | `size` debe ser 15:11 (300×220, 450×330…) |

@@ -1,7 +1,5 @@
+import { IDENTITY_COLORS } from "@amnis/shared";
 import { sessionAlive } from "./petState.ts";
-
-/** Tamaño de la paleta de identidad; la de la mascota tiene tantos colores. */
-export const IDENTITY_COLORS = 6;
 
 export interface SessionSlot {
   sessionId: string;

@@ -22,6 +22,10 @@ export type PetState =
 
 export type ProviderId = "anthropic";
 
+/** Tamaño de la paleta de identidad: el daemon reparte índices en `[0, N)` y
+ * la mascota tiene un color por índice (`--id-0`… en theme.css). */
+export const IDENTITY_COLORS = 6;
+
 /** Una sesión viva con el foco en `all`: lo que el cliente necesita para dibujar su mascota. */
 export interface SessionPet {
   sessionId: string;

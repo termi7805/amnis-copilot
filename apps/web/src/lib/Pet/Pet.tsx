@@ -1,4 +1,10 @@
-import type { Listening, PetSnapshot, PetState, Vibe } from "@amnis/shared";
+import {
+  IDENTITY_COLORS,
+  type Listening,
+  type PetSnapshot,
+  type PetState,
+  type Vibe,
+} from "@amnis/shared";
 import type { CSSProperties, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { pet as petMessages } from "../../i18n/es/pet.ts";
@@ -41,6 +47,11 @@ export interface PetProps {
   othersActive?: number;
   /** Skin elegida; los estados que no trae se pintan como BIT. */
   skin?: PetSkin | null;
+  /** Índice en la paleta de identidad (`SessionPet.identity`): con valor, la
+   * franja de lo alto de la cabeza lleva el color de la sesión. Sin él, BIT se
+   * ve como siempre. Con skin, el color solo sale en su capa `identity`: si no
+   * declara ninguna, no hay color, tampoco en los estados que pinta BIT. */
+  identity?: number;
 }
 
 /** La insignia "+N" de `othersActive`, fuera de `<Scene>` para que ningún
@@ -70,6 +81,20 @@ function OthersBadge({ count }: { count: number }) {
         {label}
       </text>
     </g>
+  );
+}
+
+/** Franja del color de identidad: el borde superior del marco de la cabeza
+ * (4 px, con sus esquinas rx=7), igual en las 12 escenas. Va en un accesorio
+ * y no en el cuerpo ni en la antena, que ya dicen el estado y la fatiga
+ * (docs/DESIGN.md §4). */
+function IdentityBand() {
+  return (
+    <path
+      d="M24.68 26A7 7 0 0 1 31 22H79a7 7 0 0 1 6.32 4Z"
+      fill="var(--pet-identity)"
+      data-testid="pet-identity"
+    />
   );
 }
 
@@ -108,6 +133,7 @@ function Scene({
   commitHash,
   music,
   screen,
+  identity = false,
 }: {
   state: PetState;
   resetsAt?: string | null;
@@ -116,6 +142,8 @@ function Scene({
   music?: { vibe: Vibe; color: string; visible: boolean };
   /** Pantalla "sonando" (#64): va al final de la cabeza, encima de la cara. */
   screen?: ReactNode;
+  /** Pinta la franja de identidad (el color sale de `--pet-identity`). */
+  identity?: boolean;
 }) {
   switch (state) {
     case "coding":
@@ -193,6 +221,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -399,6 +428,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -542,6 +572,7 @@ function Scene({
             />
             <circle cx="55" cy="12" r="3.4" className={styles.antenna} />
             <rect x="24" y="22" width="62" height="48" rx="7" fill="#4A5563" />
+            {identity && <IdentityBand />}
             <rect x="28" y="26" width="54" height="40" rx="5" fill="#171D26" />
             {music && <Headphones {...music} />}
             <g
@@ -720,6 +751,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -892,6 +924,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -1057,6 +1090,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -1235,6 +1269,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -1380,6 +1415,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -1587,6 +1623,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -1849,6 +1886,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -2042,6 +2080,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -2258,6 +2297,7 @@ function Scene({
                 rx="7"
                 fill="#4A5563"
               />
+              {identity && <IdentityBand />}
               <rect
                 x="28"
                 y="26"
@@ -2483,6 +2523,7 @@ export function Pet({
   musicPrefs: musicPrefsProp,
   othersActive = 0,
   skin = null,
+  identity,
 }: PetProps) {
   const { t } = useTranslation();
   useSkinPreload(skin);
@@ -2491,6 +2532,11 @@ export function Pet({
   const style = {
     "--pet-fatigue": fatigueLevel(fatigue),
   } as CSSProperties;
+  const identityIndex =
+    identity === undefined ? undefined : identity % IDENTITY_COLORS;
+  if (identityIndex !== undefined) {
+    Object.assign(style, { "--pet-identity": `var(--id-${identityIndex})` });
+  }
   // `waiting` y `limited` piden atención (un permiso pendiente, el límite
   // alcanzado): nada de la capa encima, y no se puede configurar (#61).
   const allowed =
@@ -2551,6 +2597,7 @@ export function Pet({
       data-state={state}
       data-level={level}
       data-skin={skinLayers ? skin?.id : undefined}
+      data-identity={identityIndex}
       data-vibe={shown?.vibe}
       data-motion={shown ? musicPrefs.motion : undefined}
       data-fallback={shown ? musicPrefs.fallback : undefined}
@@ -2569,6 +2616,7 @@ export function Pet({
           resetsAt={resetsAt}
           music={music && { ...music, visible }}
           screen={screen}
+          identity={identityIndex !== undefined}
         />
       ) : (
         <Scene
@@ -2577,6 +2625,7 @@ export function Pet({
           commitHash={commitHash}
           music={music && { ...music, visible }}
           screen={screen}
+          identity={identityIndex !== undefined && !skin}
         />
       )}
       {shown &&

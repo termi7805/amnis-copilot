@@ -417,3 +417,55 @@ describe("<Pet skin>", () => {
     expect(container.querySelector("script, foreignObject, use")).toBeNull();
   });
 });
+
+describe("<Pet skin> con color de identidad", () => {
+  const tinted = skinOf({
+    states: {
+      coding: {
+        layers: [
+          { src: "body.png" },
+          { src: "panuelo.png", identity: true, anim: "bob" },
+        ],
+      },
+    },
+  });
+
+  it("la capa identity se pinta como máscara de un relleno con el color de la sesión", () => {
+    const { container } = render(
+      <Pet state="coding" level={1} fatigue={0} skin={tinted} identity={2} />,
+    );
+    const layer = container.querySelector("[data-skin-identity]");
+    expect(layer).not.toBeNull();
+    const mask = layer?.querySelector("mask");
+    expect(mask?.querySelector("image")?.getAttribute("href")).toBe(
+      "/api/skins/prueba/panuelo.png",
+    );
+    const fill = layer?.querySelector("rect[mask]");
+    expect(fill?.getAttribute("fill")).toBe("var(--pet-identity)");
+    expect(fill?.getAttribute("mask")).toBe(`url(#${mask?.id})`);
+    expect(
+      screen.getByTestId("pet").style.getPropertyValue("--pet-identity"),
+    ).toBe("var(--id-2)");
+  });
+
+  it("sin identidad la capa identity no sale", () => {
+    const { container } = render(
+      <Pet state="coding" level={1} fatigue={0} skin={tinted} />,
+    );
+    expect(container.querySelector("[data-skin-identity]")).toBeNull();
+    expect(images(container).map((i) => i.getAttribute("href"))).toEqual([
+      "/api/skins/prueba/body.png",
+    ]);
+  });
+
+  it("una skin sin capas identity no pinta color, tampoco la franja de BIT en los estados que no trae", () => {
+    for (const state of ["coding", "testing"] as const) {
+      const { container, unmount } = render(
+        <Pet state={state} level={1} fatigue={0} skin={skin} identity={2} />,
+      );
+      expect(container.querySelector("[data-skin-identity]"), state).toBeNull();
+      expect(screen.queryByTestId("pet-identity"), state).toBeNull();
+      unmount();
+    }
+  });
+});

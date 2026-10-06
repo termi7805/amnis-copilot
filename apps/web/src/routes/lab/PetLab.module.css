@@ -16,6 +16,13 @@
   color: #e8e6e3;
 }
 
+/* Con tema: su fondo (va después de data-dark para ganarle), y cada celda
+   sobre el escenario del dashboard (más abajo, tras .cell). */
+.lab[data-theme] {
+  background: var(--bg);
+  color: var(--ink);
+}
+
 .controls {
   position: sticky;
   left: 0;
@@ -39,6 +46,10 @@
 
 .cell {
   overflow: hidden;
+}
+
+.lab[data-theme] .cell {
+  background: var(--stage);
 }
 
 .lab[data-paused="true"] .cell,

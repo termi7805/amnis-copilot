@@ -699,3 +699,53 @@ describe("insignia othersActive", () => {
     );
   });
 });
+
+describe("color de identidad", () => {
+  it("sin identity ningún estado lleva franja, atributo ni variable", () => {
+    for (const state of ALL_STATES) {
+      const { unmount } = render(<Pet state={state} level={1} fatigue={0} />);
+      const pet = screen.getByTestId("pet");
+      expect(screen.queryByTestId("pet-identity"), state).toBeNull();
+      expect(pet).not.toHaveAttribute("data-identity");
+      expect(pet.style.getPropertyValue("--pet-identity"), state).toBe("");
+      unmount();
+    }
+  });
+
+  it("con identity los 12 estados llevan una sola franja con el color de la paleta", () => {
+    for (const state of ALL_STATES) {
+      const { unmount } = render(
+        <Pet state={state} level={1} fatigue={0} identity={3} />,
+      );
+      const pet = screen.getByTestId("pet");
+      expect(screen.getAllByTestId("pet-identity"), state).toHaveLength(1);
+      expect(pet).toHaveAttribute("data-identity", "3");
+      expect(pet.style.getPropertyValue("--pet-identity")).toBe("var(--id-3)");
+      unmount();
+    }
+  });
+
+  it("un índice fuera de la paleta da la vuelta", () => {
+    render(<Pet state="coding" level={1} fatigue={0} identity={7} />);
+    expect(
+      screen.getByTestId("pet").style.getPropertyValue("--pet-identity"),
+    ).toBe("var(--id-1)");
+  });
+
+  it("la franja no cambia el resto de la escena", () => {
+    for (const state of ALL_STATES) {
+      const plain = render(<Pet state={state} level={1} fatigue={0} />);
+      const before = plain.container.innerHTML;
+      plain.unmount();
+      const tinted = render(
+        <Pet state={state} level={1} fatigue={0} identity={0} />,
+      );
+      tinted.container.querySelector('[data-testid="pet-identity"]')?.remove();
+      const pet = tinted.container.querySelector("svg") as SVGSVGElement;
+      pet.removeAttribute("data-identity");
+      pet.style.removeProperty("--pet-identity");
+      expect(tinted.container.innerHTML, state).toBe(before);
+      tinted.unmount();
+    }
+  });
+});
