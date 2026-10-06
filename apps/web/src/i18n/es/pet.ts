@@ -41,6 +41,13 @@ export const pet = {
     update: "Hay una versión nueva",
     downloadUpdate: "Descargar v{{version}}",
   },
+  carousel: {
+    label: "Sesiones",
+    prev: "Sesión anterior",
+    next: "Sesión siguiente",
+    position: "{{index}}/{{total}}",
+    dot: "{{name}} · {{state}}",
+  },
   ring: {
     weeklyScope: "7d · {{name}}",
     sessionScope: "5h · {{name}}",

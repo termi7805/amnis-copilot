@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type StateResponse } from "@amnis/shared";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { fatigueLabel, PetHero } from "./PetHero.tsx";
 
@@ -47,6 +47,42 @@ describe("PetHero", () => {
     expect(
       screen.getByRole("button", { name: "Foco de la mascota" }),
     ).toHaveTextContent("repo-1");
+  });
+
+  it("con el foco en Todas, el carrusel manda en la escena y la línea de estado", () => {
+    const session = (id: string, identity: number, st: string) => ({
+      sessionId: id,
+      worktree: `/home/x/${id}`,
+      name: id,
+      state: st,
+      since: "2026-01-01T00:02:00Z",
+      commitHash: null,
+      identity,
+    });
+    render(
+      <PetHero
+        state={{
+          ...state,
+          pet: {
+            ...state.pet,
+            focus: { kind: "all" },
+            sessions: [
+              session("wt-a", 1, "testing"),
+              session("wt-b", 2, "waiting"),
+            ],
+          } as StateResponse["pet"],
+        }}
+        now={new Date("2026-01-01T00:04:00Z")}
+      />,
+    );
+    expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "1");
+    expect(screen.getByText("desde hace 2 min")).toBeVisible();
+    fireEvent.keyDown(screen.getByRole("group", { name: "Sesiones" }), {
+      key: "ArrowRight",
+    });
+    expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "2");
+    expect(screen.getByTestId("pet")).toHaveAttribute("data-state", "waiting");
+    expect(screen.getAllByText("wt-b").length).toBeGreaterThan(0);
   });
 
   it("el chip de música solo aparece si suena algo", () => {

@@ -42,6 +42,13 @@ export const pet: Messages<typeof es> = {
     update: "A new version is out",
     downloadUpdate: "Download v{{version}}",
   },
+  carousel: {
+    label: "Sessions",
+    prev: "Previous session",
+    next: "Next session",
+    position: "{{index}}/{{total}}",
+    dot: "{{name}} · {{state}}",
+  },
   ring: {
     weeklyScope: "7d · {{name}}",
     sessionScope: "5h · {{name}}",

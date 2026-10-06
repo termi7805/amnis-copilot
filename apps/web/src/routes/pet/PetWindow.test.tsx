@@ -168,6 +168,50 @@ describe("PetWindow", () => {
     expect(screen.queryByTestId("quota-value")).not.toBeInTheDocument();
   });
 
+  it("con el foco en Todas, carrusel: → cambia de sesión sin desplegar el panel", () => {
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    const session = (id: string, identity: number) => ({
+      sessionId: id,
+      worktree: `/home/x/${id}`,
+      name: id,
+      state: "coding" as const,
+      since: "2026-01-01T00:00:00Z",
+      commitHash: null,
+      identity,
+    });
+    act(() =>
+      source?.emit("hello", {
+        ...fakeState,
+        pet: {
+          ...fakeState.pet,
+          focus: { kind: "all" },
+          sessions: [session("wt-a", 0), session("wt-b", 3)],
+        },
+      }),
+    );
+    expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "0");
+    expect(screen.getByText("wt-a")).toBeInTheDocument();
+
+    const next = screen.getByRole("button", { name: "Sesión siguiente" });
+    fireEvent.pointerDown(next, { clientX: 10, clientY: 10 });
+    fireEvent.pointerUp(next, { clientX: 10, clientY: 10 });
+    fireEvent.click(next);
+
+    expect(screen.getByTestId("pet")).toHaveAttribute("data-identity", "3");
+    expect(screen.getByText("wt-b")).toBeInTheDocument();
+    expect(localStorage.getItem(PANEL_KEY)).toBe("none");
+  });
+
+  it("fuera del foco Todas no hay carrusel", () => {
+    render(<PetWindow />);
+    const [source] = FakeEventSource.instances;
+    act(() => source?.open());
+    act(() => source?.emit("hello", fakeState));
+    expect(screen.queryByTestId("carousel-strip")).toBeNull();
+  });
+
   it("un click (sin arrastre) despliega el panel", () => {
     render(<PetWindow />);
     const [source] = FakeEventSource.instances;

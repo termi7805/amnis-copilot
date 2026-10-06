@@ -130,6 +130,18 @@ describe("FocusPicker", () => {
     });
   });
 
+  it("«Todas» va debajo de Automático y guarda el foco all", async () => {
+    const { save } = setup();
+    await open();
+    const names = screen
+      .getAllByRole("button")
+      .map((b) => b.textContent)
+      .slice(1, 3);
+    expect(names).toEqual(["Automático", "Todas"]);
+    fireEvent.click(screen.getByRole("button", { name: "Todas" }));
+    expect(save).toHaveBeenCalledExactlyOnceWith({ petFocus: { kind: "all" } });
+  });
+
   it("en la mascota las terminadas no salen ni hay interruptor", async () => {
     setup();
     await open();

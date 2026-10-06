@@ -1,4 +1,9 @@
-import { isPetScale, type PetScale, pendingUpdate } from "@amnis/shared";
+import {
+  isPetScale,
+  type PetScale,
+  pendingUpdate,
+  type SessionPet,
+} from "@amnis/shared";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useHealth } from "../../api/health.ts";
@@ -7,6 +12,10 @@ import { useNow } from "../../lib/countdown.ts";
 import { useLocale } from "../../lib/locale.ts";
 import { Pet, PetOffline } from "../../lib/Pet/Pet.tsx";
 import { useSelectedSkin } from "../../lib/Pet/useSelectedSkin.ts";
+import {
+  SessionCarousel,
+  useSessionCarousel,
+} from "../../lib/SessionCarousel/SessionCarousel.tsx";
 import { useTheme } from "../../lib/theme.ts";
 import { HooksAlert } from "./HooksAlert.tsx";
 import { MediaPanel } from "./MediaPanel.tsx";
@@ -40,6 +49,8 @@ const LEGACY_EXPANDED_KEY = "amnis-pet-quota-panel-expanded";
 
 type OpenPanel = PanelId;
 type Panel = OpenPanel | "none";
+
+const NO_SESSIONS: SessionPet[] = [];
 
 const isOpenPanel = (v: string | null): v is OpenPanel =>
   v === "quota" || v === "media";
@@ -79,6 +90,9 @@ export function PetWindow() {
   useTheme(state?.settings);
   useLocale(state?.settings);
   const skin = useSelectedSkin(state?.settings.petSkin, state?.skins);
+  // `sessions` solo trae lista con el foco en «Todas»: fuera de él, o sin
+  // sesiones vivas, `current` es `null` y se ve la mascota de siempre.
+  const carousel = useSessionCarousel(state?.pet.sessions ?? NO_SESSIONS);
   const { t } = useTranslation();
   const pointerDownAt = useRef<{ x: number; y: number } | null>(null);
   const dragStarted = useRef(false);
@@ -233,6 +247,22 @@ export function PetWindow() {
         >
           {status === "offline" ? (
             <PetOffline />
+          ) : state && carousel.current ? (
+            <SessionCarousel carousel={carousel} layout="pet" keys="window">
+              <Pet
+                state={carousel.current.session.state}
+                level={state.pet.level}
+                fatigue={state.pet.fatigue}
+                resetsAt={
+                  state.quotas[0]?.authoritative?.fiveHour.resetsAt ?? null
+                }
+                commitHash={carousel.current.session.commitHash}
+                listening={state.pet.listening}
+                musicPrefs={state.settings}
+                identity={carousel.current.session.identity}
+                skin={skin}
+              />
+            </SessionCarousel>
           ) : state ? (
             <Pet
               state={state.pet.state}

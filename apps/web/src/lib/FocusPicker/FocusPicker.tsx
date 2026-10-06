@@ -195,6 +195,7 @@ export function FocusPicker({
       {open && (
         <fieldset className={styles.list} aria-label={t("focus.label")}>
           {option("auto", t("focus.auto"), { kind: "auto" })}
+          {option("all", t("focus.all"), { kind: "all" })}
           {load.status === "loading" && (
             <span className={styles.hint}>{t("focus.loading")}</span>
           )}

@@ -400,6 +400,15 @@ del marco de la cabeza (no en el cuerpo ni en la antena, que ya dicen estado y f
 paleta por tema (`--id-N` en `theme.css`); una skin, en sus capas `identity`, y sin ellas no hay
 color de sesión.
 
+Con «Todas», mascota y dashboard enseñan **una sesión cada vez** en un carrusel: flechas ‹ ›
+(y ←/→ con la ventana enfocada, sin atajos globales; en el dashboard solo con el foco dentro del
+carrusel), un contador `2/4`, el worktree de la que se ve y un punto por sesión con su color,
+marcado cuando esa sesión está en `waiting` para ver que pide permiso sin pasar por todas (pulsarlo
+lleva a ella). La posición es estado local de cada cliente y se guarda por `sessionId`: si termina
+una sesión por delante no te mueve; si termina la que ves, pasas a la que ocupa ahora su puesto (o
+a la última), nunca a la primera; una nueva entra al final. En la ventana flotante la franja de
+controles sale del área plegada y la escena se encoge: no la ensancha ni tapa a la mascota.
+
 ### Renderizado
 
 El componente `<Pet>` recibe `{ state, level, fatigue }` (y desde E8, `listening` y las
