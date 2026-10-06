@@ -109,6 +109,12 @@
   text-transform: uppercase;
 }
 
+/* El tamaño de la mascota es otra sección de la tarjeta, no un grupo más de temas:
+   fuera del radiogroup nadie pone la separación de `.themeGroup + .themeGroup` (#169). */
+.sectionLabel {
+  margin-top: 0.9rem;
+}
+
 .swatches {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));

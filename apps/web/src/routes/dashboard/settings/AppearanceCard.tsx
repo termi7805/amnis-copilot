@@ -199,7 +199,10 @@ export function AppearanceCard({
           </div>
         )}
       </div>
-      <div className={styles.themeGroupLabel} id="pet-scale-label">
+      <div
+        className={`${styles.themeGroupLabel} ${styles.sectionLabel}`}
+        id="pet-scale-label"
+      >
         {t("settings.appearance.petSize")}
       </div>
       {/* biome-ignore lint/a11y/useSemanticElements: ídem LanguageCard, un conmutador segmentado */}
