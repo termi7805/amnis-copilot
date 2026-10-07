@@ -1,4 +1,9 @@
-import { msg, type PetSnapshot, type QuotaSnapshot } from "@amnis/shared";
+import {
+  msg,
+  type PetSnapshot,
+  type QuotaSnapshot,
+  validateSkinManifest,
+} from "@amnis/shared";
 import {
   act,
   cleanup,
@@ -8,6 +13,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n/index.ts";
+import type { PetSkin } from "../../lib/Pet/SkinScene.tsx";
 import { QuotaPanel } from "./QuotaPanel.tsx";
 
 const NOW = new Date("2026-01-01T00:00:00Z");
@@ -63,6 +69,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
   cleanup();
 });
+
+function skinPrueba(): PetSkin {
+  const checked = validateSkinManifest({
+    states: { coding: { layers: [{ src: "body.png" }] } },
+  });
+  if ("errors" in checked) throw new Error(checked.errors.join("; "));
+  return {
+    id: "prueba",
+    manifest: checked.manifest,
+    imageUrl: (src) => `/api/skins/prueba/${src}`,
+  };
+}
 
 describe("QuotaPanel", () => {
   it("la fila de actividad muestra el estado y hace cuánto lleva en él", () => {
@@ -388,5 +406,28 @@ describe("QuotaPanel", () => {
       render(conProjection(projection));
       expect(screen.queryByTestId("exhausts")).toBeNull();
     });
+  });
+});
+
+describe("QuotaPanel · skin (#171)", () => {
+  const panel = (skin?: PetSkin | null) => (
+    <QuotaPanel
+      pet={basePet}
+      status="connected"
+      quotas={[baseQuota]}
+      now={NOW}
+      skin={skin}
+    />
+  );
+
+  it("con una skin, la fila «Ahora» pinta el personaje de la skin", () => {
+    const { container } = render(panel(skinPrueba()));
+    expect(container.querySelector('[data-look="skin"]')).not.toBeNull();
+  });
+
+  it("sin skin sigue saliendo BIT", () => {
+    const { container } = render(panel(null));
+    expect(container.querySelector('[data-look="skin"]')).toBeNull();
+    expect(container.querySelector('[data-look="coding"]')).not.toBeNull();
   });
 });

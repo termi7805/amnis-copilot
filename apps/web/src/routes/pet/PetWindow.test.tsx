@@ -3,6 +3,7 @@ import {
   type HealthCheck,
   msg,
   type StateResponse,
+  validateSkinManifest,
 } from "@amnis/shared";
 import {
   act,
@@ -14,6 +15,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as healthApi from "../../api/health.ts";
+import { fetchSkin } from "../../api/skins.ts";
+import type { PetSkin } from "../../lib/Pet/SkinScene.tsx";
 import { PetWindow } from "./PetWindow.tsx";
 import {
   EXPANDED_WIDTH,
@@ -36,6 +39,11 @@ vi.mock("./useTauriWindow.ts", async (importOriginal) => ({
 vi.mock("../../api/health.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../api/health.ts")>()),
   repairHooks: vi.fn(),
+}));
+
+vi.mock("../../api/skins.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../api/skins.ts")>()),
+  fetchSkin: vi.fn(),
 }));
 
 const HOOKS_OK: HealthCheck = {
@@ -590,6 +598,45 @@ describe("PetWindow", () => {
 
       clickWindow(window_); // abre: el último, no la cuota
       expect(panelOf()).toBe("media");
+    });
+
+    it("con una skin elegida, la fila «Ahora» de cada panel pinta la skin y no BIT (#171)", async () => {
+      const checked = validateSkinManifest({
+        states: { coding: { layers: [{ src: "body.png" }] } },
+      });
+      if ("errors" in checked) throw new Error(checked.errors.join("; "));
+      const skin: PetSkin = {
+        id: "prueba",
+        manifest: checked.manifest,
+        imageUrl: (src) => `/api/skins/prueba/${src}`,
+      };
+      vi.mocked(fetchSkin).mockResolvedValue(skin);
+      const window_ = mount({
+        ...fakeState,
+        settings: { ...DEFAULT_SETTINGS, petSkin: "prueba" },
+        skins: {
+          rev: 1,
+          skins: [
+            {
+              id: "prueba",
+              name: null,
+              states: ["coding"],
+              errors: [],
+              warnings: [],
+            },
+          ],
+        },
+      });
+      clickWindow(window_);
+      await waitFor(() =>
+        expect(document.querySelector('[data-look="skin"]')).not.toBeNull(),
+      );
+      expect(panelOf()).toBe("quota");
+
+      fireEvent.click(screen.getByRole("tab", { name: "Música" }));
+      expect(panelOf()).toBe("media");
+      expect(document.querySelector('[data-look="skin"]')).not.toBeNull();
+      expect(document.querySelector('[data-look="coding"]')).toBeNull();
     });
 
     it("la elección de música sobrevive a un remontaje", () => {

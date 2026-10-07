@@ -1,6 +1,11 @@
-import type { MediaSnapshot, PetSnapshot } from "@amnis/shared";
+import {
+  type MediaSnapshot,
+  type PetSnapshot,
+  validateSkinManifest,
+} from "@amnis/shared";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { PetSkin } from "../../lib/Pet/SkinScene.tsx";
 import { MediaPanel, type MediaPanelProps } from "./MediaPanel.tsx";
 
 afterEach(() => {
@@ -54,6 +59,18 @@ function renderPanel(props: Partial<MediaPanelProps> = {}) {
       {...props}
     />,
   );
+}
+
+function skinPrueba(): PetSkin {
+  const checked = validateSkinManifest({
+    states: { coding: { layers: [{ src: "body.png" }] } },
+  });
+  if ("errors" in checked) throw new Error(checked.errors.join("; "));
+  return {
+    id: "prueba",
+    manifest: checked.manifest,
+    imageUrl: (src) => `/api/skins/prueba/${src}`,
+  };
 }
 
 describe("MediaPanel", () => {
@@ -110,5 +127,18 @@ describe("MediaPanel", () => {
       expect.stringContaining("/api/media/pause"),
       { method: "POST" },
     );
+  });
+});
+
+describe("MediaPanel · skin (#171)", () => {
+  it("con una skin, la fila «Ahora» pinta el personaje de la skin", () => {
+    const { container } = renderPanel({ skin: skinPrueba() });
+    expect(container.querySelector('[data-look="skin"]')).not.toBeNull();
+  });
+
+  it("sin skin sigue saliendo BIT", () => {
+    const { container } = renderPanel({ skin: null });
+    expect(container.querySelector('[data-look="skin"]')).toBeNull();
+    expect(container.querySelector('[data-look="coding"]')).not.toBeNull();
   });
 });

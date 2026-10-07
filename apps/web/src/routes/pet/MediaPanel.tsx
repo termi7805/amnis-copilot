@@ -2,6 +2,7 @@ import type { MediaSnapshot, MusicPrefs, PetSnapshot } from "@amnis/shared";
 import { fetchMediaDevices, sendMediaCommand } from "../../api/media.ts";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { MediaPlayer } from "../../lib/MediaPlayer/MediaPlayer.tsx";
+import type { PetSkin } from "../../lib/Pet/SkinScene.tsx";
 import type { SessionCarouselState } from "../../lib/SessionCarousel/SessionCarousel.tsx";
 import { ActivityRow } from "./ActivityRow.tsx";
 import { PanelHeader, type PanelId } from "./PanelHeader.tsx";
@@ -17,6 +18,8 @@ export interface MediaPanelProps {
   onSelectPanel: (panel: PanelId) => void;
   /** Con el foco en «Todas»: la fila para pasar de sesión, bajo el foco. */
   carousel?: SessionCarouselState;
+  /** La skin elegida, ya resuelta por `PetWindow` (no se vuelve a pedir aquí). */
+  skin?: PetSkin | null;
 }
 
 /** El aviso de "alguien mira" al recuperar el foco ya lo manda `useAmnisStream`. */
@@ -29,6 +32,7 @@ export function MediaPanel({
   musicPrefs,
   onSelectPanel,
   carousel,
+  skin,
 }: MediaPanelProps) {
   return (
     <div>
@@ -48,6 +52,7 @@ export function MediaPanel({
           now={now}
           musicPrefs={musicPrefs}
           identity={carousel?.current?.session.identity}
+          skin={skin}
         />
       )}
       <MediaPlayer

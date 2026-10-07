@@ -14,6 +14,7 @@ import { daemonText, dateFormat } from "../../i18n/index.ts";
 import { formatElapsed, formatUntil } from "../../lib/countdown.ts";
 import { fiveHourExhaustion, fiveHourWindow } from "../../lib/fiveHour.ts";
 import { scopeTitle } from "../../lib/nowCards.ts";
+import type { PetSkin } from "../../lib/Pet/SkinScene.tsx";
 import { extraLimits } from "../../lib/quotaLimits.ts";
 import type { SessionCarouselState } from "../../lib/SessionCarousel/SessionCarousel.tsx";
 import { QuotaRing } from "../dashboard/QuotaRing.tsx";
@@ -56,6 +57,8 @@ export interface QuotaPanelProps {
   onSelectPanel?: (panel: PanelId) => void;
   /** Con el foco en «Todas»: la fila para pasar de sesión, bajo el foco. */
   carousel?: SessionCarouselState;
+  /** La skin elegida, ya resuelta por `PetWindow` (no se vuelve a pedir aquí). */
+  skin?: PetSkin | null;
 }
 
 /**
@@ -72,6 +75,7 @@ export function QuotaPanel({
   musicPrefs,
   onSelectPanel,
   carousel,
+  skin,
 }: QuotaPanelProps) {
   const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
@@ -134,6 +138,7 @@ export function QuotaPanel({
         now={now}
         musicPrefs={musicPrefs}
         identity={carousel?.current?.session.identity}
+        skin={skin}
       />
 
       {quotas.map((quota, i) => {

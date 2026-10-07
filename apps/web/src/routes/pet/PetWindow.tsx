@@ -298,6 +298,7 @@ export function PetWindow() {
               now={now}
               musicPrefs={state.settings}
               onSelectPanel={setPanel}
+              skin={skin}
             />
           )}
           {panel === "media" && (
@@ -312,6 +313,7 @@ export function PetWindow() {
               status={status}
               musicPrefs={state?.settings}
               onSelectPanel={setPanel}
+              skin={skin}
             />
           )}
         </div>
