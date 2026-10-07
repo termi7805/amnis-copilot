@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { ConnectionStatus } from "../../api/useAmnisStream.ts";
 import { formatElapsed } from "../../lib/countdown.ts";
 import { Pet, PetOffline, stateTitle } from "../../lib/Pet/Pet.tsx";
-import type { PetSkin } from "../../lib/Pet/SkinScene.tsx";
+import type { SkinChoice } from "../../lib/Pet/SkinScene.tsx";
 import styles from "./ActivityRow.module.css";
 
 export interface ActivityRowProps {
@@ -15,7 +15,7 @@ export interface ActivityRowProps {
   /** Color de identidad de la sesión que se ve (foco «Todas»). */
   identity?: number;
   /** La skin que ya resolvió `PetWindow`; sin ella (o `null`) pinta BIT. */
-  skin?: PetSkin | null;
+  skin?: SkinChoice;
 }
 
 export function ActivityRow({

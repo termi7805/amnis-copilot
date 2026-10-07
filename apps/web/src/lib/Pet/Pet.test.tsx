@@ -141,6 +141,35 @@ describe("Pet", () => {
   });
 });
 
+describe("skin cargando (#172)", () => {
+  it("con `loading` no pinta BIT ni skin, pero conserva el svg y su tamaño", () => {
+    const { container } = render(
+      <Pet
+        state="coding"
+        level={1}
+        fatigue={0.2}
+        skin="loading"
+        othersActive={2}
+      />,
+    );
+
+    const pet = screen.getByTestId("pet");
+    expect(pet).toHaveAttribute("viewBox", "0 0 150 110");
+    expect(pet).toHaveAttribute("data-skin-loading");
+    expect(pet.dataset.look).toBeUndefined();
+    expect(container.querySelector("[data-look]")).toBeNull();
+    expect(screen.queryByTestId("pet-others")).toBeNull();
+  });
+
+  it("sin skin (`null`) sigue pintando BIT", () => {
+    const { container } = render(
+      <Pet state="coding" level={1} fatigue={0.2} skin={null} />,
+    );
+    expect(screen.getByTestId("pet")).not.toHaveAttribute("data-skin-loading");
+    expect(container.querySelector("[data-look]")).not.toBeNull();
+  });
+});
+
 describe("PetOffline", () => {
   it("es una escena propia, distinta de cualquier PetState", () => {
     render(<PetOffline />);

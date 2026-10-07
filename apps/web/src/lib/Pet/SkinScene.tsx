@@ -35,11 +35,28 @@ export interface PetSkin {
   imageUrl: (src: string) => string;
 }
 
+/**
+ * Lo que `<Pet>` recibe como skin: la skin lista, `null` para BIT o
+ * `"loading"` mientras llega (ni BIT ni skin: escena vacía del mismo tamaño).
+ */
+export type SkinChoice = PetSkin | null | "loading";
+
 const PLACEHOLDER = "······";
 const { width: W, height: H } = SKIN_SCENE;
 
 /** Centro de la pantalla de BIT: el punto de la geometría de cascos y pantalla que `anchor` coloca. */
 const HEAD_CENTER = { x: 55, y: 46 } as const;
+
+/** Las URLs de todas las imágenes de la skin, sin repetir. */
+export function skinImageUrls(skin: PetSkin): string[] {
+  const srcs = new Set<string>();
+  for (const state of Object.values(skin.manifest.states)) {
+    for (const layer of state.layers) {
+      if (!isSkinTextLayer(layer)) srcs.add(layer.src);
+    }
+  }
+  return [...srcs].map((src) => skin.imageUrl(src));
+}
 
 /** Todas las imágenes de la skin, para que un cambio de estado no parpadee en blanco. */
 export function useSkinPreload(skin: PetSkin | null | undefined): void {
@@ -49,15 +66,9 @@ export function useSkinPreload(skin: PetSkin | null | undefined): void {
       held.current = [];
       return;
     }
-    const srcs = new Set<string>();
-    for (const state of Object.values(skin.manifest.states)) {
-      for (const layer of state.layers) {
-        if (!isSkinTextLayer(layer)) srcs.add(layer.src);
-      }
-    }
-    held.current = [...srcs].map((src) => {
+    held.current = skinImageUrls(skin).map((url) => {
       const img = new Image();
-      img.src = skin.imageUrl(src);
+      img.src = url;
       return img;
     });
   }, [skin]);

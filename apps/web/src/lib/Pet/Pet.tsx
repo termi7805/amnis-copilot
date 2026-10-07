@@ -23,7 +23,7 @@ import {
 } from "./musicLayer.ts";
 import { NowPlayingScreen } from "./NowPlayingScreen.tsx";
 import styles from "./Pet.module.css";
-import { type PetSkin, SkinScene, useSkinPreload } from "./SkinScene.tsx";
+import { type SkinChoice, SkinScene, useSkinPreload } from "./SkinScene.tsx";
 import { useNowPlaying } from "./useNowPlaying.ts";
 
 export interface PetProps {
@@ -45,8 +45,10 @@ export interface PetProps {
    * mayor que 0 sale una insignia "+N"; no cambia la forma ni el color de la
    * mascota (docs/DESIGN.md §4). */
   othersActive?: number;
-  /** Skin elegida; los estados que no trae se pintan como BIT. */
-  skin?: PetSkin | null;
+  /** Skin elegida; los estados que no trae se pintan como BIT. `"loading"`:
+   * la skin está llegando, así que se pinta la escena vacía (ni BIT ni skin)
+   * con el mismo tamaño, para no enseñar un instante otro personaje. */
+  skin?: SkinChoice;
   /** Índice en la paleta de identidad (`SessionPet.identity`): con valor, la
    * franja de lo alto de la cabeza lleva el color de la sesión. Sin él, BIT se
    * ve como siempre. Con skin, el color solo sale en su capa `identity`: si no
@@ -2522,10 +2524,12 @@ export function Pet({
   listening = null,
   musicPrefs: musicPrefsProp,
   othersActive = 0,
-  skin = null,
+  skin: skinChoice = null,
   identity,
 }: PetProps) {
   const { t } = useTranslation();
+  const loading = skinChoice === "loading";
+  const skin = loading ? null : skinChoice;
   useSkinPreload(skin);
   const skinLayers = skin?.manifest.states[state]?.layers;
   const musicPrefs: MusicPrefs = { ...DEFAULT_MUSIC_PREFS, ...musicPrefsProp };
@@ -2597,6 +2601,7 @@ export function Pet({
       data-state={state}
       data-level={level}
       data-skin={skinLayers ? skin?.id : undefined}
+      data-skin-loading={loading ? "" : undefined}
       data-identity={identityIndex}
       data-vibe={shown?.vibe}
       data-motion={shown ? musicPrefs.motion : undefined}
@@ -2608,7 +2613,7 @@ export function Pet({
           ? t("pet.others", { state: stateTitle(state), count: othersActive })
           : stateTitle(state)}
       </title>
-      {skin && skinLayers ? (
+      {loading ? null : skin && skinLayers ? (
         <SkinScene
           skin={skin}
           layers={skinLayers}
@@ -2628,11 +2633,12 @@ export function Pet({
           identity={identityIndex !== undefined && !skin}
         />
       )}
-      {shown &&
+      {!loading &&
+        shown &&
         !(shown.vibe === "neutral" && musicPrefs.fallback === "quiet") && (
           <MusicFx visible={visible} />
         )}
-      {othersActive > 0 && <OthersBadge count={othersActive} />}
+      {!loading && othersActive > 0 && <OthersBadge count={othersActive} />}
     </svg>
   );
 }
